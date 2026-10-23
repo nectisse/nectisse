@@ -54,3 +54,11 @@ Peach 的 `CurlCffiTransport` 会自动跟随重定向。本应用增加 `follow
 - Seesaa 提取哈希含必要适配，其纯作品表解析、精确编号与不确定人物警告保留；K-MIB 仅读取用户指定的单片 URL，不引入列表采集或磁盘扫描。
 
 支持矩阵在根目录 `SOURCE_SUPPORT.md`。在线成功样本与尚未完成的验收分开记录；源码存在、导入通过和真实查询成功是不同的验证等级。
+
+## Sukebei 作品磁链查询
+
+`nectisse_worker/magnets.py` 按参考快照 `src/peach/magnet_chain.py` 的 `Fetcher.sukebei` 表格选择器、磁链读取及编号核对流程适配；直接复用随包 `peach_core.catalog_rules` 的规范化与 `_jav_code_pattern` 边界片段，以及承接 Peach 传输的 `NetworkSession`。没有导入 `downloads`、`resource_search`、其他搜索来源或下载服务。
+
+适配只读搜索首页，按站点顺序保留最多 20 条匹配记录并按 info hash 去重，补充独立名称链接、UTC 上传时间和完成次数；不使用整行文本充当标题，不逐条获取文件列表，也不采用原实现的 8 条候选上限或质量排序。日期式编号保持发行方分隔符，普通编号支持现有补零／紧凑写法并核验前后边界。明确空页和表格结构错误分开处理。
+
+网络、站点限流、结果缓存、真实取消及进程回收继续由 Nectisse 管理；此次只增加磁链搜索与复制，不增加资源下载或磁链协议启动器。上游许可仍随 `PEACH-LICENSE` 保留。

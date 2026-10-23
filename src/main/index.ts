@@ -21,6 +21,8 @@ import { InitializationStep } from './initialization-step';
 import { LibraryService } from './library-service';
 import { LIBRARY_IPC, libraryIdSchema, librarySaveSchema } from '../shared/library';
 import { sourceCooldownSeconds } from './source-policy';
+import { MagnetService } from './magnet-service';
+import { MAGNET_IPC, magnetRequestSchema, magnetActionSchema } from '../shared/magnets';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const iconPath = app.isPackaged ? join(process.resourcesPath, 'icons/icon-macos.png') : join(app.getAppPath(), 'resources/icons/icon-macos.png');
@@ -33,6 +35,7 @@ if (userDataOverride) {
 let window: BrowserWindow | null = null;
 let runtime: RuntimeService | undefined;
 let metadata: MetadataService | undefined;
+let magnets: MagnetService | undefined;
 let localReady: InitializationStep | undefined;
 let metadataReady: InitializationStep | undefined;
 let libraryReady: InitializationStep | undefined;
@@ -133,6 +136,7 @@ if (!app.requestSingleInstanceLock()) {
 		void (async () => {
 			try {
 				await Promise.all([localReady?.close(), metadataReady?.close(), libraryReady?.close()]);
+				await magnets?.stop();
 				await library?.stop();
 				await subscriptions?.stop();
 				await metadata?.stop();
@@ -196,6 +200,7 @@ if (!app.requestSingleInstanceLock()) {
 						? preferences.proxyUrl
 						: proxyFromRules(await session.defaultSession.resolveProxy(url));
 			};
+			magnets = new MagnetService(app.getPath('userData'), runtime.host, resolveProxy);
 
 			let gate: SiteGate | undefined;
 			localReady = new InitializationStep(async () => {
@@ -455,6 +460,49 @@ if (!app.requestSingleInstanceLock()) {
 				const url = library!.sourceUrl(id, recordId);
 				if (url) {
 					await shell.openExternal(url);
+				}
+			});
+			ipcMain.handle(MAGNET_IPC.search, async (event, input: unknown) => {
+				trusted(event);
+				const request = magnetRequestSchema.parse(input);
+				let code: string | undefined;
+				if (request.origin.kind === 'query') {
+					await waitMetadata();
+					const origin = request.origin;
+					code = metadata!
+						.getState()
+						.tasks.find((task) => task.id === origin.taskId)
+						?.records.find((record) => record.code.toUpperCase() === origin.code)?.code;
+				} else {
+					await waitLibrary();
+					code = library!.getWork(request.origin.id)?.code;
+				}
+				if (!code) {
+					throw new Error('WORK_NOT_FOUND');
+				}
+				await waitLocal();
+				return magnets!.search(request.id, code, request.force);
+			});
+			ipcMain.handle(MAGNET_IPC.cancel, async (event, input: unknown) => {
+				trusted(event);
+				await magnets!.cancel(z.string().uuid().parse(input));
+			});
+			ipcMain.handle(MAGNET_IPC.action, async (event, input: unknown) => {
+				trusted(event);
+				const command = magnetActionSchema.parse(input);
+				const row = await magnets!.row(command.code, command.id);
+				if (!row || quitting) {
+					return false;
+				}
+				try {
+					if (command.action === 'copy') {
+						clipboard.writeText(row.magnet);
+					} else {
+						await shell.openExternal(row.url);
+					}
+					return true;
+				} catch {
+					return false;
 				}
 			});
 			protocol.handle('nectisse-cover', async (request) => {

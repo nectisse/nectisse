@@ -17,6 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { ReviewTabs, QuietButton, StatusBadge } from '../prototype/components';
 import { SOURCE_LABELS, isActiveTask, type SourceId, type QueryTask, type MetadataState, type MetadataRecord, type CoverCandidate } from '../../../shared/metadata';
+import type { MagnetOrigin } from '../../../shared/magnets';
+import { MagnetSearch } from './MagnetSearch';
 
 const statusLabels = { running: '查询中', cancelling: '正在取消', cancelled: '已取消', succeeded: '已完成', partial: '部分取得', failed: '未取得', interrupted: '已中断' };
 
@@ -100,6 +102,7 @@ export function RealDetail({
 	backLabel = '返回查询结果',
 	actions,
 	onOpenSource,
+	magnetOrigin,
 }: {
 	onPerformer?: (name: string) => void;
 	records: MetadataRecord[];
@@ -112,8 +115,10 @@ export function RealDetail({
 	backLabel?: string;
 	actions?: ReactNode;
 	onOpenSource?: (recordId: string) => void;
+	magnetOrigin?: MagnetOrigin;
 }): React.JSX.Element {
-	const [tab, setTab] = useState<'info' | 'sources'>('info');
+	const [tab, setTab] = useState<'info' | 'sources' | 'magnets'>('info');
+	const origin: MagnetOrigin | undefined = magnetOrigin ?? (task ? { kind: 'query', taskId: task.id, code: records[0]!.code } : undefined);
 	const covers = records.flatMap((record) => record.covers);
 	const selected =
 		(coverId ? (covers.find((cover) => cover.id === coverId && cover.asset) ?? covers.find((cover) => cover.id === coverId)) : undefined) ??
@@ -175,13 +180,14 @@ export function RealDetail({
 						<StatusBadge>{selected?.asset ? '封面已缓存' : '封面未取得'}</StatusBadge>
 					</div>
 					{actions}
-					<ReviewTabs<'info' | 'sources'>
+					<ReviewTabs<'info' | 'sources' | 'magnets'>
 						value={tab}
 						onChange={setTab}
 						label="真实作品详情"
 						items={[
 							{ value: 'info', label: '作品资料' },
 							{ value: 'sources', label: '来源与差异' },
+							...(origin ? [{ value: 'magnets' as const, label: '磁链搜索' }] : []),
 						]}
 					>
 						{tab === 'info' ? (
@@ -221,6 +227,8 @@ export function RealDetail({
 										: '采用顺序由设置中的资料优先级决定；FC2 独立查询。人物、卖家与可关注账号保持各自角色。'}
 								</p>
 							</>
+						) : tab === 'magnets' && origin ? (
+							<MagnetSearch key={records[0]!.code} origin={origin} code={records[0]!.code} />
 						) : (
 							<SourceProvenance
 								snapshots={snapshots}
@@ -234,7 +242,7 @@ export function RealDetail({
 							/>
 						)}
 					</ReviewTabs>
-					{tab !== 'sources' &&
+					{tab === 'info' &&
 						records
 							.flatMap((record) => record.warnings)
 							.map((warning, index) => (
