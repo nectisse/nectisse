@@ -94,7 +94,10 @@ export function ReviewTabs<T extends string>({
 			className="content-tabs"
 			onValueChange={(next) => {
 				const item = items.find((item) => item.value === next);
-				if (item) onChange(item.value);
+
+				if (item) {
+					onChange(item.value);
+				}
 			}}
 		>
 			<TabsList variant={segmented ? 'default' : 'line'} aria-label={label} className={cn('review-tabs', segmented && 'segmented-tabs')}>
@@ -134,7 +137,9 @@ export function ReviewDialog({
 		<Dialog
 			open={open}
 			onOpenChange={(value) => {
-				if (!value) onClose();
+				if (!value) {
+					onClose();
+				}
 			}}
 		>
 			<DialogContent

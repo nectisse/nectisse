@@ -220,7 +220,11 @@ export const posts: readonly Post[] = [
 
 export const firstWork = works[0]!;
 export const firstCreator = creators[0]!;
+
 export const creatorFor = (id: string): Creator => creators.find((creator) => creator.id === id) ?? firstCreator;
+
 export const initialReadIds = (): Set<string> => new Set(posts.filter((post) => post.initiallyRead).map((post) => post.id));
+
 export const sourceUrl = (work: Work, source: Site): string => `https://demo.nectisse.invalid/${source.toLowerCase()}/works/${work.id}`;
+
 export const dateLabel = (value: string): string => value.replaceAll('-', '.');

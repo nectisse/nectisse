@@ -16,12 +16,14 @@ export default function App(): React.JSX.Element {
 
 	useEffect(() => {
 		let mounted = true;
+
 		const apply = (state: RuntimeState): void => {
 			if (mounted) {
 				setRuntime((previous) => (state.revision >= previous.revision ? state : previous));
 				setBridgeError(false);
 			}
 		};
+
 		if (!window.nectisse) {
 			setBridgeError(true);
 			return;
@@ -31,7 +33,9 @@ export default function App(): React.JSX.Element {
 			.getState()
 			.then(apply)
 			.catch(() => {
-				if (mounted) setBridgeError(true);
+				if (mounted) {
+					setBridgeError(true);
+				}
 			});
 		return () => {
 			mounted = false;
@@ -50,6 +54,7 @@ export default function App(): React.JSX.Element {
 			.then(setRuntime)
 			.catch(() => setBridgeError(true));
 	};
+
 	return (
 		<SubscriptionsProvider>
 			<LibraryProvider>

@@ -12,12 +12,14 @@ export const preferencesSchema = z.object({
 		.array(allSourceSchema)
 		.max(ALL_IDS.length)
 		.refine((items) => new Set(items).size === items.length),
+
 	metadataPriority: z
 		.array(z.enum(METADATA_IDS))
 		.min(3)
 		.max(METADATA_IDS.length)
 		.refine((items) => new Set(items).size === items.length)
 		.transform((items) => [...items, ...DEFAULT_METADATA_ORDER.filter((id) => !items.includes(id))]),
+
 	coverPriority: z
 		.array(z.enum(COVER_SOURCE_IDS))
 		.max(COVER_SOURCE_IDS.length)

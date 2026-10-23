@@ -30,6 +30,7 @@ export const runtimeDiagnosticCodeSchema = diagnosticCodeSchema.extract([
 	'RUNTIME_PROTOCOL_ERROR',
 	'RUNTIME_CHECK_FAILED',
 ]);
+
 export function runtimeDiagnosticCode(code: string): z.infer<typeof runtimeDiagnosticCodeSchema> {
 	return code === 'START_FAILED'
 		? 'RUNTIME_START_FAILED'
@@ -45,6 +46,7 @@ export function runtimeDiagnosticCode(code: string): z.infer<typeof runtimeDiagn
 							? 'RUNTIME_PROTOCOL_ERROR'
 							: 'RUNTIME_CHECK_FAILED';
 }
+
 export const diagnosticEntrySchema = z.object({ at: z.string().datetime(), code: diagnosticCodeSchema, context: subscriptionFailureContextSchema.optional() });
 export type DiagnosticEntry = z.infer<typeof diagnosticEntrySchema>;
 export const diagnosticEnvironmentSchema = z.object({
@@ -64,6 +66,7 @@ export const diagnosticReportSchema = z.object({
 	ignoredLines: z.number().int().nonnegative(),
 });
 export type DiagnosticReport = z.infer<typeof diagnosticReportSchema>;
+
 export function formatDiagnosticReport(report: DiagnosticReport): string {
 	const { environment: env } = report;
 	const phase = { starting: '正在准备', ready: '已就绪', error: '自检失败', stopped: '已停止', unavailable: '不可用' }[env.runtimePhase];
@@ -87,6 +90,7 @@ export function formatDiagnosticReport(report: DiagnosticReport): string {
 		...(report.ignoredLines ? [`已忽略 ${report.ignoredLines} 条无法识别的旧日志。`] : []),
 	].join('\n');
 }
+
 export const diagnosticCopyReplySchema = z.discriminatedUnion('copied', [
 	z.object({ copied: z.literal(true), report: diagnosticReportSchema }),
 	z.object({ copied: z.literal(false) }),

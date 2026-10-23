@@ -1,37 +1,44 @@
-import { Fragment, useState } from 'react';
-import { ArrowUp, ChevronDown, ExternalLink, KeyRound, Search, Settings2 } from 'lucide-react';
+import { Fragment, useRef, useState } from 'react';
+import { ChevronDown, ExternalLink, Image, KeyRound, ListFilter, ListOrdered, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { EmptyState } from '@/components/empty-state';
 import { Card } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { OptionSelect } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SOURCES, SOURCE_LABELS, isFollowProvider, type SourceSpec } from '../../../shared/sources';
+import { DEFAULT_METADATA_ORDER, SOURCES, isFollowProvider, type SourceSpec } from '../../../shared/sources';
+import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY } from '../../../shared/cover-selection';
 import type { AllSource, FollowProvider, Preferences } from '../../../shared/subscriptions';
 import { StatusBadge } from '../prototype/components';
 import { useSubscriptions } from './context';
-import { CoverPreferences } from './CoverPreferences';
+import { SourcePriorityDialog } from './SourcePriorityDialog';
 
 function Credential({ provider }: { provider: AllSource }): React.JSX.Element {
 	const { state, invoke } = useSubscriptions();
 	const [cookie, setCookie] = useState('');
 	const [busy, setBusy] = useState(false);
 	const present = state.sources.find((row) => row.id === provider)?.credentialPresent;
+
 	const save = async (value: string): Promise<void> => {
 		setBusy(true);
 		try {
 			const reply = await invoke({ action: 'credential', provider, cookie: value });
-			if (reply.ok) setCookie('');
-			if (reply.ok) toast.success(value ? '已安全保存；有效性以实际查询为准' : '已清除本机凭据', { id: `credential:${provider}` });
-			else toast.error(reply.message || '保存失败', { id: `credential:${provider}`, duration: 8000 });
+			if (reply.ok) {
+				setCookie('');
+			}
+			if (reply.ok) {
+				toast.success(value ? '已安全保存；有效性以实际查询为准' : '已清除本机凭据', { id: `credential:${provider}` });
+			} else {
+				toast.error(reply.message || '保存失败', { id: `credential:${provider}`, duration: 8000 });
+			}
 		} finally {
 			setBusy(false);
 		}
 	};
+
 	return (
 		<form
 			className="source-credential-form"
@@ -179,45 +186,61 @@ const capabilities = (source: SourceSpec): string =>
 	]
 		.filter(Boolean)
 		.join(' · ') || '—';
+
 const statusLabel = (value: string | undefined): string => (value?.includes('尚未验证') ? '待验证' : value === '最近访问成功' ? '最近成功' : value || '未检查');
 
 export function SourceCatalog({ onAdd, save }: { onAdd: (provider?: FollowProvider) => void; save: (patch: Partial<Preferences>) => Promise<void> }): React.JSX.Element {
 	const { state } = useSubscriptions();
 	const [filter, setFilter] = useState('all');
-	const [search, setSearch] = useState('');
 	const [selected, setSelected] = useState<AllSource | null>(null);
-	const [priorityOpen, setPriorityOpen] = useState(false);
+	const [priorityOpen, setPriorityOpen] = useState<'cover' | 'metadata' | null>(null);
+	const coverTrigger = useRef<HTMLButtonElement | null>(null);
+	const metadataTrigger = useRef<HTMLButtonElement | null>(null);
 	const preferences = state.preferences;
 	const visible = SOURCES.filter(
 		(row) =>
-			(filter === 'all' ||
-				(filter === 'enabled' && preferences.enabledSources.includes(row.id)) ||
-				(filter === 'metadata' && row.metadata) ||
-				(filter === 'follow' && row.follow) ||
-				(filter === 'reference' && !row.available)) &&
-			`${row.name} ${row.id} ${row.note}`.toLowerCase().includes(search.toLowerCase()),
+			filter === 'all' ||
+			(filter === 'enabled' && preferences.enabledSources.includes(row.id)) ||
+			(filter === 'metadata' && row.metadata) ||
+			(filter === 'follow' && row.follow) ||
+			(filter === 'reference' && !row.available),
 	);
+
 	return (
 		<div className="source-catalog">
-			<CoverPreferences priority={preferences.coverPriority} onChange={(coverPriority) => save({ coverPriority })} />
 			<div className="source-catalog-controls">
-				<div className="source-search">
-					<Search size={14} aria-hidden="true" />
-					<Input aria-label="搜索来源" placeholder="搜索站点名称或能力" value={search} onChange={(event) => setSearch(event.target.value)} />
+				<div className="source-catalog-filter">
+					<OptionSelect
+						aria-label="来源用途"
+						value={filter}
+						onValueChange={setFilter}
+						options={[
+							{ value: 'all', label: `全部来源 · ${SOURCES.length}` },
+							{ value: 'enabled', label: '已启用' },
+							{ value: 'metadata', label: '作品资料与封面' },
+							{ value: 'follow', label: '演员／创作者订阅' },
+							{ value: 'reference', label: '需要额外适配' },
+						]}
+					/>
+					<span className="source-catalog-count">{preferences.enabledSources.length} 个已启用</span>
 				</div>
-				<OptionSelect
-					aria-label="来源用途"
-					value={filter}
-					onValueChange={setFilter}
-					options={[
-						{ value: 'all', label: `全部来源 · ${SOURCES.length}` },
-						{ value: 'enabled', label: '已启用' },
-						{ value: 'metadata', label: '作品资料与封面' },
-						{ value: 'follow', label: '演员／创作者订阅' },
-						{ value: 'reference', label: '需要额外适配' },
-					]}
-				/>
-				<span className="source-catalog-count">{preferences.enabledSources.length} 个已启用</span>
+				<div className="source-catalog-actions">
+					<Button ref={coverTrigger} variant="outline" size="sm" aria-haspopup="dialog" aria-expanded={priorityOpen === 'cover'} onClick={() => setPriorityOpen('cover')}>
+						<Image aria-hidden="true" />
+						封面选择
+					</Button>
+					<Button
+						ref={metadataTrigger}
+						variant="outline"
+						size="sm"
+						aria-haspopup="dialog"
+						aria-expanded={priorityOpen === 'metadata'}
+						onClick={() => setPriorityOpen('metadata')}
+					>
+						<ListOrdered aria-hidden="true" />
+						资料采用顺序
+					</Button>
+				</div>
 			</div>
 			<Card className="settings-card source-table-card gap-0 py-0 ring-0">
 				<Table aria-label="站点来源" className="source-table">
@@ -302,13 +325,13 @@ export function SourceCatalog({ onAdd, save }: { onAdd: (provider?: FollowProvid
 					<EmptyState
 						compact
 						headingLevel={3}
-						icon={Search}
+						icon={ListFilter}
 						title="没有匹配的来源"
-						description="试试其他名称，或清除当前筛选。"
+						description="切换来源用途，或清除当前筛选。"
 						action={{
 							label: '清除筛选',
+
 							onClick: () => {
-								setSearch('');
 								setFilter('all');
 							},
 						}}
@@ -319,40 +342,25 @@ export function SourceCatalog({ onAdd, save }: { onAdd: (provider?: FollowProvid
 					<span>按需启用 · 配置连接与账号后，在查询中验证</span>
 				</div>
 			</Card>
-			<Collapsible open={priorityOpen} onOpenChange={setPriorityOpen} className="source-priority">
-				<CollapsibleTrigger render={<Button type="button" variant="ghost" size="sm" />}>
-					<ArrowUp />
-					资料采用顺序
-					<ChevronDown className={priorityOpen ? 'rotate-180' : ''} />
-				</CollapsibleTrigger>
-				<CollapsibleContent>
-					<p className="source-detail-note">采用第一个非空值，保留各站原值；仅请求本次选中且已启用的来源。</p>
-					<div className="source-priority-list">
-						{preferences.metadataPriority.map((id, index) => (
-							<div className="source-priority-item" key={id}>
-								<span>
-									<small>{String(index + 1).padStart(2, '0')}</small>
-									{SOURCE_LABELS[id]}
-								</span>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon-xs"
-									disabled={index === 0}
-									aria-label={`提高 ${id} 优先级`}
-									onClick={() => {
-										const priority = [...preferences.metadataPriority];
-										[priority[index - 1], priority[index]] = [priority[index]!, priority[index - 1]!];
-										void save({ metadataPriority: priority });
-									}}
-								>
-									<ArrowUp />
-								</Button>
-							</div>
-						))}
-					</div>
-				</CollapsibleContent>
-			</Collapsible>
+			<SourcePriorityDialog
+				kind="cover"
+				open={priorityOpen === 'cover'}
+				onOpenChange={(open) => setPriorityOpen(open ? 'cover' : null)}
+				returnFocus={coverTrigger}
+				priority={preferences.coverPriority}
+				defaultPriority={DEFAULT_COVER_PRIORITY}
+				additionalSources={COVER_SOURCE_IDS}
+				onChange={(coverPriority) => save({ coverPriority })}
+			/>
+			<SourcePriorityDialog
+				kind="metadata"
+				open={priorityOpen === 'metadata'}
+				onOpenChange={(open) => setPriorityOpen(open ? 'metadata' : null)}
+				returnFocus={metadataTrigger}
+				priority={preferences.metadataPriority}
+				defaultPriority={DEFAULT_METADATA_ORDER}
+				onChange={(metadataPriority) => save({ metadataPriority })}
+			/>
 		</div>
 	);
 }

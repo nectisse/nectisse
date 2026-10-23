@@ -22,19 +22,24 @@ export function SaveWorkButton({
 	const { state, loading, error } = useLibrary();
 	const existing = state.works.find((work) => work.code === code);
 	const [pending, setPending] = useState(false);
+
 	const save = async (replace = false): Promise<void> => {
 		setPending(true);
 		const id = `library-save:${code}`;
 		try {
 			const reply = await window.nectisse.library.save({ taskId, code, coverId, replace });
-			if (reply.ok) toast.success(replace ? '收藏资料已更新' : '作品资料已收藏', { id, description: code });
-			else toast.error(reply.message || '收藏未完成', { id, duration: 8000 });
+			if (reply.ok) {
+				toast.success(replace ? '收藏资料已更新' : '作品资料已收藏', { id, description: code });
+			} else {
+				toast.error(reply.message || '收藏未完成', { id, duration: 8000 });
+			}
 		} catch {
 			toast.error('收藏服务暂未响应，可在作品收藏中重新检查。', { id, duration: 8000 });
 		} finally {
 			setPending(false);
 		}
 	};
+
 	return (
 		<div className="work-save-action">
 			<div>

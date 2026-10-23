@@ -47,6 +47,7 @@ export interface SourceSpec {
 	credential: boolean;
 	available: boolean;
 }
+
 export const SOURCES: SourceSpec[] = ALL_IDS.map((id) => ({
 	id,
 	...catalog[id],
@@ -54,6 +55,7 @@ export const SOURCES: SourceSpec[] = ALL_IDS.map((id) => ({
 	credential: catalog[id].credential === 'cookie',
 	available: catalog[id].metadata || catalog[id].follow,
 }));
+
 export const SOURCE_BY_ID = Object.fromEntries(SOURCES.map((source) => [source.id, source])) as Record<AllSource, (typeof SOURCES)[number]>;
 export const SOURCE_LABELS = Object.fromEntries(SOURCES.map((source) => [source.id, source.name])) as Record<AllSource, string>;
 export const DEFAULT_METADATA_ORDER: SourceId[] = [
@@ -83,5 +85,7 @@ export const DEFAULT_METADATA_ORDER: SourceId[] = [
 	'javbus',
 ];
 export const DEFAULT_ENABLED: AllSource[] = ['dmm', 'r18dev', 'fc2', 'fanbox', 'javdb'];
+
 export const isFollowProvider = (value: string): value is FollowProvider => (FOLLOW_IDS as readonly string[]).includes(value);
+
 export const isMetadataSource = (value: string): value is SourceId => (METADATA_IDS as readonly string[]).includes(value);

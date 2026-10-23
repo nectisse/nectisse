@@ -30,23 +30,21 @@
 .brand {
 	display: flex;
 	align-items: center;
-	gap: 8px;
 	text-align: left;
 	margin: 14px 6px 33px;
 	color: var(--primary);
 	flex-shrink: 0;
 }
-.brand-mark {
-	width: 38px;
-	height: 38px;
-	flex-shrink: 0;
-}
 .brand > span {
-	font:
-		25px/1.1 Georgia,
-		serif;
-	letter-spacing: -0.8px;
 	color: var(--foreground);
+}
+.brand-name {
+	display: block;
+	font-family: 'Snell Roundhand', 'Apple Chancery', 'Brush Script MT', cursive;
+	font-size: 36px;
+	font-weight: 400;
+	line-height: 1;
+	letter-spacing: 0;
 }
 .brand small {
 	display: block;
@@ -228,39 +226,18 @@
 	font-size: 11px;
 }
 .private-space {
-	display: flex;
-	align-items: center;
-	gap: 9px;
 	width: 100%;
 	border-top: 1px solid var(--border);
-	padding: 17px 8px;
+	padding: 14px 12px;
 	margin-top: 10px;
 	text-align: left;
 	font-size: 11px;
-}
-.private-space > span:nth-child(2) {
-	flex: 1;
 }
 .private-space small {
 	display: block;
 	font-size: 9px;
 	color: var(--muted-foreground);
 	margin-top: 2px;
-}
-.private-space > svg {
-	color: var(--subtle);
-}
-.private-symbol {
-	display: grid;
-	place-items: center;
-	width: 30px;
-	height: 30px;
-	border: 1px solid var(--input);
-	border-radius: 8px;
-	font:
-		italic 20px Georgia,
-		serif;
-	color: var(--primary);
 }
 .app-main {
 	flex: 1;
@@ -1767,11 +1744,10 @@ button[data-slot='button'].card-save.is-saved {
 		padding: 0 11px;
 	}
 	.brand {
-		gap: 5px;
 		margin-left: 4px;
 	}
-	.brand > span {
-		font-size: 23px;
+	.brand-name {
+		font-size: 34px;
 	}
 	.brand small {
 		font-size: 7px;

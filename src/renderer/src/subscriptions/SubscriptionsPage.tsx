@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BellPlus, Check, ExternalLink, LoaderCircle, Pause, Play, RefreshCw, Search, Sparkles, Users, X } from 'lucide-react';
+import { ArrowLeft, BellPlus, Check, ExternalLink, LoaderCircle, Pause, Play, RefreshCw, Sparkles, Users, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader, PageToolbar } from '@/components/page-layout';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { OptionSelect } from '@/components/ui/select';
@@ -15,13 +14,16 @@ import { ReviewTabs, StatusBadge } from '../prototype/components';
 import type { FollowProvider, Subscription, FeedEntry } from '../../../shared/subscriptions';
 import { useSubscriptions } from './context';
 import { IdentityAvatar } from './IdentityAvatar';
-import { FOLLOW_IDS, SOURCE_LABELS, SOURCE_BY_ID } from '../../../shared/sources';
+import { FOLLOW_IDS, SOURCE_LABELS } from '../../../shared/sources';
 
 const providerName = (value: FollowProvider): string => SOURCE_LABELS[value];
+
 const date = (value: string): string => (value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '尚未检查');
+
 export function TaskProgress(): React.JSX.Element | null {
 	const { state, invoke } = useSubscriptions();
-	const active = state.tasks.find((task) => ['running', 'cancelling'].includes(task.status));
+	const active = state.tasks.find((task) => task.kind !== 'lookup' && ['running', 'cancelling'].includes(task.status));
+
 	return active ? (
 		<div className="live-task-progress" role="status">
 			<LoaderCircle className="spin" />
@@ -47,11 +49,16 @@ export function TaskProgress(): React.JSX.Element | null {
 function SubscriptionRow({ subscription: sub, onOpen }: { subscription: Subscription; onOpen?: (id: string) => void }): React.JSX.Element {
 	const { state, invoke } = useSubscriptions();
 	const busy = state.tasks.some((task) => task.kind !== 'covers' && ['running', 'cancelling'].includes(task.status));
+
 	const update = async (value: Parameters<typeof invoke>[0]): Promise<void> => {
 		const reply = await invoke(value);
-		if (reply.ok) toast.success('订阅已更新', { id: `subscription:${sub.id}` });
-		else toast.error(reply.message || '操作失败', { id: `subscription:${sub.id}`, duration: 8000 });
+		if (reply.ok) {
+			toast.success('订阅已更新', { id: `subscription:${sub.id}` });
+		} else {
+			toast.error(reply.message || '操作失败', { id: `subscription:${sub.id}`, duration: 8000 });
+		}
 	};
+
 	const status = !sub.following ? '已取消关注' : !sub.enabled ? '已暂停' : sub.autoPaused ? '自动检查已暂停' : '已关注';
 	const nextCheck = !sub.following
 		? '已取消关注'
@@ -192,7 +199,9 @@ function SubscriptionRow({ subscription: sub, onOpen }: { subscription: Subscrip
 		</article>
 	);
 }
+
 type SubscriptionKind = 'actors' | 'creators';
+
 export function SubscriptionList({
 	onAdd,
 	onOpen,
@@ -210,11 +219,14 @@ export function SubscriptionList({
 	const [localKind, setLocalKind] = useState<SubscriptionKind>('actors');
 	const [archived, setArchived] = useState(false);
 	const kind = controlledKind ?? localKind;
+
 	const setKind = (value: SubscriptionKind): void => {
 		setLocalKind(value);
 		onKindChange?.(value);
 	};
+
 	const list = state.subscriptions.filter((sub) => (kind === 'actors' ? sub.provider === 'javdb' : sub.provider !== 'javdb') && (archived || sub.following));
+
 	return (
 		<section className="subscription-list">
 			{showHeading && (
@@ -269,49 +281,28 @@ export function SubscriptionList({
 
 export function SubscriptionsPage({
 	seed,
+	onAdd,
 	onSettings,
 	onWork,
 }: {
 	seed?: { provider: FollowProvider; query: string; token: number; subscriptionId?: string };
+	onAdd: (provider?: FollowProvider) => void;
 	onSettings: () => void;
 	onWork: (code: string) => void;
 }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
-	const [adding, setAdding] = useState(false);
-	const [provider, setProvider] = useState<FollowProvider>('javdb');
-	const [query, setQuery] = useState('');
-	const [taskId, setTaskId] = useState('');
+	const { state } = useSubscriptions();
 	const [selected, setSelected] = useState('');
 	const [kind, setKind] = useState<SubscriptionKind>('actors');
 	useEffect(() => {
 		if (seed) {
-			setAdding(!seed.subscriptionId);
-			setProvider(seed.provider);
 			setKind(seed.provider === 'javdb' ? 'actors' : 'creators');
-			setQuery(seed.query);
-			setTaskId('');
 			setSelected(seed.subscriptionId || '');
 		}
 	}, [seed]);
 	useEffect(() => {
 		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
 	}, [selected]);
-	const task = state.tasks.find((task) => task.id === taskId);
-	const busy = state.tasks.some((task) => task.kind !== 'covers' && ['running', 'cancelling'].includes(task.status));
-	const add = (value: FollowProvider = kind === 'actors' ? 'javdb' : 'fanbox'): void => {
-		setProvider(value);
-		setKind(value === 'javdb' ? 'actors' : 'creators');
-		setAdding(true);
-		setSelected('');
-		setTaskId('');
-	};
-	const sub = state.subscriptions.find((sub) => sub.id === selected);
-	const lookup = async (): Promise<void> => {
-		setTaskId('');
-		const reply = await invoke({ action: 'lookup', provider, query });
-		if (reply.ok) setTaskId(reply.id || '');
-		else toast.error(reply.message || '查询未开始', { id: 'follow-lookup', duration: 8000 });
-	};
+	const sub = state.subscriptions.find((value) => value.id === selected);
 	return (
 		<div className="page subscriptions-page">
 			<PageHeader
@@ -329,7 +320,7 @@ export function SubscriptionsPage({
 								来源与订阅设置
 							</Button>
 						)}
-						<Button size="sm" onClick={() => add(sub?.provider)}>
+						<Button size="sm" onClick={() => onAdd(sub?.provider ?? (kind === 'actors' ? 'javdb' : 'fanbox'))}>
 							<BellPlus />
 							添加关注
 						</Button>
@@ -343,110 +334,7 @@ export function SubscriptionsPage({
 					<CollectedEntries key={sub.id} subscriptionId={sub.id} onWork={onWork} />
 				</>
 			) : (
-				<>
-					{adding && (
-						<section className="settings-card add-subscription">
-							<div className="section-heading">
-								<h2>查找并关注</h2>
-								<Button variant="ghost" size="sm" aria-label="收起添加关注" onClick={() => setAdding(false)}>
-									<X />
-								</Button>
-							</div>
-							<form
-								onSubmit={(event) => {
-									event.preventDefault();
-									void lookup();
-								}}
-							>
-								<div className="follow-lookup-fields">
-									<OptionSelect
-										aria-label="关注来源"
-										value={provider}
-										onValueChange={(value) => {
-											setProvider(value);
-											setTaskId('');
-										}}
-										options={(['javdb', ...FOLLOW_IDS.filter((id) => id !== 'javdb')] as FollowProvider[]).map((id) => ({
-											value: id,
-											label: `${SOURCE_LABELS[id]}${id === 'javdb' ? ' 演员' : ''}`,
-										}))}
-									/>
-									<Input
-										aria-label="主页、账号或演员名"
-										value={query}
-										onChange={(event) => setQuery(event.target.value)}
-										placeholder={
-											provider === 'javdb'
-												? '输入演员名，或粘贴 JavDB 演员主页'
-												: provider === 'fanbox'
-													? '粘贴创作者主页，或输入 FANBOX 账号 id'
-													: '粘贴创作者主页，或输入本站原生身份'
-										}
-										autoComplete="off"
-									/>
-									<Button disabled={busy || !query.trim() || !state.preferences.enabledSources.includes(provider)}>
-										<Search />
-										查询身份
-									</Button>
-								</div>
-							</form>
-							<p className="panel-note">
-								{SOURCE_BY_ID[provider].note}。{provider === 'javdb' ? '请核对演员名与记录类型。' : '按本站主页或身份识别，不承诺全站名称搜索。'}查找不会自动关注。
-								{!state.preferences.enabledSources.includes(provider) && '请先在来源设置中启用此站。'}
-							</p>
-							{task && !['running', 'cancelling'].includes(task.status) && (
-								<>
-									<p className={task.status === 'failed' ? 'source-problem' : 'panel-note'} role="status">
-										{task.phase}
-									</p>
-									{task.candidates.map((candidate) => {
-										const known = state.subscriptions.some((sub) => sub.provider === candidate.provider && sub.ref === candidate.ref && sub.following);
-										return (
-											<article className="follow-candidate" key={candidate.ref}>
-												<IdentityAvatar identity={candidate} />
-												<div>
-													<h3>
-														{candidate.name}
-														<StatusBadge>{candidate.recordType}</StatusBadge>
-													</h3>
-													<p>{candidate.url}</p>
-													{candidate.aliases.length > 0 && <small>{candidate.aliases.join(' · ')}</small>}
-													<p>{candidate.evidence}</p>
-													{candidate.bio && <p>{candidate.bio}</p>}
-												</div>
-												<Button
-													size="sm"
-													disabled={known || busy}
-													onClick={() => {
-														void (async () => {
-															const reply = await invoke({ action: 'follow', taskId: task.id, ref: candidate.ref });
-															if (reply.ok) toast.success(reply.message || '已关注', { id: 'follow-confirm' });
-															else toast.error(reply.message || '关注失败', { id: 'follow-confirm', duration: 8000 });
-															if (reply.ok && reply.id) {
-																setSelected(reply.id);
-																setAdding(false);
-															}
-														})();
-													}}
-												>
-													{known ? (
-														<>
-															<Check />
-															已关注
-														</>
-													) : (
-														'确认关注'
-													)}
-												</Button>
-											</article>
-										);
-									})}
-								</>
-							)}
-						</section>
-					)}
-					<SubscriptionList onAdd={add} onOpen={setSelected} showHeading={false} kind={kind} onKindChange={setKind} />
-				</>
+				<SubscriptionList onAdd={onAdd} onOpen={setSelected} showHeading={false} kind={kind} onKindChange={setKind} />
 			)}
 		</div>
 	);
@@ -461,15 +349,18 @@ function CollectedEntries({ subscriptionId, onWork }: { subscriptionId: string; 
 	const currentPage = Math.min(page, pageCount);
 	const start = (currentPage - 1) * pageSize;
 	const pageEntries = entries.slice(start, start + pageSize);
+
 	useEffect(() => {
 		setPage((value) => Math.min(value, pageCount));
 	}, [pageCount]);
+
 	const changePage = (value: number): void => {
 		setPage(Math.min(Math.max(value, 1), pageCount));
 		const heading = document.getElementById('collected-entry-heading');
 		heading?.focus({ preventScroll: true });
 		heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
 	};
+
 	return (
 		<section className="collected-entries" aria-labelledby="collected-entry-heading">
 			<h2 className="creator-entry-heading" id="collected-entry-heading" tabIndex={-1}>
@@ -489,10 +380,14 @@ function CollectedEntries({ subscriptionId, onWork }: { subscriptionId: string; 
 }
 
 function feedDate(value: string, dateOnly = false): string {
-	if (!value) return '未提供';
+	if (!value) {
+		return '未提供';
+	}
 	if (dateOnly) {
 		const calendarDate = value.match(/^(\d{4})[-./](\d{2})[-./](\d{2})/);
-		if (calendarDate) return `${calendarDate[1]}/${calendarDate[2]}/${calendarDate[3]}`;
+		if (calendarDate) {
+			return `${calendarDate[1]}/${calendarDate[2]}/${calendarDate[3]}`;
+		}
 	}
 	const parsed = new Date(value);
 	return Number.isNaN(parsed.valueOf())
@@ -502,8 +397,9 @@ function feedDate(value: string, dateOnly = false): string {
 
 function feedTitle(entry: FeedEntry): string {
 	const title = entry.title || '来源未提供标题';
-	if (entry.code && title.startsWith(entry.code) && /^[\s·|:：-]/.test(title.slice(entry.code.length)))
+	if (entry.code && title.startsWith(entry.code) && /^[\s·|:：-]/.test(title.slice(entry.code.length))) {
 		return title.slice(entry.code.length).replace(/^[\s·|:：-]+/, '') || title;
+	}
 	return title;
 }
 
@@ -553,11 +449,13 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 	const [selection, setSelected] = useState<FeedEntry>();
 	const selected = state.entries.find((entry) => entry.id === selection?.id) ?? selection;
 	const returnFocus = useRef<HTMLElement | null>(null);
+
 	const open = (entry: FeedEntry): void => {
 		returnFocus.current = document.activeElement as HTMLElement;
 		setSelected(entry);
 		void invoke({ action: 'read', ids: [entry.id], read: true });
 	};
+
 	return (
 		<>
 			{entries.length ? (
@@ -630,25 +528,25 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 										</time>
 									),
 								},
+								{ label: '来源页面', value: <span title={selected.url}>{new URL(selected.url).hostname}</span> },
 								{ label: '发现时间', value: <time dateTime={selected.firstSeenAt}>{date(selected.firstSeenAt)}</time> },
-								{ label: '来源页面', value: new URL(SOURCE_BY_ID[selected.provider].root).hostname },
-								{ label: '收录方式', value: selected.initial ? '初次收录' : '后续收录' },
 							]
 						: []
 				}
-				summary={selected?.summary || ''}
-				summaryLabel={selected?.provider === 'javdb' ? '收录说明' : '来源摘要'}
+				summary={selected?.provider === 'javdb' ? '' : selected?.summary || ''}
 				notice={
-					selected?.restricted
-						? '仅显示来源公开提供的内容。'
-						: selected?.partial
-							? '完整正文尚未取得，可查看原文。'
-							: selected?.provider === 'javdb' && selected.initial
-								? '初次收录的条目可能早已发行，发行日与发现时间分别记录。'
+					selected?.provider === 'javdb'
+						? undefined
+						: selected?.restricted
+							? '仅显示来源公开提供的内容。'
+							: selected?.partial
+								? '完整正文尚未取得，可查看原文。'
 								: undefined
 				}
 				onOpenSource={() => {
-					if (selected) void invoke({ action: 'open', kind: 'entry', id: selected.id });
+					if (selected) {
+						void invoke({ action: 'open', kind: 'entry', id: selected.id });
+					}
 				}}
 				onWork={
 					selected?.code
@@ -663,6 +561,7 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 		</>
 	);
 }
+
 export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void; onAdd: () => void }): React.JSX.Element {
 	const { state, invoke } = useSubscriptions();
 	const [filter, setFilter] = useState<'unread' | 'all'>('unread');
@@ -678,22 +577,34 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 	const currentPage = Math.min(page, pageCount);
 	const start = (currentPage - 1) * pageSize;
 	const pageEntries = entries.slice(start, start + pageSize);
+
 	// Reading the last unread items can remove a page while its detail dialog remains open.
 	useEffect(() => {
 		setPage((value) => Math.min(value, pageCount));
 	}, [pageCount]);
+
 	const changePage = (value: number, focusHeading = true): void => {
 		setPage(Math.min(Math.max(value, 1), pageCount));
 		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
-		if (focusHeading) document.getElementById('page-heading')?.focus({ preventScroll: true });
+		if (focusHeading) {
+			document.getElementById('page-heading')?.focus({ preventScroll: true });
+		}
 	};
+
 	const readPage = async (): Promise<void> => {
 		const ids = pageEntries.filter((entry) => !entry.read).map((entry) => entry.id);
-		if (!ids.length) return;
+
+		if (!ids.length) {
+			return;
+		}
 		const reply = await invoke({ action: 'read', ids, read: true });
-		if (reply.ok) toast.success(`已将本页 ${ids.length} 条更新标为已读`, { id: 'updates-read-page' });
-		else toast.error(reply.message || '已读状态未能保存', { id: 'updates-read-page', duration: 8000 });
+		if (reply.ok) {
+			toast.success(`已将本页 ${ids.length} 条更新标为已读`, { id: 'updates-read-page' });
+		} else {
+			toast.error(reply.message || '已读状态未能保存', { id: 'updates-read-page', duration: 8000 });
+		}
 	};
+
 	return (
 		<div className="page real-updates">
 			<PageHeader

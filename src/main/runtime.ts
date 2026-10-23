@@ -20,26 +20,32 @@ export class RuntimeService extends EventEmitter {
 		return structuredClone(this.state);
 	}
 
-	private publish(next: Omit<RuntimeState, 'revision'>): RuntimeState {
-		this.state = { ...next, revision: this.state.revision + 1 };
-		this.emit('state', this.getState());
-		return this.getState();
-	}
-
 	start(): Promise<RuntimeState> {
-		if (this.checking) return this.checking;
-		if (this.disposed) return Promise.resolve(this.getState());
+		if (this.checking) {
+			return this.checking;
+		}
+		if (this.disposed) {
+			return Promise.resolve(this.getState());
+		}
 		this.publish({ phase: 'starting', message: '正在准备采集环境' });
 		this.checking = (async () => {
 			try {
 				const manifest = JSON.parse(await readFile(this.layout.manifest, 'utf8'));
-				if (manifest.target !== `${process.platform}-${process.arch}`) throw new PythonWorkerError('WRONG_ARCH', '采集环境与应用架构不匹配');
+				if (manifest.target !== `${process.platform}-${process.arch}`) {
+					throw new PythonWorkerError('WRONG_ARCH', '采集环境与应用架构不匹配');
+				}
 				const health = healthSchema.parse(await this.host.run('health'));
-				if (health.pythonVersion !== manifest.pythonVersion) throw new PythonWorkerError('WRONG_RUNTIME', '采集环境版本与随包清单不一致');
-				if (this.disposed) return this.getState();
+				if (health.pythonVersion !== manifest.pythonVersion) {
+					throw new PythonWorkerError('WRONG_RUNTIME', '采集环境版本与随包清单不一致');
+				}
+				if (this.disposed) {
+					return this.getState();
+				}
 				return this.publish({ phase: 'ready', message: '采集环境已就绪', health });
 			} catch (error) {
-				if (this.disposed || error instanceof TaskCancelledError) return this.getState();
+				if (this.disposed || error instanceof TaskCancelledError) {
+					return this.getState();
+				}
 				return this.publish({
 					phase: 'error',
 					errorCode: runtimeDiagnosticCode(error instanceof PythonWorkerError ? error.code : ''),
@@ -57,5 +63,11 @@ export class RuntimeService extends EventEmitter {
 		await this.host.shutdown();
 		await this.checking;
 		this.publish({ phase: 'stopped', message: '采集环境已停止' });
+	}
+
+	private publish(next: Omit<RuntimeState, 'revision'>): RuntimeState {
+		this.state = { ...next, revision: this.state.revision + 1 };
+		this.emit('state', this.getState());
+		return this.getState();
 	}
 }

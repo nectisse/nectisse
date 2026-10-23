@@ -3,13 +3,19 @@ export class InitializationStep {
 	private pending?: Promise<void>;
 	private failed = false;
 	private closed = false;
+
 	constructor(private initialize: () => void | Promise<void>) {}
+
 	run(): Promise<void> {
-		if (this.closed) return Promise.reject(new Error('APP_STOPPING'));
+		if (this.closed) {
+			return Promise.reject(new Error('APP_STOPPING'));
+		}
 		if (!this.pending) {
 			this.pending = Promise.resolve()
 				.then(() => {
-					if (this.closed) throw new Error('APP_STOPPING');
+					if (this.closed) {
+						throw new Error('APP_STOPPING');
+					}
 					return this.initialize();
 				})
 				.catch((error) => {
@@ -19,6 +25,7 @@ export class InitializationStep {
 		}
 		return this.pending;
 	}
+
 	retry(): Promise<void> {
 		if (this.failed) {
 			this.pending = undefined;
@@ -26,6 +33,7 @@ export class InitializationStep {
 		}
 		return this.run();
 	}
+
 	async close(): Promise<void> {
 		this.closed = true;
 		await this.pending?.catch(() => {});

@@ -72,8 +72,11 @@ export function subscriptionFailureContext(error: unknown, stage: SubscriptionSt
 							: 'service_error';
 	return { stage, kind, ...(systemCode.success ? { systemCode: systemCode.data } : {}), ...(sqliteCode !== undefined ? { sqliteCode } : {}) };
 }
+
 function ipcFailureKind(message: unknown): SubscriptionFailureContext['kind'] {
-	if (typeof message !== 'string') return 'ipc_error';
+	if (typeof message !== 'string') {
+		return 'ipc_error';
+	}
 	return message.includes("No handler registered for 'nectisse:subscriptions-get'")
 		? 'ipc_handler_missing'
 		: message.includes('Untrusted IPC sender')
@@ -82,6 +85,7 @@ function ipcFailureKind(message: unknown): SubscriptionFailureContext['kind'] {
 				? 'ipc_serialization'
 				: 'ipc_error';
 }
+
 export function describeSubscriptionFailure(context: SubscriptionFailureContext): string {
 	return `环节：${SUBSCRIPTION_STAGES[context.stage]}（${context.stage}）；类型：${SUBSCRIPTION_FAILURE_KINDS[context.kind]}（${context.kind}）${context.systemCode ? `；系统码：${context.systemCode}` : ''}${context.sqliteCode !== undefined ? `；SQLite：${context.sqliteCode}` : ''}`;
 }

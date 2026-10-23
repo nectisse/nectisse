@@ -2,7 +2,7 @@
 // in-memory prototype, deliberately separate from future source adapters.
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Archive, Check, ChevronRight, Info, LoaderCircle, Moon, Search, Settings2, Sparkles, Sun, Users, WifiOff } from 'lucide-react';
+import { Archive, Check, ChevronRight, LoaderCircle, Moon, Search, Settings2, Sparkles, Sun, Users, WifiOff } from 'lucide-react';
 import type { RuntimeState } from '../../../shared/protocol';
 import { Button } from '@/components/ui/button';
 import { FeedImage } from '@/components/feed-item';
@@ -16,7 +16,6 @@ import { Avatar, CoverChoice, Photo, Poster, QuietButton, ReviewDialog, StatusBa
 import { CreatorPage, UpdatesPage, type Frequency } from './creator-pages';
 import { creators, creatorFor, firstCreator, firstWork, initialReadIds, posts, type Creator, type Post, type Route, type Site, type Work } from './data';
 import { QueryPage, WorkDetail, type DateOverride } from './work-pages';
-import MetadataWorkspace from '../metadata/MetadataWorkspace';
 import type { MetadataState, QueryTask } from '../../../shared/metadata';
 
 type Dialog = { kind: 'source' | 'preview' | 'compare' | 'about' | 'settings' } | { kind: 'post'; post: Post };
@@ -30,16 +29,22 @@ const navigation = [
 
 export default function VisualPrototype({ runtime, bridgeError, onRetry }: { runtime: RuntimeState; bridgeError: boolean; onRetry: () => void }): React.JSX.Element {
 	const [route, setRoute] = useState<Route>({ page: 'query' });
-	const [queryMode, setQueryMode] = useState<'live' | 'demo'>('live');
 	const [activeMetadata, setActiveMetadata] = useState<QueryTask>();
 	const metadataRevision = useRef(-1);
+
 	useEffect(() => {
-		if (!window.nectisse?.metadata) return;
+		if (!window.nectisse?.metadata) {
+			return;
+		}
+
 		const apply = (state: MetadataState): void => {
-			if (state.revision < metadataRevision.current) return;
+			if (state.revision < metadataRevision.current) {
+				return;
+			}
 			metadataRevision.current = state.revision;
 			setActiveMetadata(state.tasks.find((task) => task.id === state.activeId));
 		};
+
 		const unsubscribe = window.nectisse.metadata.onState(apply);
 		void window.nectisse.metadata
 			.getState()
@@ -47,6 +52,7 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 			.catch(() => {});
 		return unsubscribe;
 	}, []);
+
 	const [work, setWork] = useState<Work>(firstWork);
 	const [creator, setCreator] = useState<Creator>(firstCreator);
 	const [theme, setTheme] = useState<'cream' | 'night'>('cream');
@@ -71,56 +77,73 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 	const unreadCount = posts.filter((post) => !read.has(post.id)).length;
 	const selectedCover = coverChoices[work.id] ?? 0;
 	const cover = work.covers[selectedCover] ?? work.covers[0]!;
+
 	const notify = (message: string): void => setNotice({ message });
+
 	const open = (next: Dialog): void => {
 		returnFocus.current = document.activeElement as HTMLElement | null;
 		setDialog(next);
 	};
+
 	const openWork = (next: Work): void => {
 		setWork(next);
 		setRoute({ page: 'detail' });
 		setDialog(null);
 	};
+
 	const openCreator = (next: Creator): void => {
 		setCreator(next);
 		setRoute({ page: 'creator' });
 		setDialog(null);
 	};
+
 	const openPost = (post: Post): void => {
 		open({ kind: 'post', post });
 		setRead((previous) => new Set(previous).add(post.id));
 	};
+
 	const toggleRead = (post: Post): void =>
 		setRead((previous) => {
 			const next = new Set(previous);
-			if (next.has(post.id)) next.delete(post.id);
-			else next.add(post.id);
+			if (next.has(post.id)) {
+				next.delete(post.id);
+			} else {
+				next.add(post.id);
+			}
 			return next;
 		});
+
 	const toggleSaved = (item: Work): void => {
 		setSaved((previous) => {
 			const next = new Set(previous);
-			if (next.has(item.id)) next.delete(item.id);
-			else next.add(item.id);
+			if (next.has(item.id)) {
+				next.delete(item.id);
+			} else {
+				next.add(item.id);
+			}
 			return next;
 		});
 		notify(`${item.id} 的保存状态已切换，仅保留在本次预览中。`);
 	};
+
 	const selectCover = (index: number): void => {
 		setCoverChoices((previous) => ({ ...previous, [work.id]: index }));
 		notify('已切换当前封面预览，没有修改或导出文件。');
 	};
+
 	const queryFor = (value: string): void => {
 		setQuery(value);
 		setSubmittedQuery(value);
 		setRoute({ page: 'query' });
 	};
+
 	const openSources = (): void => {
 		const override = dates[work.id];
 		setDateChoice(override?.manual ? 'manual' : override?.value === work.mirrorDate ? 'mirror' : 'primary');
 		setManualDate(override?.value ?? work.releaseDate);
 		open({ kind: 'source' });
 	};
+
 	const reset = (): void => {
 		setRead(initialReadIds());
 		setSaved(new Set());
@@ -142,15 +165,22 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 		document.documentElement.dataset.theme = theme;
 		document.documentElement.classList.toggle('dark', theme === 'night');
 	}, [theme]);
+
 	useEffect(() => {
 		scroll.current?.scrollTo(0, 0);
 		document.title = `${route.page === 'query' ? '资料查询' : route.page === 'detail' ? work.title : route.page === 'creator' ? creator.name : '更新'} · Nectisse`;
 	}, [route.page, work.id, work.title, creator.id, creator.name]);
+
 	useEffect(() => {
-		if (!notice) return;
+		if (!notice) {
+			return;
+		}
+
 		const timer = setTimeout(() => setNotice(null), 3600);
+
 		return () => clearTimeout(timer);
 	}, [notice]);
+
 	useEffect(() => {
 		const keydown = (event: KeyboardEvent): void => {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -164,6 +194,7 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 				});
 			}
 		};
+
 		window.addEventListener('keydown', keydown);
 		return () => window.removeEventListener('keydown', keydown);
 	}, []);
@@ -182,7 +213,9 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 					className="source-choices"
 					value={dateChoice}
 					onValueChange={(value) => {
-						if (value === 'primary' || value === 'mirror' || value === 'manual') setDateChoice(value);
+						if (value === 'primary' || value === 'mirror' || value === 'manual') {
+							setDateChoice(value);
+						}
 					}}
 				>
 					{(['primary', ...(work.sources.length > 1 ? ['mirror'] : []), 'manual'] as DateChoice[]).map((choice) => (
@@ -306,12 +339,9 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 			<aside className="sidebar">
 				<div className="titlebar-space window-drag" />
 				<Button variant="text" size="text" className="brand" aria-label="Nectisse 资料查询" onClick={() => setRoute({ page: 'query' })}>
-					<svg className="brand-mark" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-						<path d="M10 27V10c0-3 4-4 6-1l10 18V10M10 18c5-6 11-6 16 0" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-						<path d="M6 30c6-3 18-3 24 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity=".5" />
-					</svg>
 					<span>
-						Nectisse<small>A PRIVATE COLLECTION</small>
+						<span className="brand-name">Nectisse</span>
+						<small>A PRIVATE COLLECTION</small>
 					</span>
 				</Button>
 				<p className="nav-label">我的空间</p>
@@ -371,22 +401,15 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 					</QuietButton>
 				</div>
 				<div className="sidebar-bottom">
-					<p className="background-note">
-						关闭窗口后仍在后台运行
-						<br />
-						<kbd>⌘ Q</kbd> 退出 Nectisse
-					</p>
 					<Button variant="ghost" className="nav-item" onClick={() => open({ kind: 'settings' })}>
 						<Settings2 />
 						<span>预览设置</span>
 					</Button>
-					<Button variant="text" size="text" className="private-space" onClick={() => open({ kind: 'about' })}>
-						<span className="private-symbol">N</span>
+					<div className="private-space">
 						<span>
 							私人资料库<small>只属于你的收藏</small>
 						</span>
-						<Info size={14} />
-					</Button>
+					</div>
 				</div>
 			</aside>
 			<section className="app-main">
@@ -413,13 +436,8 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 						)}
 					</nav>
 					<div className="toolbar-right">
-						{route.page === 'query' && (
-							<Button variant="text" size="text" className="demo-badge" onClick={() => setQueryMode((previous) => (previous === 'live' ? 'demo' : 'live'))}>
-								{queryMode === 'live' ? '视觉演示' : '联网查询'}
-							</Button>
-						)}
 						<Button variant="text" size="text" className="demo-badge" onClick={() => open({ kind: 'about' })}>
-							{route.page === 'query' && queryMode === 'live' ? '真实来源' : '模拟数据'}
+							模拟数据
 						</Button>
 						<span className="local-indicator">
 							<i />
@@ -452,24 +470,27 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 							</AlertDescription>
 						</Alert>
 					)}
-					{route.page === 'query' && queryMode === 'live' ? (
-						<MetadataWorkspace />
-					) : route.page === 'query' ? (
+					{route.page === 'query' ? (
 						<QueryPage
 							query={query}
 							submittedQuery={submittedQuery}
 							onChange={setQuery}
 							onSubmit={() => {
 								setSubmittedQuery(query);
-								if (query.trim()) setRecent((previous) => [query.trim(), ...previous.filter((item) => item !== query.trim())].slice(0, 4));
+								if (query.trim()) {
+									setRecent((previous) => [query.trim(), ...previous.filter((item) => item !== query.trim())].slice(0, 4));
+								}
 								notify('已筛选本地模拟资料，没有向原站发送请求。');
 							}}
 							selectedSources={sources}
 							onSource={(source) =>
 								setSources((previous) => {
 									const next = new Set(previous);
-									if (next.has(source)) next.delete(source);
-									else next.add(source);
+									if (next.has(source)) {
+										next.delete(source);
+									} else {
+										next.add(source);
+									}
 									return next;
 								})
 							}
@@ -508,8 +529,11 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 							onFollow={() => {
 								setFollowed((previous) => {
 									const next = new Set(previous);
-									if (next.has(creator.id)) next.delete(creator.id);
-									else next.add(creator.id);
+									if (next.has(creator.id)) {
+										next.delete(creator.id);
+									} else {
+										next.add(creator.id);
+									}
 									return next;
 								});
 								notify('已切换关注状态，仅用于本次预览；已收录的示例动态保留。');
@@ -545,11 +569,11 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 				<footer className="preview-footer">
 					<Button variant="text" size="text" onClick={() => open({ kind: 'about' })}>
 						<i />
-						{route.page === 'query' && queryMode === 'live' ? '资料查询 · 来源记录与封面缓存在本机' : '视觉预览 · 虚构内容，不连接原站'}
+						视觉预览 · 虚构内容，不连接原站
 					</Button>
 					<div className="runtime-indicator" role="status" data-testid="runtime-status" data-phase={bridgeError ? 'error' : runtime.phase}>
 						{activeMetadata || runtime.phase === 'starting' ? <LoaderCircle className="spin" /> : bridgeError || runtime.phase === 'error' ? <WifiOff /> : <Check />}
-						<span>{activeMetadata ? activeMetadata.phase : bridgeError ? '应用通信未就绪' : runtime.phase === 'ready' ? '采集环境就绪' : runtime.message}</span>
+						<span>{activeMetadata?.phase ?? (bridgeError ? '应用通信未就绪' : runtime.phase === 'ready' ? '采集环境就绪' : runtime.message)}</span>
 						{activeMetadata && (
 							<Button
 								variant="text"
@@ -588,7 +612,8 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 					readingPost
 						? [
 								{ label: '发布时间', value: readingPost.publishedAt.replaceAll('.', '/') },
-								{ label: '收录方式', value: '虚构动态 · 演示' },
+								{ label: '来源页面', value: readingPost.source },
+								{ label: '发现时间', value: '示例未提供' },
 							]
 						: []
 				}

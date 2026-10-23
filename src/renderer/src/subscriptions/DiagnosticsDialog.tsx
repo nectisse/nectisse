@@ -10,7 +10,9 @@ import { DIAGNOSTIC_DESCRIPTIONS, type DiagnosticReport } from '../../../shared/
 import { describeSubscriptionFailure } from '../../../shared/subscription-failure';
 
 const localTime = (value: string): string => new Date(value).toLocaleString('zh-CN', { hour12: false });
+
 const phases = { starting: '正在准备', ready: '已就绪', error: '自检失败', stopped: '已停止', unavailable: '暂不可用' };
+
 export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolean; onClose: () => void; returnFocus: RefObject<HTMLButtonElement | null> }): React.JSX.Element {
 	const [report, setReport] = useState<DiagnosticReport>();
 	const [loading, setLoading] = useState(false);
@@ -18,23 +20,35 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 	const [copied, setCopied] = useState(false);
 	const [error, setError] = useState('');
 	const generation = useRef(0);
+
 	const refresh = useCallback(async (): Promise<void> => {
 		const request = ++generation.current;
 		setLoading(true);
 		setError('');
 		setCopied(false);
 		try {
-			if (!window.nectisse?.diagnostics) throw new Error('Unavailable');
+			if (!window.nectisse?.diagnostics) {
+				throw new Error('Unavailable');
+			}
 			const next = await window.nectisse.diagnostics.getReport();
-			if (generation.current === request) setReport(next);
+			if (generation.current === request) {
+				setReport(next);
+			}
 		} catch {
-			if (generation.current === request) setError('诊断日志暂时无法读取，请重试或重新打开应用。');
+			if (generation.current === request) {
+				setError('诊断日志暂时无法读取，请重试或重新打开应用。');
+			}
 		} finally {
-			if (generation.current === request) setLoading(false);
+			if (generation.current === request) {
+				setLoading(false);
+			}
 		}
 	}, []);
+
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			return;
+		}
 		setReport(undefined);
 		setCopying(false);
 		void refresh();
@@ -42,6 +56,7 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 			generation.current++;
 		};
 	}, [open, refresh]);
+
 	const copy = async (): Promise<void> => {
 		const request = generation.current;
 		setCopying(true);
@@ -54,19 +69,28 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 					setReport(reply.report);
 					setCopied(true);
 					toast.success('诊断信息已复制', { id: 'diagnostics-copy' });
-				} else toast.error('未能写入剪贴板，请重试。', { id: 'diagnostics-copy', duration: 8000 });
+				} else {
+					toast.error('未能写入剪贴板，请重试。', { id: 'diagnostics-copy', duration: 8000 });
+				}
 			}
 		} catch {
-			if (generation.current === request) toast.error('诊断信息暂时无法复制，请重试。', { id: 'diagnostics-copy', duration: 8000 });
+			if (generation.current === request) {
+				toast.error('诊断信息暂时无法复制，请重试。', { id: 'diagnostics-copy', duration: 8000 });
+			}
 		} finally {
-			if (generation.current === request) setCopying(false);
+			if (generation.current === request) {
+				setCopying(false);
+			}
 		}
 	};
+
 	return (
 		<Dialog
 			open={open}
 			onOpenChange={(next) => {
-				if (!next) onClose();
+				if (!next) {
+					onClose();
+				}
 			}}
 		>
 			<DialogContent className="diagnostics-dialog" finalFocus={() => (returnFocus.current?.isConnected ? returnFocus.current : document.getElementById('page-heading'))}>

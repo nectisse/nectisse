@@ -21,7 +21,9 @@ test('来源页面覆盖完整登记目录，独立图床按图片域名清单�
 		'https://video.dmm.co.jp:444/work',
 		'javascript:alert(1)',
 		'not a URL',
-	]) assert.equal(allowedSourceUrl('dmm', value), undefined, value);
+	]) {
+		assert.equal(allowedSourceUrl('dmm', value), undefined, value);
+	}
 	assert.equal(allowedSourceUrl('dmm', 'https://pics.dmm.co.jp/cover.jpg', 'image'), 'https://pics.dmm.co.jp/cover.jpg');
 	assert.equal(allowedSourceUrl('r18dev', 'https://pics.dmm.co.jp/cover.jpg', 'image'), 'https://pics.dmm.co.jp/cover.jpg');
 	assert.equal(allowedSourceUrl('r18dev', 'https://pics.dmm.co.jp/cover.jpg'), undefined);

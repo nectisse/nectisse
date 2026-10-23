@@ -1,6 +1,6 @@
 .entry-dialog {
-	width: min(680px, calc(100vw - 64px));
-	max-height: min(680px, calc(100dvh - 64px));
+	width: min(760px, calc(100vw - 64px));
+	max-height: min(820px, calc(100dvh - 64px));
 }
 .entry-dialog-bar {
 	display: flex;
@@ -46,8 +46,8 @@
 }
 .entry-dialog-title {
 	margin: 0;
-	font-size: 17px;
-	line-height: 1.55;
+	font-size: 16px;
+	line-height: 24px;
 	font-weight: 550;
 	overflow-wrap: anywhere;
 }
@@ -55,7 +55,7 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	margin: 12px 0 18px;
+	margin: 10px 0 16px;
 	color: var(--muted-foreground);
 	font-size: 11px;
 	overflow-wrap: anywhere;
@@ -69,29 +69,21 @@
 	height: 24px;
 	font-size: 11px;
 }
-.entry-dialog-overview {
-	display: grid;
-	grid-template-columns: 160px minmax(0, 1fr);
-	gap: 20px;
-	align-items: start;
-	padding: 16px 0;
-	border-top: 1px solid var(--border);
-	border-bottom: 1px solid var(--border);
-}
-.entry-dialog-media {
-	min-width: 0;
-}
 .entry-dialog .entry-detail-image {
 	position: relative;
 	isolation: isolate;
 	display: grid;
 	place-items: center;
 	width: 100%;
-	aspect-ratio: 4 / 3;
+	height: min(420px, 48dvh);
+	margin-bottom: 18px;
 	border: 1px solid var(--border);
 	border-radius: 6px;
 	background: var(--muted);
 	overflow: hidden;
+}
+.entry-dialog .entry-detail-image:has(.feed-image-placeholder) {
+	height: 132px;
 }
 .entry-dialog .entry-detail-image img {
 	position: absolute;
@@ -110,26 +102,13 @@
 	width: 22px;
 	height: 22px;
 }
-.entry-dialog-image-toggle[data-slot='button'] {
-	display: flex;
-	margin: 6px auto 0;
-	font-size: 10px;
-	font-weight: 400;
-	color: var(--muted-foreground);
-}
-.entry-dialog-overview[data-image-expanded='true'] {
-	grid-template-columns: minmax(0, 1fr);
-}
-.entry-dialog-overview[data-image-expanded='true'] .entry-detail-image {
-	aspect-ratio: auto;
-	height: min(300px, 40dvh);
-}
 .entry-dialog-facts {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 16px 20px;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
 	min-width: 0;
-	padding-top: 2px;
+	padding-top: 14px;
+	border-top: 1px solid var(--border);
 }
 .entry-dialog-facts > div {
 	min-width: 0;

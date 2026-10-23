@@ -42,6 +42,7 @@ const outcomeSchema = z.object({
 	avatarUrl: z.string().max(2000).optional(),
 });
 export const PROVIDER_ROOTS = Object.fromEntries(SOURCES.filter((row) => row.follow).map((row) => [row.id, row.root])) as Record<FollowProvider, string>;
+
 export class SubscriptionsService extends EventEmitter {
 	private revision = Date.now();
 	private active: { task: FollowTask; controller: AbortController; promise: Promise<void> } | undefined;
@@ -52,6 +53,7 @@ export class SubscriptionsService extends EventEmitter {
 	private commands = 0;
 	private cachePrepared = false;
 	private secureStorageWarning = false;
+
 	constructor(
 		readonly store: SubscriptionStore,
 		private host: Pick<PythonTaskHost, 'run'>,
@@ -69,43 +71,34 @@ export class SubscriptionsService extends EventEmitter {
 				this.publish();
 				throw error;
 			}
-			if (this.notice === '订阅封面缓存未准备完成，请检查应用数据目录') this.notice = '';
+			if (this.notice === '订阅封面缓存未准备完成，请检查应用数据目录') {
+				this.notice = '';
+			}
 			this.publish();
 		});
 		void this.initialization.run().catch(() => {});
 	}
+
 	initialize(): Promise<void> {
 		return this.initialization.retry();
 	}
-	private async prepareCache(): Promise<void> {
-		const cache = join(this.store.root, 'cache', 'subscription-covers');
-		await mkdir(cache, { recursive: true, mode: 0o700 });
-		const indexed = new Set(this.store.images().map((row) => `${row.asset.sha256}.image`));
-		for (const file of await readdir(cache))
-			if (/^\.temporary-[a-f0-9-]+$/.test(file) || (/^[a-f0-9]{64}\.image$/.test(file) && !indexed.has(file))) await rm(join(cache, file), { force: true });
-		for (const row of this.store.images()) {
-			try {
-				const bytes = await readFile(join(cache, `${row.asset.sha256}.image`));
-				if (bytes.length !== row.asset.bytes || createHash('sha256').update(bytes).digest('hex') !== row.asset.sha256) throw new Error('Image mismatch');
-			} catch {
-				this.store.dropImage(row.url);
-			}
-		}
-		for (const entry of this.store.entries())
-			if (!entry.imageAsset && entry.imageCache?.status === 'loading')
-				this.store.setImageCache([entry.id], { ...entry.imageCache, status: 'queued', attempts: Math.max(0, entry.imageCache.attempts - 1) });
-		this.cachePrepared = true;
-	}
+
 	getState(): SubscriptionsState {
 		const state = {
 			revision: this.revision,
+
 			preferences: readSubscriptionPart('preferences', () => this.store.preferences()),
+
 			subscriptions: readSubscriptionPart('subscriptions', () => this.store.subscriptions()),
+
 			entries: readSubscriptionPart('entries', () => this.store.entries()),
+
 			tasks: readSubscriptionPart('tasks', () => this.store.tasks()),
+
 			sources: readSubscriptionPart('sources', () =>
 				SOURCES.map((source) => ({ id: source.id, credentialPresent: this.store.credentialPresent(source.id), ...this.store.source(source.id) })),
 			),
+
 			encryptionAvailable: false,
 			notice: this.notice,
 		};
@@ -126,32 +119,33 @@ export class SubscriptionsService extends EventEmitter {
 		}
 		return state;
 	}
-	private publish(): void {
-		this.revision++;
-		this.emit('state', this.getState());
-	}
+
 	refresh(): void {
 		this.publish();
 	}
-	private save(task: FollowTask): void {
-		this.store.saveTask(task);
-		this.publish();
-	}
+
 	start(): void {
-		if (this.timer || this.disposed) return;
+		if (this.timer || this.disposed) {
+			return;
+		}
+
 		const tick = (): void => {
 			void this.tick().catch(() => {
 				this.notice = '自动检查或封面补齐未完成，请检查来源与缓存状态';
 				this.publish();
 			});
 		};
+
 		this.timer = setInterval(tick, 30_000);
 		this.timer.unref();
 		tick();
 	}
+
 	async tick(): Promise<void> {
 		await this.initialization.run();
-		if (this.disposed || this.active || this.commands) return;
+		if (this.disposed || this.active || this.commands) {
+			return;
+		}
 		const preferences = this.store.preferences();
 		const due =
 			preferences.automatic &&
@@ -167,17 +161,25 @@ export class SubscriptionsService extends EventEmitter {
 						this.store.source(sub.provider).cooldownUntil <= Date.now(),
 				)
 				.sort((a, b) => a.nextCheckAt.localeCompare(b.nextCheckAt))[0];
-		if (due) this.launch('check', due.provider, '', due);
-		else this.launchImages();
+		if (due) {
+			this.launch('check', due.provider, '', due);
+		} else {
+			this.launchImages();
+		}
 	}
+
 	async command(input: FollowCommand): Promise<CommandReply> {
 		this.commands++;
 		try {
 			await this.initialization.run();
 			const command = followCommandSchema.parse(input);
-			if (this.disposed) throw new Error('应用正在退出');
+			if (this.disposed) {
+				throw new Error('应用正在退出');
+			}
 			// Background images yield their worker to an explicit user operation.
-			if (['lookup', 'follow', 'check', 'credential', 'preferences'].includes(command.action)) await this.yieldImages();
+			if (['lookup', 'follow', 'check', 'credential', 'preferences'].includes(command.action)) {
+				await this.yieldImages();
+			}
 			if (command.action === 'preferences') {
 				if (command.value.proxyMode === 'custom') {
 					const url = new URL(command.value.proxyUrl);
@@ -189,31 +191,42 @@ export class SubscriptionsService extends EventEmitter {
 						url.pathname !== '/' ||
 						url.search ||
 						url.hash
-					)
+					) {
 						throw new Error('请输入不含账号密码的 HTTP / HTTPS / SOCKS 代理地址');
+					}
 				}
 				const previous = this.store.preferences();
 				this.store.savePreferences(command.value);
-				if (previous.creatorMinutes !== command.value.creatorMinutes || previous.performerMinutes !== command.value.performerMinutes)
-					for (const sub of this.store.subscriptions())
+				if (previous.creatorMinutes !== command.value.creatorMinutes || previous.performerMinutes !== command.value.performerMinutes) {
+					for (const sub of this.store.subscriptions()) {
 						if (sub.lastCheckedAt && sub.intervalMinutes === null) {
 							const minutes = sub.provider === 'javdb' ? command.value.performerMinutes : command.value.creatorMinutes;
 							sub.nextCheckAt = new Date(Math.max(Date.parse(sub.lastCheckedAt) + minutes * 60_000, this.store.source(sub.provider).cooldownUntil)).toISOString();
 							this.store.saveSubscription(sub);
 						}
+					}
+				}
 				if (
 					previous.proxyMode !== command.value.proxyMode ||
 					previous.proxyUrl !== command.value.proxyUrl ||
 					previous.fanboxTransport !== command.value.fanboxTransport ||
 					previous.javdbTransport !== command.value.javdbTransport ||
 					JSON.stringify(previous.sourceTransports) !== JSON.stringify(command.value.sourceTransports)
-				)
-					for (const provider of ALL_IDS)
+				) {
+					for (const provider of ALL_IDS) {
 						this.store.saveSource(provider, { ...this.store.source(provider), cooldownUntil: 0, state: '连接设置已更改，尚未验证', message: '' });
-				if (this.active && !command.value.enabledSources.includes(this.active.task.provider)) await this.cancel(this.active.task.id);
+					}
+				}
+				if (this.active && !command.value.enabledSources.includes(this.active.task.provider)) {
+					await this.cancel(this.active.task.id);
+				}
 			} else if (command.action === 'credential') {
-				if (!SOURCE_BY_ID[command.provider].credential) throw new Error('此来源当前不接收 Cookie');
-				if (this.active?.task.provider === command.provider) throw new Error('请先取消该来源正在执行的任务，再修改凭据');
+				if (!SOURCE_BY_ID[command.provider].credential) {
+					throw new Error('此来源当前不接收 Cookie');
+				}
+				if (this.active?.task.provider === command.provider) {
+					throw new Error('请先取消该来源正在执行的任务，再修改凭据');
+				}
 				this.store.saveCredential(command.provider, command.cookie.trim());
 				this.store.saveSource(command.provider, {
 					...this.store.source(command.provider),
@@ -225,10 +238,15 @@ export class SubscriptionsService extends EventEmitter {
 			} else if (command.action === 'lookup') {
 				return { ok: true, id: this.launch('lookup', command.provider, command.query) };
 			} else if (command.action === 'follow') {
-				if (this.active) throw new Error('请先等待或取消当前查询');
+				if (this.active) {
+					throw new Error('请先等待或取消当前查询');
+				}
+
 				const task = this.store.tasks().find((task) => task.id === command.taskId && ['succeeded', 'partial'].includes(task.status));
 				const candidate = task?.candidates.find((item) => item.ref === command.ref);
-				if (!candidate || candidate.url !== canonical(candidate.provider, candidate.ref)) throw new Error('请先查询并确认有效候选');
+				if (!candidate || candidate.url !== canonical(candidate.provider, candidate.ref)) {
+					throw new Error('请先查询并确认有效候选');
+				}
 				const sub = this.store.follow(candidate);
 				this.publish();
 				try {
@@ -241,8 +259,12 @@ export class SubscriptionsService extends EventEmitter {
 				return { ok: true, id: sub.id, message: '已关注；首次检查状态显示在订阅中' };
 			} else if (command.action === 'update') {
 				const sub = this.store.subscription(command.id);
-				if (!sub) throw new Error('该订阅不存在');
-				if (command.intervalMinutes != null && sub.provider === 'javdb' && command.intervalMinutes < 360) throw new Error('演员新作检查间隔至少 360 分钟');
+				if (!sub) {
+					throw new Error('该订阅不存在');
+				}
+				if (command.intervalMinutes != null && sub.provider === 'javdb' && command.intervalMinutes < 360) {
+					throw new Error('演员新作检查间隔至少 360 分钟');
+				}
 				if (command.enabled !== undefined) {
 					sub.enabled = command.enabled;
 					sub.autoPaused = false;
@@ -262,26 +284,37 @@ export class SubscriptionsService extends EventEmitter {
 				}
 				this.store.saveSubscription(sub);
 				if ((!sub.enabled || !sub.following) && this.active?.task.subscriptionId === sub.id) {
-					if (this.active.task.kind === 'covers') await this.yieldImages('subscription_paused');
-					else await this.cancel(this.active.task.id);
+					if (this.active.task.kind === 'covers') {
+						await this.yieldImages('subscription_paused');
+					} else {
+						await this.cancel(this.active.task.id);
+					}
 				}
 			} else if (command.action === 'check') {
 				const sub = this.store.subscription(command.id);
-				if (!sub?.following) throw new Error('请先关注这个账号或演员');
-				if (!sub.enabled) throw new Error('订阅已暂停，请先恢复');
+				if (!sub?.following) {
+					throw new Error('请先关注这个账号或演员');
+				}
+				if (!sub.enabled) {
+					throw new Error('订阅已暂停，请先恢复');
+				}
 				return { ok: true, id: this.launch('check', sub.provider, '', sub) };
-			} else if (command.action === 'cancel') await this.cancel(command.id);
-			else if (command.action === 'retry-images') {
-				for (const entry of this.store.entries())
+			} else if (command.action === 'cancel') {
+				await this.cancel(command.id);
+			} else if (command.action === 'retry-images') {
+				for (const entry of this.store.entries()) {
 					if (
 						(!command.subscriptionId || entry.subscriptionId === command.subscriptionId) &&
 						entry.thumbnailUrl &&
 						!entry.imageAsset &&
 						entry.imageCache?.status !== 'loading'
-					)
+					) {
 						this.store.setImageCache([entry.id], { status: 'queued', attempts: 0, nextAttemptAt: 0, reason: '' });
-			} else if (command.action === 'read') this.store.markRead(command.ids, command.read);
-			else if (command.action === 'open') {
+					}
+				}
+			} else if (command.action === 'read') {
+				this.store.markRead(command.ids, command.read);
+			} else if (command.action === 'open') {
 				const entry = command.kind === 'entry' ? this.store.entry(command.id) : undefined;
 				const sub = command.kind === 'subscription' ? this.store.subscription(command.id) : entry ? this.store.subscription(entry.subscriptionId) : undefined;
 				const source = command.kind === 'source' ? SOURCES.find((row) => row.id === command.id) : undefined;
@@ -291,7 +324,9 @@ export class SubscriptionsService extends EventEmitter {
 						: !entry && sub && sub.url === canonical(sub.provider, sub.ref)
 							? sub.url
 							: source?.root;
-				if (url) await this.openExternal(url);
+				if (url) {
+					await this.openExternal(url);
+				}
 			}
 			this.publish();
 			return { ok: true };
@@ -305,11 +340,135 @@ export class SubscriptionsService extends EventEmitter {
 			this.launchImages();
 		}
 	}
+
+	async image(sha256: string): Promise<{ bytes: Buffer; asset: ImageAsset } | undefined> {
+		if (!/^[a-f0-9]{64}$/.test(sha256)) {
+			return;
+		}
+
+		const image = this.store.images().find((row) => row.asset.sha256 === sha256);
+
+		if (!image) {
+			return;
+		}
+		try {
+			const bytes = await readFile(join(this.store.root, 'cache/subscription-covers', `${sha256}.image`));
+			if (bytes.length === image.asset.bytes && createHash('sha256').update(bytes).digest('hex') === sha256) {
+				return { bytes, asset: image.asset };
+			}
+		} catch {
+			/* 缓存缺失保留内容正文。 */
+		}
+		if (!this.disposed) {
+			for (const row of this.store.images()) {
+				if (row.asset.sha256 === sha256) {
+					this.store.dropImage(row.url);
+				}
+			}
+			this.publish();
+			this.launchImages();
+		}
+	}
+
+	async cancel(id: string): Promise<void> {
+		const active = this.active;
+		if (!active || active.task.id !== id) {
+			return;
+		}
+		active.task.status = 'cancelling';
+		active.task.cancelRequestedAt = new Date().toISOString();
+		active.task.phase = '正在停止请求与清理工作者';
+		try {
+			this.save(active.task);
+			if (active.task.kind === 'covers') {
+				for (const id of active.task.imageIds ?? []) {
+					const entry = this.store.entry(id);
+					if (entry && !entry.imageAsset) {
+						this.store.setImageCache([id], { status: 'cancelled', attempts: entry.imageCache?.attempts ?? 0, nextAttemptAt: 0, reason: 'cancelled' });
+					}
+				}
+			} else if (active.task.subscriptionId) {
+				const sub = this.store.subscription(active.task.subscriptionId);
+				if (sub) {
+					sub.autoPaused = true;
+					this.store.saveSubscription(sub);
+				}
+			}
+		} finally {
+			active.controller.abort();
+		}
+		await active.promise;
+	}
+
+	async stop(): Promise<void> {
+		this.disposed = true;
+		if (this.timer) {
+			clearInterval(this.timer);
+		}
+		const active = this.active;
+		if (active) {
+			active.task.status = 'interrupted';
+			if (active.task.kind !== 'covers' && active.task.subscriptionId) {
+				const sub = this.store.subscription(active.task.subscriptionId);
+				if (sub) {
+					sub.autoPaused = true;
+					this.store.saveSubscription(sub);
+				}
+			}
+			active.controller.abort();
+			await active.promise;
+		}
+		await this.initialization.close();
+	}
+
+	private async prepareCache(): Promise<void> {
+		const cache = join(this.store.root, 'cache', 'subscription-covers');
+		await mkdir(cache, { recursive: true, mode: 0o700 });
+		const indexed = new Set(this.store.images().map((row) => `${row.asset.sha256}.image`));
+		for (const file of await readdir(cache)) {
+			if (/^\.temporary-[a-f0-9-]+$/.test(file) || (/^[a-f0-9]{64}\.image$/.test(file) && !indexed.has(file))) {
+				await rm(join(cache, file), { force: true });
+			}
+		}
+		for (const row of this.store.images()) {
+			try {
+				const bytes = await readFile(join(cache, `${row.asset.sha256}.image`));
+				if (bytes.length !== row.asset.bytes || createHash('sha256').update(bytes).digest('hex') !== row.asset.sha256) {
+					throw new Error('Image mismatch');
+				}
+			} catch {
+				this.store.dropImage(row.url);
+			}
+		}
+		for (const entry of this.store.entries()) {
+			if (!entry.imageAsset && entry.imageCache?.status === 'loading') {
+				this.store.setImageCache([entry.id], { ...entry.imageCache, status: 'queued', attempts: Math.max(0, entry.imageCache.attempts - 1) });
+			}
+		}
+		this.cachePrepared = true;
+	}
+
+	private publish(): void {
+		this.revision++;
+		this.emit('state', this.getState());
+	}
+
+	private save(task: FollowTask): void {
+		this.store.saveTask(task);
+		this.publish();
+	}
+
 	private launch(kind: 'lookup' | 'check', provider: FollowProvider, query: string, sub?: Subscription): string {
-		if (this.active) throw new Error('已有订阅查询正在进行，请先取消或等待完成');
-		if (!this.store.preferences().enabledSources.includes(provider)) throw new Error('该来源已关闭，请先在设置中启用');
+		if (this.active) {
+			throw new Error('已有订阅查询正在进行，请先取消或等待完成');
+		}
+		if (!this.store.preferences().enabledSources.includes(provider)) {
+			throw new Error('该来源已关闭，请先在设置中启用');
+		}
 		const source = this.store.source(provider);
-		if (source.cooldownUntil > Date.now()) throw new Error(`来源冷却至 ${new Date(source.cooldownUntil).toLocaleTimeString('zh-CN')}，本次未发送请求`);
+		if (source.cooldownUntil > Date.now()) {
+			throw new Error(`来源冷却至 ${new Date(source.cooldownUntil).toLocaleTimeString('zh-CN')}，本次未发送请求`);
+		}
 		if (sub) {
 			sub.autoPaused = false;
 			this.store.saveSubscription(sub);
@@ -338,28 +497,39 @@ export class SubscriptionsService extends EventEmitter {
 		});
 		return task.id;
 	}
+
 	private running(task: FollowTask, signal: AbortSignal): boolean {
 		return task.status === 'running' && !signal.aborted && !this.disposed;
 	}
+
 	private async permit(task: FollowTask, signal: AbortSignal, source: string): Promise<void> {
 		if (
 			!this.running(task, signal) ||
 			source !== task.provider ||
 			(task.kind !== 'covers' && task.requests >= 24) ||
 			!this.store.preferences().enabledSources.includes(task.provider)
-		)
+		) {
 			throw new TaskCancelledError();
+		}
 		const policy = this.store.source(task.provider);
-		if (policy.cooldownUntil > Date.now()) throw new Error('来源冷却中');
+		if (policy.cooldownUntil > Date.now()) {
+			throw new Error('来源冷却中');
+		}
 		const wait = this.gate ? 0 : Math.max(0, policy.nextRequestAt - Date.now());
 		task.phase =
 			task.kind === 'covers'
 				? `${SOURCE_BY_ID[task.provider].name} · 封面 ${task.completed ?? 0}/${task.total} · ${wait ? '等待站点间隔' : '正在缓存'}`
 				: `${SOURCE_BY_ID[task.provider].name} · ${wait ? '等待站点间隔' : '正在查询'}（${task.requests + 1}/24）`;
 		this.save(task);
-		if (wait) await delay(wait, undefined, { signal });
-		if (this.gate) await this.gate(task.provider, signal);
-		if (!this.running(task, signal) || !this.store.preferences().enabledSources.includes(task.provider)) throw new TaskCancelledError();
+		if (wait) {
+			await delay(wait, undefined, { signal });
+		}
+		if (this.gate) {
+			await this.gate(task.provider, signal);
+		}
+		if (!this.running(task, signal) || !this.store.preferences().enabledSources.includes(task.provider)) {
+			throw new TaskCancelledError();
+		}
 		this.store.saveSource(task.provider, {
 			...this.store.source(task.provider),
 			nextRequestAt: Date.now() + (this.gate && task.provider === 'javdb' ? 3000 : this.intervalMs),
@@ -367,12 +537,15 @@ export class SubscriptionsService extends EventEmitter {
 		task.requests++;
 		this.save(task);
 	}
+
 	private async execute(task: FollowTask, signal: AbortSignal, query: string, sub?: Subscription): Promise<void> {
 		let discoveredAt = '';
 		try {
 			const preferences = this.store.preferences();
 			const proxy = await this.resolveProxy(PROVIDER_ROOTS[task.provider]);
-			if (!this.running(task, signal)) return;
+			if (!this.running(task, signal)) {
+				return;
+			}
 			const transport = sourceTransport(task.provider, preferences);
 			const outcome = outcomeSchema.parse(
 				await this.host.run(
@@ -391,19 +564,29 @@ export class SubscriptionsService extends EventEmitter {
 					{
 						signal,
 						timeoutMs: 60_000,
+
 						onRequest: (request) => this.permit(task, signal, request.source),
+
 						onProgress: (payload) => {
-							if (payload.event !== 'entry' || !sub || !this.running(task, signal)) return;
+							if (payload.event !== 'entry' || !sub || !this.running(task, signal)) {
+								return;
+							}
 							const entry = entryInputSchema.parse(payload.entry);
-							if (!validFollowEntry(task.provider, sub.ref, entry)) throw new Error('条目身份不属于当前来源');
+							if (!validFollowEntry(task.provider, sub.ref, entry)) {
+								throw new Error('条目身份不属于当前来源');
+							}
 							discoveredAt ||= new Date().toISOString();
-							if (this.store.upsertEntry(sub, entry, discoveredAt)) task.added++;
+							if (this.store.upsertEntry(sub, entry, discoveredAt)) {
+								task.added++;
+							}
 							this.save(task);
 						},
 					},
 				),
 			);
-			if (!this.running(task, signal)) return;
+			if (!this.running(task, signal)) {
+				return;
+			}
 			task.candidates = (outcome.candidates ?? []).filter(
 				(candidate) => candidate.provider === task.provider && candidate.url === canonical(candidate.provider, candidate.ref),
 			);
@@ -419,7 +602,9 @@ export class SubscriptionsService extends EventEmitter {
 			if (sub) {
 				const latest = this.store.subscription(sub.id)!;
 				if (outcome.avatarUrl) {
-					if (latest.avatarUrl !== outcome.avatarUrl) delete latest.avatarAsset;
+					if (latest.avatarUrl !== outcome.avatarUrl) {
+						delete latest.avatarAsset;
+					}
 					latest.avatarUrl = outcome.avatarUrl;
 				}
 				latest.lastCheckedAt = new Date().toISOString();
@@ -437,7 +622,9 @@ export class SubscriptionsService extends EventEmitter {
 				this.store.saveSubscription(latest);
 			}
 			const imageIssue = !cooling ? await this.cacheAvatars(task, signal, sub ? [this.store.subscription(sub.id)!] : task.candidates, sub) : false;
-			if (!this.running(task, signal)) return;
+			if (!this.running(task, signal)) {
+				return;
+			}
 			if (imageIssue && sub) {
 				const latest = this.store.subscription(sub.id)!;
 				latest.lastError = [latest.lastError, '部分头像或封面未取得，已保留资料与正文'].filter(Boolean).join('；');
@@ -472,12 +659,17 @@ export class SubscriptionsService extends EventEmitter {
 			this.launchImages();
 		}
 	}
+
 	private async cacheAvatars(task: FollowTask, signal: AbortSignal, profiles: FollowCandidate[], subscription?: Subscription): Promise<boolean> {
 		const cache = join(this.store.root, 'cache', 'subscription-covers');
 		let issue = false;
 		for (const profile of profiles.slice(0, 8)) {
-			if (!this.running(task, signal) || this.store.source(task.provider).cooldownUntil > Date.now()) break;
-			if (!profile.avatarUrl || !allowedSourceUrl(task.provider, profile.avatarUrl, 'image')) continue;
+			if (!this.running(task, signal) || this.store.source(task.provider).cooldownUntil > Date.now()) {
+				break;
+			}
+			if (!profile.avatarUrl || !allowedSourceUrl(task.provider, profile.avatarUrl, 'image')) {
+				continue;
+			}
 			let asset = this.store.image(profile.avatarUrl);
 			if (asset) {
 				try {
@@ -487,7 +679,9 @@ export class SubscriptionsService extends EventEmitter {
 					asset = undefined;
 				}
 			}
-			if (!this.running(task, signal)) break;
+			if (!this.running(task, signal)) {
+				break;
+			}
 			if (!asset) {
 				if (task.requests >= 24) {
 					issue = true;
@@ -498,7 +692,9 @@ export class SubscriptionsService extends EventEmitter {
 					task.phase = '缓存来源提供的头像';
 					this.save(task);
 					const proxy = await this.resolveProxy(profile.avatarUrl);
-					if (!this.running(task, signal)) break;
+					if (!this.running(task, signal)) {
+						break;
+					}
 					const transport = sourceTransport(task.provider, this.store.preferences());
 					const result = outcomeSchema.parse(
 						await this.host.run(
@@ -507,7 +703,9 @@ export class SubscriptionsService extends EventEmitter {
 							{ signal, timeoutMs: 60_000, onRequest: (request) => this.permit(task, signal, request.source) },
 						),
 					);
-					if (!this.running(task, signal)) break;
+					if (!this.running(task, signal)) {
+						break;
+					}
 					if (!result.asset) {
 						issue = true;
 						const seconds = sourceCooldownSeconds(result.reason, result.retryAfter);
@@ -523,11 +721,17 @@ export class SubscriptionsService extends EventEmitter {
 						continue;
 					}
 					const bytes = await readFile(destination);
-					if (!this.running(task, signal)) break;
-					if (bytes.length !== result.asset.bytes || createHash('sha256').update(bytes).digest('hex') !== result.asset.sha256) throw new Error('Avatar mismatch');
+					if (!this.running(task, signal)) {
+						break;
+					}
+					if (bytes.length !== result.asset.bytes || createHash('sha256').update(bytes).digest('hex') !== result.asset.sha256) {
+						throw new Error('Avatar mismatch');
+					}
 					await chmod(destination, 0o600);
 					await rename(destination, join(cache, `${result.asset.sha256}.image`));
-					if (!this.running(task, signal)) break;
+					if (!this.running(task, signal)) {
+						break;
+					}
 					asset = result.asset;
 					this.store.cacheImage(profile.avatarUrl, asset);
 				} catch {
@@ -550,17 +754,24 @@ export class SubscriptionsService extends EventEmitter {
 		await this.pruneImages();
 		return issue;
 	}
+
 	/** Only the already collected, most recent 500 entries participate. No post/history requests. */
 	private launchImages(): void {
-		if (!this.cachePrepared || this.disposed || this.active || this.commands) return;
+		if (!this.cachePrepared || this.disposed || this.active || this.commands) {
+			return;
+		}
 		const preferences = this.store.preferences();
 		const subscriptions = new Map(this.store.subscriptions().map((sub) => [sub.id, sub]));
 		const pending: FeedEntry[] = [];
 		let changed = false;
 		for (const entry of this.store.entries()) {
-			if (!entry.thumbnailUrl || entry.imageAsset) continue;
+			if (!entry.thumbnailUrl || entry.imageAsset) {
+				continue;
+			}
 			const sub = subscriptions.get(entry.subscriptionId);
-			if (!sub?.following || !sub.enabled || sub.autoPaused || !preferences.enabledSources.includes(sub.provider)) continue;
+			if (!sub?.following || !sub.enabled || sub.autoPaused || !preferences.enabledSources.includes(sub.provider)) {
+				continue;
+			}
 			if (!validFollowEntry(sub.provider, sub.ref, entry) || !allowedSourceUrl(sub.provider, entry.thumbnailUrl, 'image')) {
 				if (entry.imageCache?.reason !== 'unsupported') {
 					this.store.setImageCache([entry.id], { status: 'failed', attempts: 0, nextAttemptAt: 0, reason: 'unsupported' });
@@ -572,12 +783,18 @@ export class SubscriptionsService extends EventEmitter {
 				this.store.setImageCache([entry.id], { status: 'queued', attempts: 0, nextAttemptAt: 0, reason: '' });
 				changed = true;
 			}
-			if (entry.imageCache && !['queued', 'retry'].includes(entry.imageCache.status)) continue;
-			if ((entry.imageCache?.nextAttemptAt ?? 0) > Date.now() || this.store.source(sub.provider).cooldownUntil > Date.now()) continue;
+			if (entry.imageCache && !['queued', 'retry'].includes(entry.imageCache.status)) {
+				continue;
+			}
+			if ((entry.imageCache?.nextAttemptAt ?? 0) > Date.now() || this.store.source(sub.provider).cooldownUntil > Date.now()) {
+				continue;
+			}
 			pending.push(entry);
 		}
 		if (!pending.length) {
-			if (changed) this.publish();
+			if (changed) {
+				this.publish();
+			}
 			return;
 		}
 		const first = pending[0]!;
@@ -587,7 +804,9 @@ export class SubscriptionsService extends EventEmitter {
 			kind: 'covers',
 			provider: first.provider,
 			subscriptionId: first.subscriptionId,
+
 			imageIds: entries.map((entry) => entry.id),
+
 			completed: 0,
 			total: new Set(entries.map((entry) => entry.thumbnailUrl)).size,
 			status: 'running',
@@ -608,9 +827,12 @@ export class SubscriptionsService extends EventEmitter {
 			this.publish();
 		});
 	}
+
 	private async yieldImages(reason = 'foreground'): Promise<void> {
 		const active = this.active;
-		if (active?.task.kind !== 'covers') return;
+		if (active?.task.kind !== 'covers') {
+			return;
+		}
 		// 前台操作只是让后台队列暂退；只有显式取消才持久化 cancelRequestedAt。
 		active.task.status = 'interrupted';
 		active.task.reason = reason;
@@ -619,6 +841,7 @@ export class SubscriptionsService extends EventEmitter {
 		active.controller.abort();
 		await active.promise;
 	}
+
 	private imageFailure(ids: string[], attempts: number, reason: string, retryAfter = 0): void {
 		const retryable = ['network', 'timeout', 'server_error', 'rate_limited', 'access_denied', 'auth_required', 'challenge', 'region_restricted', 'budget_exceeded'].includes(
 			reason,
@@ -631,18 +854,26 @@ export class SubscriptionsService extends EventEmitter {
 			reason,
 		});
 	}
+
 	private imageWorkerReason(error: unknown): string {
-		if (error instanceof PythonWorkerError) return error.code === 'WORKER_TIMEOUT' ? 'timeout' : error.code === 'UNEXPECTED_EXIT' ? 'network' : error.code;
-		if (error instanceof z.ZodError || (error instanceof Error && error.message === 'Image mismatch')) return 'parse_error';
+		if (error instanceof PythonWorkerError) {
+			return error.code === 'WORKER_TIMEOUT' ? 'timeout' : error.code === 'UNEXPECTED_EXIT' ? 'network' : error.code;
+		}
+		if (error instanceof z.ZodError || (error instanceof Error && error.message === 'Image mismatch')) {
+			return 'parse_error';
+		}
 		return ['ENOENT', 'ENOSPC', 'EACCES', 'EPERM', 'EIO', 'EROFS', 'ERR_SQLITE_ERROR'].includes(String((error as NodeJS.ErrnoException)?.code)) ? 'cache_write' : 'network';
 	}
+
 	private async cacheImages(task: FollowTask, signal: AbortSignal): Promise<void> {
 		const cache = join(this.store.root, 'cache', 'subscription-covers');
 		let issue = false;
 		const groups = new Map<string, string[]>();
 		for (const id of task.imageIds ?? []) {
 			const entry = this.store.entry(id);
-			if (entry) groups.set(entry.thumbnailUrl, [...(groups.get(entry.thumbnailUrl) ?? []), id]);
+			if (entry) {
+				groups.set(entry.thumbnailUrl, [...(groups.get(entry.thumbnailUrl) ?? []), id]);
+			}
 		}
 		try {
 			for (const [url, ids] of groups) {
@@ -651,10 +882,14 @@ export class SubscriptionsService extends EventEmitter {
 					break;
 				}
 				const sub = this.store.subscription(task.subscriptionId!);
-				if (!sub?.following || !sub.enabled || sub.autoPaused) break;
+				if (!sub?.following || !sub.enabled || sub.autoPaused) {
+					break;
+				}
+
 				const entry = ids
 					.map((id) => this.store.entry(id))
 					.find((item) => item?.thumbnailUrl === url && !item.imageAsset && ['queued', 'retry'].includes(item.imageCache?.status ?? 'queued'));
+
 				if (!entry) {
 					task.completed!++;
 					continue;
@@ -663,13 +898,17 @@ export class SubscriptionsService extends EventEmitter {
 				if (cached) {
 					try {
 						const bytes = await readFile(join(cache, `${cached.sha256}.image`));
-						if (bytes.length !== cached.bytes || createHash('sha256').update(bytes).digest('hex') !== cached.sha256) throw new Error('Image mismatch');
+						if (bytes.length !== cached.bytes || createHash('sha256').update(bytes).digest('hex') !== cached.sha256) {
+							throw new Error('Image mismatch');
+						}
 					} catch {
 						this.store.dropImage(url);
 						cached = undefined;
 					}
 				}
-				if (!this.running(task, signal)) break;
+				if (!this.running(task, signal)) {
+					break;
+				}
 				if (cached) {
 					this.store.saveImage(entry, cached);
 					task.completed!++;
@@ -683,7 +922,9 @@ export class SubscriptionsService extends EventEmitter {
 					task.phase = `${sub.name} · 正在缓存封面 ${task.completed! + 1}/${task.total}`;
 					this.save(task);
 					const proxy = await this.resolveProxy(url);
-					if (!this.running(task, signal)) break;
+					if (!this.running(task, signal)) {
+						break;
+					}
 					const transport = sourceTransport(task.provider, this.store.preferences());
 					const result = outcomeSchema.parse(
 						await this.host.run(
@@ -692,30 +933,38 @@ export class SubscriptionsService extends EventEmitter {
 							{ signal, timeoutMs: 60_000, onRequest: (request) => this.permit(task, signal, request.source) },
 						),
 					);
-					if (!this.running(task, signal)) break;
+					if (!this.running(task, signal)) {
+						break;
+					}
 					if (!result.asset) {
 						issue = true;
 						this.imageFailure(ids, attempts, result.reason || 'parse_error', result.retryAfter);
 						const seconds = sourceCooldownSeconds(result.reason, result.retryAfter);
-						if (seconds)
+						if (seconds) {
 							this.store.saveSource(task.provider, {
 								...this.store.source(task.provider),
 								state: '封面等待重试',
 								message: result.message,
 								cooldownUntil: Date.now() + seconds * 1000,
 							});
+						}
 					} else {
 						const bytes = await readFile(destination);
-						if (!this.running(task, signal)) break;
-						if (bytes.length !== result.asset.bytes || createHash('sha256').update(bytes).digest('hex') !== result.asset.sha256) throw new Error('Image mismatch');
+						if (!this.running(task, signal)) {
+							break;
+						}
+						if (bytes.length !== result.asset.bytes || createHash('sha256').update(bytes).digest('hex') !== result.asset.sha256) {
+							throw new Error('Image mismatch');
+						}
 						await chmod(destination, 0o600);
 						await rename(destination, join(cache, `${result.asset.sha256}.image`));
 						if (this.running(task, signal)) {
 							this.store.saveImage(entry, result.asset);
 							task.added++;
 							const source = this.store.source(task.provider);
-							if (source.state === '封面等待重试')
+							if (source.state === '封面等待重试') {
 								this.store.saveSource(task.provider, { ...source, checkedAt: new Date().toISOString(), state: '最近访问成功', message: '', cooldownUntil: 0 });
+							}
 							await this.pruneImages();
 						}
 					}
@@ -724,9 +973,12 @@ export class SubscriptionsService extends EventEmitter {
 						issue = true;
 						const reason = this.imageWorkerReason(error);
 						this.imageFailure(ids, attempts, reason);
-						if (['network', 'timeout'].includes(reason))
+						if (['network', 'timeout'].includes(reason)) {
 							this.store.saveSource(task.provider, { ...this.store.source(task.provider), cooldownUntil: Date.now() + 30_000 });
-						if (reason === 'cache_write') throw error;
+						}
+						if (reason === 'cache_write') {
+							throw error;
+						}
 					}
 				} finally {
 					await rm(destination, { force: true });
@@ -747,9 +999,11 @@ export class SubscriptionsService extends EventEmitter {
 			}
 		} catch {
 			if (this.running(task, signal)) {
-				for (const entry of this.store.entries())
-					if (!entry.imageAsset && entry.thumbnailUrl && ['queued', 'loading'].includes(entry.imageCache?.status ?? 'queued'))
+				for (const entry of this.store.entries()) {
+					if (!entry.imageAsset && entry.thumbnailUrl && ['queued', 'loading'].includes(entry.imageCache?.status ?? 'queued')) {
 						this.imageFailure([entry.id], entry.imageCache?.attempts ?? 0, 'cache_write');
+					}
+				}
 				task.status = 'failed';
 				task.phase = '封面缓存未写入，请检查数据目录';
 				this.notice = task.phase;
@@ -758,7 +1012,9 @@ export class SubscriptionsService extends EventEmitter {
 			// 未完成的下载退回队列且不消耗重试次数；用户取消的整批任务保留取消状态。
 			for (const id of task.imageIds ?? []) {
 				const entry = this.store.entry(id);
-				if (!entry || entry.imageAsset || entry.imageCache?.status !== 'loading') continue;
+				if (!entry || entry.imageAsset || entry.imageCache?.status !== 'loading') {
+					continue;
+				}
 				this.store.setImageCache([id], {
 					status: task.cancelRequestedAt ? 'cancelled' : 'queued',
 					attempts: Math.max(0, entry.imageCache.attempts - 1),
@@ -779,6 +1035,7 @@ export class SubscriptionsService extends EventEmitter {
 			this.launchImages();
 		}
 	}
+
 	private async pruneImages(): Promise<void> {
 		const cache = join(this.store.root, 'cache', 'subscription-covers');
 		const images = this.store.images();
@@ -789,72 +1046,14 @@ export class SubscriptionsService extends EventEmitter {
 		// explicit terminal states, so an automatic backfill cannot refetch in a loop.
 		images.sort((a, b) => Number(referenced.has(a.url)) - Number(referenced.has(b.url)));
 		for (const row of images) {
-			if (bytes <= 64 * 1024 * 1024) break;
+			if (bytes <= 64 * 1024 * 1024) {
+				break;
+			}
 			this.store.dropImage(row.url, true);
 			if (!this.store.images().some((item) => item.asset.sha256 === row.asset.sha256)) {
 				bytes -= row.asset.bytes;
 				await rm(join(cache, `${row.asset.sha256}.image`), { force: true });
 			}
 		}
-	}
-	async image(sha256: string): Promise<{ bytes: Buffer; asset: ImageAsset } | undefined> {
-		if (!/^[a-f0-9]{64}$/.test(sha256)) return;
-		const image = this.store.images().find((row) => row.asset.sha256 === sha256);
-		if (!image) return;
-		try {
-			const bytes = await readFile(join(this.store.root, 'cache/subscription-covers', `${sha256}.image`));
-			if (bytes.length === image.asset.bytes && createHash('sha256').update(bytes).digest('hex') === sha256) return { bytes, asset: image.asset };
-		} catch {
-			/* 缓存缺失保留内容正文。 */
-		}
-		if (!this.disposed) {
-			for (const row of this.store.images()) if (row.asset.sha256 === sha256) this.store.dropImage(row.url);
-			this.publish();
-			this.launchImages();
-		}
-	}
-	async cancel(id: string): Promise<void> {
-		const active = this.active;
-		if (!active || active.task.id !== id) return;
-		active.task.status = 'cancelling';
-		active.task.cancelRequestedAt = new Date().toISOString();
-		active.task.phase = '正在停止请求与清理工作者';
-		try {
-			this.save(active.task);
-			if (active.task.kind === 'covers')
-				for (const id of active.task.imageIds ?? []) {
-					const entry = this.store.entry(id);
-					if (entry && !entry.imageAsset)
-						this.store.setImageCache([id], { status: 'cancelled', attempts: entry.imageCache?.attempts ?? 0, nextAttemptAt: 0, reason: 'cancelled' });
-				}
-			else if (active.task.subscriptionId) {
-				const sub = this.store.subscription(active.task.subscriptionId);
-				if (sub) {
-					sub.autoPaused = true;
-					this.store.saveSubscription(sub);
-				}
-			}
-		} finally {
-			active.controller.abort();
-		}
-		await active.promise;
-	}
-	async stop(): Promise<void> {
-		this.disposed = true;
-		if (this.timer) clearInterval(this.timer);
-		const active = this.active;
-		if (active) {
-			active.task.status = 'interrupted';
-			if (active.task.kind !== 'covers' && active.task.subscriptionId) {
-				const sub = this.store.subscription(active.task.subscriptionId);
-				if (sub) {
-					sub.autoPaused = true;
-					this.store.saveSubscription(sub);
-				}
-			}
-			active.controller.abort();
-			await active.promise;
-		}
-		await this.initialization.close();
 	}
 }
