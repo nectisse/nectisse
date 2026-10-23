@@ -1,0 +1,45 @@
+# Dependencies and virtual environments
+node_modules/
+.venv/
+
+# Electron builds and bundled Python runtime
+/out/
+/dist/
+/.build/
+*.tsbuildinfo
+
+# Caches and test output
+/.cache/
+/.test-output/
+/coverage/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Local environment variables; keep example files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# macOS and editor temporary files
+.DS_Store
+._*
+*.swp
+*.swo
+
+# Local references, design drafts and tool state
+/ref/
+/design/
+/.wu

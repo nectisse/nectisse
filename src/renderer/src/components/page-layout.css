@@ -1,0 +1,281 @@
+/* Desktop frames use the available window width; text blocks keep their own rhythm. */
+.workspace-shell {
+	--page-gutter: 32px;
+	--page-top: 28px;
+}
+.workspace-shell .page {
+	width: 100%;
+	max-width: none;
+	margin: 0;
+	padding: var(--page-top) var(--page-gutter) 32px;
+}
+.workspace-shell .workspace-page-heading {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	flex-wrap: nowrap;
+	gap: 16px 24px;
+	min-height: 64px;
+	margin: 0 0 24px;
+}
+.workspace-page-heading .page-heading-copy {
+	flex: 1;
+	min-width: 0;
+}
+.workspace-page-heading h1 {
+	margin: 0;
+	font-size: 26px;
+	font-weight: 550;
+	line-height: 34px;
+	letter-spacing: -0.6px;
+}
+.workspace-page-heading .page-heading-copy > p {
+	margin: 8px 0 0;
+	color: var(--muted-foreground);
+	font-size: 12px;
+	line-height: 20px;
+	overflow-wrap: anywhere;
+}
+.page-heading-actions {
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	flex-shrink: 0;
+	gap: 8px;
+	padding-top: 1px;
+}
+.page-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px 20px;
+	width: 100%;
+	min-width: 0;
+	min-height: 50px;
+	padding: 8px 12px;
+	margin: 0 0 20px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--muted) 28%, var(--background));
+}
+.page-toolbar-filters,
+.page-toolbar-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-width: 0;
+}
+.page-toolbar-actions {
+	margin-left: auto;
+	justify-content: flex-end;
+}
+.page-toolbar [data-slot='select-trigger'],
+.page-toolbar input[data-slot='input'] {
+	height: 32px;
+	font-size: 12px;
+}
+.page-toolbar .content-tabs {
+	width: fit-content;
+	flex-shrink: 0;
+	gap: 0;
+	margin: 0;
+}
+.page-toolbar .review-tabs.segmented-tabs {
+	height: 32px;
+	margin: 0;
+}
+.page-toolbar .segmented-tabs [data-slot='tabs-trigger'] {
+	height: 26px;
+}
+.page-toolbar .archive-filter {
+	margin: 0;
+	min-height: 32px;
+	font-size: 11px;
+	font-weight: 400;
+}
+.page-toolbar .library-search {
+	width: 240px;
+}
+.page-toolbar .library-search > svg {
+	top: 8px;
+}
+.page-toolbar .library-search input {
+	padding-left: 32px;
+}
+.page-toolbar .library-sort {
+	width: 132px;
+}
+.page-toolbar .update-type {
+	width: 160px;
+}
+.page-toolbar .page-toolbar-count {
+	color: var(--muted-foreground);
+	font-size: 11px;
+	white-space: nowrap;
+}
+.updates-pagination,
+.collected-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 12px 20px;
+	margin-top: 20px;
+}
+.updates-pagination > p,
+.collected-pagination > p {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 20px;
+	font-variant-numeric: tabular-nums;
+}
+.updates-pagination > p > span,
+.collected-pagination > p > span {
+	margin-left: 12px;
+	color: var(--subtle);
+}
+.updates-pagination [data-slot='pagination'],
+.collected-pagination [data-slot='pagination'] {
+	margin-left: auto;
+}
+.query-results-toolbar {
+	margin-top: 24px;
+}
+.query-results-toolbar h2 {
+	font-size: 13px;
+	font-weight: 550;
+}
+.query-results-toolbar .page-toolbar-filters {
+	gap: 12px;
+}
+.workspace-shell .subscription-list {
+	margin-top: 0;
+}
+.workspace-shell .settings-page .subscription-list {
+	margin-top: 24px;
+}
+.workspace-shell .subscription-cards {
+	gap: 12px;
+}
+.workspace-shell .subscription-cards > .subscription-card {
+	margin: 0;
+}
+.workspace-shell .creator-entry-heading {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	margin: 24px 0 12px;
+	font-size: 13px;
+	font-weight: 550;
+}
+.creator-entry-heading span {
+	color: var(--muted-foreground);
+	font-size: 11px;
+	font-weight: 400;
+}
+.workspace-shell .live-detail .detail-layout {
+	grid-template-columns: minmax(260px, 0.95fr) minmax(0, 1.35fr);
+	gap: 28px;
+}
+.workspace-shell .live-detail .detail-title {
+	margin: 0;
+	font-size: 22px;
+	line-height: 1.5;
+	letter-spacing: -0.3px;
+	font-weight: 550;
+}
+.workspace-shell .live-detail .detail-status {
+	margin: 14px 0 20px;
+}
+.workspace-shell .work-info > .content-tabs {
+	margin-top: 20px;
+}
+.workspace-shell .detail-code {
+	display: block;
+	margin-bottom: 8px;
+	color: var(--primary);
+	font-size: 12px;
+	letter-spacing: 0.04em;
+}
+.workspace-shell .page-heading-actions .work-save-action {
+	margin: 0;
+}
+.workspace-shell .page-heading-actions .work-save-action > div {
+	justify-content: flex-end;
+}
+.workspace-shell .live-task-progress {
+	margin: 0 0 20px;
+}
+.workspace-shell .toolbar.workspace-toolbar {
+	height: 52px;
+	padding-inline: var(--page-gutter);
+	gap: 16px;
+}
+.workspace-toolbar .breadcrumb {
+	gap: 10px;
+	font-size: 11px;
+	white-space: nowrap;
+}
+.workspace-toolbar .toolbar-right {
+	gap: 4px;
+}
+.workspace-toolbar .toolbar-query,
+.workspace-toolbar .toolbar-demo,
+.workspace-toolbar .toolbar-theme {
+	color: var(--muted-foreground);
+	font-size: 11px;
+}
+.workspace-toolbar .toolbar-query kbd {
+	margin-left: 12px;
+	padding: 1px 4px;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	font: inherit;
+	font-size: 10px;
+	color: var(--subtle);
+	line-height: 17px;
+}
+.toolbar-divider {
+	width: 1px;
+	height: 16px;
+	background: var(--border);
+	margin-inline: 8px;
+}
+.workspace-shell .preview-footer {
+	padding-inline: var(--page-gutter);
+}
+.workspace-shell .environment-alert {
+	margin: 20px var(--page-gutter) 0;
+}
+@media (max-width: 1100px) {
+	.workspace-shell {
+		--page-gutter: 24px;
+	}
+	.workspace-shell .live-detail .detail-layout {
+		grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr);
+		gap: 24px;
+	}
+	.page-toolbar .library-search {
+		width: 210px;
+	}
+	.workspace-toolbar .toolbar-query kbd {
+		margin-left: 4px;
+	}
+}
+@media (max-width: 900px) {
+	.workspace-shell .workspace-page-heading {
+		flex-wrap: wrap;
+	}
+	.page-heading-actions {
+		justify-content: flex-start;
+	}
+	.workspace-toolbar .breadcrumb > span:first-child,
+	.workspace-toolbar .breadcrumb > svg,
+	.workspace-toolbar .toolbar-query kbd {
+		display: none;
+	}
+}

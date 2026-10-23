@@ -1,0 +1,83 @@
+{
+  "peachVersion": "0.46.1",
+  "records": [
+    {
+      "path": "sources/r18dev.py",
+      "upstreamSha256": "f48d47616639017e746a844b17a2ee0eaaea32cd8143fb8f96df799511ae3bb1",
+      "extractedSha256": "c62f091e504aaf44bc9b643adadb7ce12b0486308d5b97f21f43360f79d2de35"
+    },
+    {
+      "path": "sources/dmm.py",
+      "upstreamSha256": "da7d79bb949eead66dc6c2a6f494f61b8729fc9ea068628381772d0a31035be7",
+      "extractedSha256": "caad24f3da6bb794631310d598b695df67ba0646928cedebe2f3a22be979a4a6"
+    },
+    {
+      "path": "sources/fc2.py",
+      "upstreamSha256": "5bce60967475a5d336c59e3871cd6b9e51237e697678e2b19f04ecda8f82fb41",
+      "extractedSha256": "fca81c29a83a93228f63c2243149d3eb44e9540eb0f142a9b2675a2eb72c5e1c"
+    },
+    {
+      "path": "sources/onepondo.py",
+      "upstreamSha256": "ec4a5cac394f420ae701dc5b741390f31638686f691c875cd4275a27c9d7550d",
+      "extractedSha256": "da2824341174154b787d1036390c3081e2401c93f6a20d982db309d4ef24b9f1"
+    },
+    {
+      "path": "sources/fc2cmadb.py",
+      "upstreamSha256": "3967634ba1f769adfe489ecb2253a2a8049eaeca13c092871b55beb978a28cc4",
+      "extractedSha256": "cc9d983c8bb742efd39e55c954c5e0840fc68a14731611095e3ddd1688021108"
+    },
+    {
+      "path": "sources/fc2ppvdb.py",
+      "upstreamSha256": "de60b64e371c5fe852deb57926b5d92078f8717430a7aeaa4e08eac2f5b85223",
+      "extractedSha256": "1174a1967f9b048461d1cd2170959b88bb98ac81e847f2de8ec536fbf43c5ed3"
+    },
+    {
+      "path": "sources/javten.py",
+      "upstreamSha256": "27c38eb4e0ae1dde544cbdc708eac19dec33bd86d5c6eb575a1ada17437f504c",
+      "extractedSha256": "ddb030152c3db1553ffa89f3f5c2fc632f11f6844ddc9703e22f22c277ba1ea9"
+    },
+    {
+      "path": "sources/javarchive.py",
+      "upstreamSha256": "2f258e2c63a9c0377a02ffe18926c5a82645acfb86cdaeb52f1b4077c5bc1a3e",
+      "extractedSha256": "2fdfff019b80fc0fd4d2248ddc410acfde65d39ff6101f4a5e9596dcaa74147b"
+    },
+    {
+      "path": "sources/avbase.py",
+      "upstreamSha256": "c693480248742d825180ee4383b90f03ac3c5b2a2457fa5368517421a6447ddd",
+      "extractedSha256": "e86bdb3c38759e6aa8f0ba6b2e11f71ef01ad49571049ef3d29ea20eb7e9ba4f"
+    },
+    {
+      "path": "sources/javbus.py",
+      "upstreamSha256": "5476cc062ec72dad67242c6d797fb33dec7c7420239e683725ba727c231d760c",
+      "extractedSha256": "304e4ce31bf26817da430981a71968f8f829967f4d4e336a63c5ac99d6cdd05b"
+    },
+    {
+      "path": "sources/javdb.py",
+      "upstreamSha256": "dc7a8b4fe5334688e2b64d07d9550eff6860d2f518710295e1345e43cee317c9",
+      "extractedSha256": "31433255afd2ba9a397a2e9859bf4c236c65a002a8126e6de48985a8d7516e27"
+    },
+    {
+      "path": "sources/seesaa.py",
+      "upstreamSha256": "a82d3c6c40bf6bdf9e1bf2b84446b91f70407a857be0186265b134c41c5b1f18",
+      "extractedSha256": "5e1987d25c273babadbd66e42342a3893bbea0c6c096e898b4ec507d4a55b08e"
+    },
+    {
+      "path": "metadata_kmib.py",
+      "upstreamSha256": "cbc224094ec05d3c81a689fb83d04c59ac04780b95ae2846f78176fc239d364a"
+    },
+    {
+      "path": "metadata.py",
+      "upstreamSha256": "9d2b537585431a3d7e6a024c44f163c0fe6e526c2e3018b08509f66ecc30cd38",
+      "extractedPath": "identity.py",
+      "extractedSha256": "eb139de15526f4129a80eb2d949f9237c1b1fd14557a3bf5c3c06e53c373f391",
+      "extractedSections": "IDENTITY_FIELDS 到 identifies_code"
+    },
+    {
+      "path": "jav_cover_fetch.py",
+      "upstreamSha256": "cd0a883149ab37ce71269b42cfb39680b28123e02c26ba1730621b5d0fc8bf0d",
+      "extractedPath": "cover_identity.py",
+      "extractedSha256": "1bfaaaef88b47081368714740bccab7dfc8ed9490bc346f76151faa671467bb2",
+      "extractedSections": "_DMM_CID 到 is_cross_product_cover；MIN_WIDTH/SMALL_MIN_WIDTH"
+    }
+  ]
+}

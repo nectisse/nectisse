@@ -1,0 +1,88 @@
+{
+  "version": "0.20.0",
+  "revision": "cc42cee6ecf290cf05af1caa347d2dc2d5aeffcd",
+  "archiveSha256": "6f34ece2db62f4e22f68c931c8a6862415c9d7cba12bad1fd658ec8c56d9cab2",
+  "license": "GPL-3.0",
+  "records": [
+    {
+      "path": "enums.py",
+      "upstreamSha256": "18fa20135b184061d3ac0c6b6d2012923b09c593fb16e3c6fd8c55322a2cdd6f"
+    },
+    {
+      "path": "crawlers/base.py",
+      "upstreamSha256": "87130fc58d006f19d7a783b0558e20a5a5ae7a13174edd39674b548155319209"
+    },
+    {
+      "path": "crawlers/http.py",
+      "upstreamSha256": "28f75e1edc4ebd911127c6b011d9c75f22e1d6a47804337490d9962d6d00e6cb"
+    },
+    {
+      "path": "crawlers/models.py",
+      "upstreamSha256": "01705231d3be9172b0ef63daaa2349dc118682ec4f73c0c602473a6fbd10e0f1"
+    },
+    {
+      "path": "crawlers/parsing.py",
+      "upstreamSha256": "10e2767cd7e3f38624969e86b03cbc107e58e7f63b3685138a98ab90d628a1d8"
+    },
+    {
+      "path": "net/errors.py",
+      "upstreamSha256": "a3da19950847d4a6a1bc0b655672aaa3eea1076fc86e104979782c5ff72bab89"
+    },
+    {
+      "path": "net/connectivity.py",
+      "upstreamSha256": "95103694fac1bb8ff597c263c3c405b11924842dbba0b0ed4f590c58b3a41153"
+    },
+    {
+      "path": "plugins/models.py",
+      "upstreamSha256": "219dd97c9e2c7937d2ee750eb822ef392e26e6349e26d99bf163a61cece96716"
+    },
+    {
+      "path": "utils/dates.py",
+      "upstreamSha256": "4547be6bca134c216c5eb92bececd5877f99cc837f993f44c854f9dde231cfa7"
+    },
+    {
+      "path": "crawlers/sites/official.py",
+      "upstreamSha256": "0aeeb0c15230e1a43eecf2504d9873d04c4dd43788f9150e8e27e8647f4181dc"
+    },
+    {
+      "path": "crawlers/sites/prestige.py",
+      "upstreamSha256": "972bcdc94405f9197e451b4da277320b8fb24149d2d84b43f30fcc7ca8203618"
+    },
+    {
+      "path": "crawlers/sites/faleno.py",
+      "upstreamSha256": "6a1ba9a71a19de232ebebcc66c21a6f493147abbf6059d0b6d0228a26eeace24"
+    },
+    {
+      "path": "crawlers/sites/dahlia.py",
+      "upstreamSha256": "084ee8850616e282843ef3eeda6f500d344f48dfdfa867bb7b34902d06315cde"
+    },
+    {
+      "path": "crawlers/sites/mgstage.py",
+      "upstreamSha256": "b1fdf3f5fa550ddaeacda80cb9ae4bd90327cf2d0934d7c854ccd149c6d8e3a1"
+    },
+    {
+      "path": "crawlers/sites/avsox.py",
+      "upstreamSha256": "de67e25e9cce3025e8d8c3bb06ba272e3702228d460f21ea9f07aa0b5261709b"
+    },
+    {
+      "path": "crawlers/sites/fc2club.py",
+      "upstreamSha256": "867597f8dca7e8763288951f663a937ddfb51b33c80f632a0d93b054645a6e58"
+    },
+    {
+      "path": "crawlers/sites/freejavbt.py",
+      "upstreamSha256": "6e8f9d47ad2d4826f6b4b3ccd24e8d56a6b571b7ff18db2725255a2d4c23549c"
+    },
+    {
+      "path": "crawlers/sites/airav.py",
+      "upstreamSha256": "0181a91514427fb1e619f862cb10158bebba52112c555d29de832b56684454d2"
+    },
+    {
+      "path": "crawlers/sites/wp_works.py",
+      "upstreamSha256": "5dfcdafd7dd8e34faef66eeeac39c5e149f2ffdea2143f99972d543385f28f0c"
+    }
+  ],
+  "modifications": [
+    "包 __init__.py 使用无副作用入口，站点与纯模型文件保持原样",
+    "运行时注入 Nectisse 有界客户端，不使用上游下载、重试或网络调度"
+  ]
+}

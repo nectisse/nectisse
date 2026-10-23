@@ -1,0 +1,61 @@
+{
+	"name": "nectisse",
+	"productName": "Nectisse",
+	"version": "0.1.0",
+	"private": true,
+	"description": "私人作品资料与创作者更新桌面应用",
+	"type": "module",
+	"main": "out/main/index.js",
+	"engines": {
+		"node": ">=22.12.0"
+	},
+	"scripts": {
+		"dev": "npm run python:prepare && electron-vite dev",
+		"start": "electron-vite preview",
+		"python:prepare": "node scripts/prepare-python.mjs",
+		"icons:build": "npm run python:prepare && node scripts/build-icons.mjs",
+		"python:lock": "uv pip compile python/pyproject.toml --python-version 3.14.9 --generate-hashes --only-binary :all: --output-file python/requirements.lock",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+		"build": "npm run typecheck && electron-vite build",
+		"test": "node --import tsx --test tests/*.test.ts",
+		"test:python": "node scripts/test-python.mjs",
+		"test:desktop": "node scripts/smoke-desktop.mjs",
+		"test:workspace": "node scripts/review-workspace.mjs",
+		"test:scroll": "node scripts/review-scroll.mjs",
+		"test:pagination": "node scripts/review-pagination.mjs",
+		"test:profile-pagination": "node scripts/review-profile-pagination.mjs",
+		"test:startup": "node scripts/review-startup.mjs",
+		"test:recovery": "node scripts/review-recovery.mjs",
+		"test:lifecycle": "node scripts/review-lifecycle.mjs",
+		"test:native-quit": "node scripts/review-native-quit.mjs",
+		"test:library": "node scripts/review-library.mjs",
+		"test:diagnostics": "node scripts/review-diagnostics.mjs",
+		"package:mac": "npm run icons:build && npm run build && node scripts/package-mac.mjs"
+	},
+	"dependencies": {
+		"@base-ui/react": "1.9.0",
+		"class-variance-authority": "0.7.1",
+		"cn": "0.5.0",
+		"lucide-react": "1.61.0",
+		"radix-ui": "1.8.1",
+		"react": "19.3.1",
+		"react-dom": "19.3.1",
+		"sonner": "2.0.8",
+		"zod": "4.6.7"
+	},
+	"devDependencies": {
+		"@tailwindcss/vite": "4.3.3",
+		"@types/node": "26.6.5",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"@vitejs/plugin-react": "6.1.2",
+		"electron": "45.0.0",
+		"electron-builder": "26.15.3",
+		"electron-vite": "6.0.0",
+		"playwright-core": "1.64.1",
+		"tailwindcss": "4.3.3",
+		"tsx": "4.23.15",
+		"typescript": "7.0.2",
+		"vite": "8.3.5"
+	}
+}
