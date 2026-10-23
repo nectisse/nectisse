@@ -131,65 +131,69 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 					{error || result?.message || '尚未取得结果'}
 				</p>
 			) : result.items.length ? (
-				<Table className="magnet-table" aria-label="Sukebei 磁链结果">
-					<TableHeader>
-						<TableRow>
-							<TableHead>名称 / 上传时间</TableHead>
-							<TableHead className="magnet-size">大小</TableHead>
-							<TableHead className="magnet-seeds">做种</TableHead>
-							<TableHead className="magnet-actions">操作</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{result.items.map((row) => (
-							<TableRow key={row.id}>
-								<TableCell>
-									<span className="magnet-title" title={row.title}>
-										{row.title}
-									</span>
-									<div className="magnet-meta">
-										<time
-											dateTime={row.uploadedAt || undefined}
-											title={row.uploadedAt ? new Date(row.uploadedAt).toLocaleString('zh-CN', { hour12: false }) : undefined}
-										>
-											{row.uploadedAt ? new Date(row.uploadedAt).toLocaleDateString('zh-CN') : '上传时间未提供'}
-										</time>
-										<span>下载中 {count(row.leechers)}</span>
-										<span>完成 {count(row.completed)}</span>
-									</div>
-								</TableCell>
-								<TableCell className="magnet-size">{row.size || '—'}</TableCell>
-								<TableCell className="magnet-seeds">{count(row.seeders)}</TableCell>
-								<TableCell className="magnet-actions">
-									<div>
-										<Button
-											variant="ghost"
-											size="icon-sm"
-											aria-label={`复制磁链：${row.title}`}
-											title="复制磁链"
-											onClick={() => {
-												void action(row, 'copy');
-											}}
-										>
-											<Copy />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon-sm"
-											aria-label={`查看来源：${row.title}`}
-											title="查看来源页面"
-											onClick={() => {
-												void action(row, 'open');
-											}}
-										>
-											<ExternalLink />
-										</Button>
-									</div>
-								</TableCell>
+				<div className="magnet-table-frame" role="region" aria-label="磁链结果表格，可横向滚动" tabIndex={0}>
+					<Table className="magnet-table" aria-label="Sukebei 磁链结果">
+						<TableHeader>
+							<TableRow>
+								<TableHead>名称</TableHead>
+								<TableHead className="magnet-size">大小</TableHead>
+								<TableHead className="magnet-number magnet-seeds">做种</TableHead>
+								<TableHead className="magnet-actions">操作</TableHead>
 							</TableRow>
-						))}
-					</TableBody>
-				</Table>
+						</TableHeader>
+						<TableBody>
+							{result.items.map((row) => (
+								<TableRow key={row.id}>
+									<TableCell>
+										<span className="magnet-title" title={row.title}>
+											{row.title}
+										</span>
+										<div className="magnet-meta">
+											<time
+												dateTime={row.uploadedAt || undefined}
+												title={row.uploadedAt ? new Date(row.uploadedAt).toLocaleString('zh-CN', { hour12: false }) : '上传时间未提供'}
+											>
+												{row.uploadedAt ? new Date(row.uploadedAt).toLocaleDateString('zh-CN') : '上传时间未提供'}
+											</time>
+											<span title={`下载中 ${count(row.leechers)}`}>下载中 {count(row.leechers)}</span>
+											<span title={`完成 ${count(row.completed)}`}>完成 {count(row.completed)}</span>
+										</div>
+									</TableCell>
+									<TableCell className="magnet-size">{row.size || '—'}</TableCell>
+									<TableCell className="magnet-number magnet-seeds">
+										<span title={count(row.seeders)}>{count(row.seeders)}</span>
+									</TableCell>
+									<TableCell className="magnet-actions">
+										<div>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												aria-label={`复制磁链：${row.title}`}
+												title="复制磁链"
+												onClick={() => {
+													void action(row, 'copy');
+												}}
+											>
+												<Copy />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												aria-label={`查看来源：${row.title}`}
+												title="查看来源页面"
+												onClick={() => {
+													void action(row, 'open');
+												}}
+											>
+												<ExternalLink />
+											</Button>
+										</div>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
 			) : (
 				<p className="magnet-search-state" role="status">
 					没有找到编号匹配的磁链
