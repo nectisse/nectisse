@@ -21,6 +21,7 @@
 		"test:python": "node scripts/test-python.mjs",
 		"test:desktop": "node scripts/smoke-desktop.mjs",
 		"test:workspace": "node scripts/review-workspace.mjs",
+		"test:magnets": "node scripts/review-magnets.mjs",
 		"test:scroll": "node scripts/review-scroll.mjs",
 		"test:pagination": "node scripts/review-pagination.mjs",
 		"test:profile-pagination": "node scripts/review-profile-pagination.mjs",

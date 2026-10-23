@@ -50,7 +50,16 @@ export class PythonTaskHost {
 
 	run(
 		method:
-			'health' | 'metadata.query' | 'metadata.cover' | 'metadata.coverProbe' | 'follow.lookup' | 'follow.check' | 'follow.image' | 'diagnostics.wait' | 'diagnostics.block',
+			| 'health'
+			| 'metadata.query'
+			| 'metadata.cover'
+			| 'metadata.coverProbe'
+			| 'follow.lookup'
+			| 'follow.check'
+			| 'follow.image'
+			| 'magnet.search'
+			| 'diagnostics.wait'
+			| 'diagnostics.block',
 		params: Record<string, unknown> = {},
 		options: RunOptions = {},
 	): Promise<unknown> {

@@ -1,0 +1,98 @@
+.magnet-search {
+	min-width: 0;
+}
+.magnet-search-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+.magnet-search-toolbar > div {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 12px;
+}
+.magnet-search-toolbar svg {
+	width: 14px;
+	height: 14px;
+}
+.magnet-search-toolbar small {
+	color: var(--muted-foreground);
+	font-size: 10px;
+}
+.magnet-table {
+	table-layout: fixed;
+	font-size: 11px;
+}
+.magnet-table th {
+	height: 34px;
+	color: var(--muted-foreground);
+	font-size: 10px;
+	font-weight: 400;
+}
+.magnet-table td {
+	padding: 10px 8px;
+	white-space: normal;
+}
+.magnet-table .magnet-size {
+	width: 64px;
+	font-size: 10px;
+	white-space: nowrap;
+}
+.magnet-table .magnet-seeds {
+	width: 42px;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.magnet-table .magnet-actions {
+	width: 80px;
+	text-align: right;
+	padding-right: 4px;
+}
+.magnet-actions > div {
+	display: flex;
+	justify-content: flex-end;
+	gap: 2px;
+}
+.magnet-title {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+	line-height: 18px;
+	font-weight: 500;
+}
+.magnet-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 8px;
+	margin-top: 5px;
+	color: var(--muted-foreground);
+	font-size: 10px;
+	line-height: 16px;
+	font-variant-numeric: tabular-nums;
+}
+.magnet-search-state {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 36px 12px;
+	color: var(--muted-foreground);
+	font-size: 12px;
+	line-height: 20px;
+}
+.magnet-search-state > svg {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+.magnet-search-note {
+	margin-top: 12px;
+	color: var(--muted-foreground);
+	font-size: 10px;
+	line-height: 18px;
+}

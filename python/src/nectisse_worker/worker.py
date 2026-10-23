@@ -76,7 +76,7 @@ def main(*, allow_diagnostics: bool = False) -> int:
         if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100:
             raise ValueError("invalid id")
         method = request.get("method")
-        if method not in {"health", "metadata.query", "metadata.cover", "metadata.coverProbe", "follow.lookup", "follow.check", "follow.image"} and not (allow_diagnostics and method in {"diagnostics.wait", "diagnostics.block"}):
+        if method not in {"health", "metadata.query", "metadata.cover", "metadata.coverProbe", "follow.lookup", "follow.check", "follow.image", "magnet.search"} and not (allow_diagnostics and method in {"diagnostics.wait", "diagnostics.block"}):
             emit(request_id, "error", code="UNSUPPORTED_METHOD", message="尚未接入此采集能力")
             return 2
     except (ValueError, TypeError):
@@ -153,6 +153,9 @@ def main(*, allow_diagnostics: bool = False) -> int:
     try:
         if method == "health":
             payload = health()
+        elif method == "magnet.search":
+            from nectisse_worker.magnets import job
+            payload = job(request.get('params') or {}, cancelled, permit)
         elif method in {"follow.lookup", "follow.check", "follow.image"}:
             from nectisse_worker.follow import job
             payload = job(method, request.get("params") or {}, cancelled, permit, lambda entry: emit(request_id, "progress", payload={"event": "entry", "entry": entry}))

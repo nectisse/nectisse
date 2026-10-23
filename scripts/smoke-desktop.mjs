@@ -62,7 +62,7 @@ try {
 		hasNode: typeof window.require !== 'undefined' || typeof window.process !== 'undefined',
 	}));
 	assert.equal(inspection.state.phase, 'ready');
-	assert.deepEqual(inspection.bridge.sort(), ['diagnostics', 'library', 'metadata', 'runtime', 'subscriptions']);
+	assert.deepEqual(inspection.bridge.sort(), ['diagnostics', 'library', 'magnets', 'metadata', 'runtime', 'subscriptions']);
 	assert.equal(inspection.hasNode, false);
 	const expectedRuntime = appPath ? join(appPath, 'Contents/Resources/python/runtime/') : join(root, '.build/python/');
 	assert.ok(inspection.state.health.executable.startsWith(expectedRuntime));

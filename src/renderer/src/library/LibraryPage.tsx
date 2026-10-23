@@ -94,6 +94,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 						key={work.updatedAt}
 						records={work.records}
 						scope="library"
+						magnetOrigin={{ kind: 'library', id: work.id }}
 						coverId={work.coverId}
 						backLabel="返回作品收藏"
 						onBack={() => setSelected('')}
