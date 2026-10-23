@@ -66,6 +66,9 @@ try {
 	await page.getByRole('tab', { name: '磁链搜索', exact: true }).click();
 	await page.getByRole('table', { name: 'Sukebei 磁链结果' }).waitFor();
 	assert.equal(await page.locator('.magnet-table tbody tr').count(), 20);
+	assert.deepEqual(await page.locator('.magnet-table thead th').allTextContents(), ['名称', '大小', '做种', '操作']);
+	assert.deepEqual(await page.locator('.magnet-table tbody tr').first().locator('.magnet-meta > *').allTextContents(), ['2026/10/23', '下载中 2', '完成 1,234']);
+	assert.equal(await page.locator('.magnet-table tbody tr').nth(1).locator('.magnet-meta time').innerText(), '上传时间未提供');
 	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 1, 'StrictMode must not dispatch a duplicate query');
 	assert.equal(await page.locator('.magnet-seeds').nth(1).innerText(), '0');
 	await page.getByRole('button', { name: /^复制磁链：/ }).first().click();
@@ -80,14 +83,36 @@ try {
 			await page.evaluate(async theme => { const state = await window.nectisse.subscriptions.getState(); await window.nectisse.subscriptions.command({ action: 'preferences', value: { ...state.preferences, theme } }); }, theme);
 			await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
 			await page.waitForFunction(() => getComputedStyle(document.querySelector('.magnet-title')).color === getComputedStyle(document.body).color);
-			const measure = await page.locator('.magnet-search').evaluate(element => ({ width: element.clientWidth, scrollWidth: element.scrollWidth, titleHeights: [...element.querySelectorAll('.magnet-title')].map(title => title.getBoundingClientRect().height), controls: [...element.querySelectorAll('button')].map(button => button.getBoundingClientRect().height), appScroll: scrollY, pageOverflow: document.querySelector('.page-scroll').scrollWidth > document.querySelector('.page-scroll').clientWidth }));
+			await page.locator('.magnet-table-frame').evaluate(element => { element.scrollLeft = 0; });
+			const measure = await page.locator('.magnet-search').evaluate(element => ({ width: element.clientWidth, scrollWidth: element.scrollWidth, titleHeights: [...element.querySelectorAll('.magnet-title')].map(title => title.getBoundingClientRect().height), rowHeights: [...element.querySelectorAll('tbody tr')].map(row => row.getBoundingClientRect().height), cells: [...element.querySelectorAll('tbody tr')].map(row => row.querySelectorAll('td').length), controls: [...element.querySelectorAll('button')].map(button => button.getBoundingClientRect().height), appScroll: scrollY, pageOverflow: document.querySelector('.page-scroll').scrollWidth > document.querySelector('.page-scroll').clientWidth }));
 			assert.ok(measure.scrollWidth <= measure.width + 1, JSON.stringify(measure));
 			assert.equal(measure.pageOverflow, false);
 			assert.equal(measure.appScroll, 0);
-			assert.ok(measure.titleHeights.every(height => height <= 37));
-			assert.ok(measure.controls.every(height => height === 32));
+			assert.ok(measure.titleHeights.every(height => height <= 19));
+			assert.ok(measure.rowHeights.every(height => height >= 51 && height <= 54), JSON.stringify(measure));
+			assert.ok(measure.cells.every(cells => cells === 4));
+			const rows = await page.locator('.magnet-table tbody tr').evaluateAll(rows => rows.map(row => {
+				const cell = row.querySelector('td');
+				const title = cell.querySelector('.magnet-title').getBoundingClientRect();
+				const meta = cell.querySelector('.magnet-meta').getBoundingClientRect();
+				return { gap: meta.y - title.bottom, metaHeight: meta.height, borders: [...row.querySelectorAll('td')].map(cell => parseFloat(getComputedStyle(cell).borderLeftWidth)) };
+			}));
+			assert.ok(rows.every(row => Math.abs(row.gap - 4) <= 1 && row.metaHeight <= 17 && row.borders.every(width => width === 0)), JSON.stringify(rows));
+			assert.equal(measure.controls[0], 32);
+			assert.ok(measure.controls.slice(1).every(height => height === 28));
 			measurements.push({ width, theme, ...measure });
 			await page.screenshot({ path: join(output, `${width}-${theme}-magnet-table.png`) });
+			const frame = page.getByRole('region', { name: '磁链结果表格，可横向滚动', exact: true });
+			assert.deepEqual(await frame.evaluate(element => { const style = getComputedStyle(element); return [style.borderLeftWidth, style.borderRightWidth, style.borderRadius]; }), ['1px', '1px', '9px']);
+			if (width === 1600) {
+				assert.equal(await frame.evaluate(element => element.scrollWidth <= element.clientWidth + 1), true, 'All four columns fit at the larger desktop size');
+			}
+			await frame.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+			const actions = await page.locator('.magnet-table tbody tr').first().locator('.magnet-actions').boundingBox();
+			const frameBounds = await frame.boundingBox();
+			assert.ok(actions.x + actions.width <= frameBounds.x + frameBounds.width + 1);
+			assert.equal(await page.evaluate(() => scrollX), 0);
+			await frame.evaluate(element => { element.scrollLeft = 0; });
 		}
 	}
 	const mode = async value => { await app.evaluate((_electron, value) => { globalThis.__magnetMode = value; }, value); };
@@ -119,7 +144,7 @@ try {
 	assert.equal(await page.getByRole('tab', { name: '磁链搜索', exact: true }).count(), 0);
 	assert.deepEqual(errors, []);
 	assert.deepEqual(await app.evaluate(() => globalThis.__network), []);
-	await writeFile(join(output, 'verification.json'), JSON.stringify({ measurements, checks: ['detail-only-tab', 'existing-work-authorization', 'no-auto-query-before-tab', 'one-query-in-strict-mode', 'twenty-rows', 'copy-toast-and-source-action', 'empty-failure-cancel-and-leave-tab', 'query-and-library-origins', 'both-themes-and-window-sizes', 'no-site-requests'] }, null, 2));
+	await writeFile(join(output, 'verification.json'), JSON.stringify({ measurements, checks: ['detail-only-tab', 'existing-work-authorization', 'no-auto-query-before-tab', 'one-query-in-strict-mode', 'twenty-rows', 'four-columns-with-two-lines-in-name-cell', 'horizontal-row-separators-without-vertical-borders', 'horizontal-scroll-contained-in-table', 'zero-counts-and-missing-time', 'copy-toast-and-source-action', 'empty-failure-cancel-and-leave-tab', 'query-and-library-origins', 'both-themes-and-window-sizes', 'no-site-requests'] }, null, 2));
 	console.log(JSON.stringify({ application: appPath ? 'packaged' : 'development', output, checks: 'passed' }));
 } finally {
 	await app?.close().catch(() => {});
