@@ -17,23 +17,27 @@ import { useLibrary } from './context';
 export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: number }; onQuery: (code: string) => void }): React.JSX.Element {
 	const { state, loading, error, reload } = useLibrary();
 	const [view, setView] = useState<'cards' | 'wall'>('cards');
-	const [search, setSearch] = useState(''),
-		[sort, setSort] = useState('saved');
-	const [visible, setVisible] = useState(60),
-		[selected, setSelected] = useState(seed?.id ?? '');
-	const [work, setWork] = useState<SavedWork>(),
-		[detailError, setDetailError] = useState('');
-	const [confirm, setConfirm] = useState(false),
-		[removing, setRemoving] = useState(false);
+	const [search, setSearch] = useState('');
+	const [sort, setSort] = useState('saved');
+	const [visible, setVisible] = useState(60);
+	const [selected, setSelected] = useState(seed?.id ?? '');
+	const [work, setWork] = useState<SavedWork>();
+	const [detailError, setDetailError] = useState('');
+	const [confirm, setConfirm] = useState(false);
+	const [removing, setRemoving] = useState(false);
+
 	useEffect(() => {
 		setSelected(seed?.id ?? '');
 	}, [seed]);
+
 	useEffect(() => {
 		setVisible(60);
 	}, [search, sort, view]);
+
 	useEffect(() => {
 		document.querySelector('.page-scroll')?.scrollTo(0, 0);
 	}, [selected, view]);
+
 	useEffect(() => {
 		if (!selected) {
 			setWork(undefined);
@@ -46,18 +50,25 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 			.then((next) => {
 				if (live) {
 					setWork(next);
-					if (!next) setSelected('');
+					if (!next) {
+						setSelected('');
+					}
 				}
 			})
 			.catch(() => {
-				if (live) setDetailError('这部作品的收藏暂时无法读取，请重新检查收藏库。');
+				if (live) {
+					setDetailError('这部作品的收藏暂时无法读取，请重新检查收藏库。');
+				}
 			});
 		return () => {
 			live = false;
 		};
 	}, [selected, state]);
+
 	const remove = async (): Promise<void> => {
-		if (!work) return;
+		if (!work) {
+			return;
+		}
 		setRemoving(true);
 		try {
 			const reply = await window.nectisse.library.remove(work.id);
@@ -65,14 +76,17 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 				setSelected('');
 				setConfirm(false);
 				toast.success('已取消收藏', { id: 'library-remove', description: work.code });
-			} else toast.error(reply.message || '取消收藏未完成', { id: 'library-remove', duration: 8000 });
+			} else {
+				toast.error(reply.message || '取消收藏未完成', { id: 'library-remove', duration: 8000 });
+			}
 		} catch {
 			toast.error('收藏服务暂未响应，请重新检查后重试。', { id: 'library-remove', duration: 8000 });
 		} finally {
 			setRemoving(false);
 		}
 	};
-	if (selected)
+
+	if (selected) {
 		return (
 			<>
 				{work?.id === selected ? (
@@ -129,7 +143,9 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 				<Dialog
 					open={confirm}
 					onOpenChange={(open) => {
-						if (!removing) setConfirm(open);
+						if (!removing) {
+							setConfirm(open);
+						}
 					}}
 				>
 					<DialogContent className="library-remove-dialog" finalFocus={() => document.querySelector<HTMLElement>('.library-remove-button')}>
@@ -154,6 +170,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 				</Dialog>
 			</>
 		);
+	}
 	const term = search.trim().toLocaleLowerCase();
 	const works = state.works
 		.filter((work) => [work.code, work.title, work.studio, ...work.people, ...work.tags].join(' ').toLocaleLowerCase().includes(term))
@@ -164,6 +181,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 					? b.releaseDate.localeCompare(a.releaseDate)
 					: b.savedAt.localeCompare(a.savedAt),
 		);
+
 	return (
 		<div className="page library-page">
 			<PageHeader

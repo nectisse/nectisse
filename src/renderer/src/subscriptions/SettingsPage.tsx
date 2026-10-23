@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, FileText, HardDrive } from 'lucide-react';
+import { Bell, Check, FileText, Globe2, HardDrive, Monitor, Network, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { PageHeader } from '@/components/page-layout';
@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { FollowProvider, Preferences } from '../../../shared/subscriptions';
 import { StatusBadge } from '../prototype/components';
 import { useSubscriptions } from './context';
-import { SubscriptionList } from './SubscriptionsPage';
 import { SourceCatalog } from './SourceCatalog';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
 
@@ -29,35 +28,53 @@ function SettingRow({ label, description, children }: { label: string; descripti
 }
 
 const sections = [
-	{ value: 'sources', label: '来源与账号' },
-	{ value: 'subscriptions', label: '订阅管理' },
-	{ value: 'network', label: '网络与存储' },
-	{ value: 'general', label: '外观与应用' },
+	{ value: 'sources', label: '来源与账号', icon: Globe2 },
+	{ value: 'subscriptions', label: '订阅管理', icon: Bell },
+	{ value: 'network', label: '网络与存储', icon: Network },
+	{ value: 'general', label: '外观与应用', icon: Palette },
 ] as const;
 
-export function SettingsPage({ onAdd }: { onAdd: (provider?: FollowProvider) => void }): React.JSX.Element {
+export type SettingsSection = (typeof sections)[number]['value'];
+
+export function SettingsPage({
+	onAdd,
+	onDemo,
+	section,
+	onSectionChange,
+}: {
+	onAdd: (provider?: FollowProvider) => void;
+	onDemo: () => void;
+	section: SettingsSection;
+	onSectionChange: (section: SettingsSection) => void;
+}): React.JSX.Element {
 	const { state, invoke } = useSubscriptions();
-	const [section, setSection] = useState<string>('sources');
 	const [proxy, setProxy] = useState(state.preferences.proxyUrl);
 	const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 	const diagnosticsTrigger = useRef<HTMLButtonElement | null>(null);
 	const preferences = state.preferences;
+
 	useEffect(() => {
 		setProxy(preferences.proxyUrl);
 	}, [preferences.proxyUrl]);
+
 	const save = async (patch: Partial<Preferences>): Promise<void> => {
 		const reply = await invoke({ action: 'preferences', value: { ...preferences, ...patch } });
-		if (reply.ok) toast.success('设置已保存', { id: 'settings-save' });
-		else toast.error(reply.message || '设置未保存', { id: 'settings-save', duration: 8000 });
+		if (reply.ok) {
+			toast.success('设置已保存', { id: 'settings-save' });
+		} else {
+			toast.error(reply.message || '设置未保存', { id: 'settings-save', duration: 8000 });
+		}
 	};
+
 	return (
 		<div className="page settings-page">
 			<PageHeader title="设置" description="管理资料来源、订阅与本机连接。" />
 			<Tabs
 				value={section}
 				onValueChange={(value) => {
-					if (typeof value === 'string') {
-						setSection(value);
+					const next = sections.find((item) => item.value === value);
+					if (next) {
+						onSectionChange(next.value);
 					}
 				}}
 				className="settings-tabs"
@@ -65,6 +82,7 @@ export function SettingsPage({ onAdd }: { onAdd: (provider?: FollowProvider) => 
 				<TabsList variant="line" aria-label="设置分区">
 					{sections.map((item) => (
 						<TabsTrigger key={item.value} value={item.value}>
+							<item.icon aria-hidden="true" />
 							{item.label}
 						</TabsTrigger>
 					))}
@@ -127,7 +145,6 @@ export function SettingsPage({ onAdd }: { onAdd: (provider?: FollowProvider) => 
 							</div>
 						</Card>
 					</section>
-					<SubscriptionList onAdd={onAdd} />
 				</TabsContent>
 				<TabsContent value="network">
 					<section className="settings-section settings-preferences">
@@ -218,6 +235,19 @@ export function SettingsPage({ onAdd }: { onAdd: (provider?: FollowProvider) => 
 										{ value: 'night', label: '黑莓夜间' },
 									]}
 								/>
+							</SettingRow>
+						</Card>
+					</section>
+					<section className="settings-section settings-preferences" aria-labelledby="visual-demo-heading">
+						<div className="settings-section-heading">
+							<h2 id="visual-demo-heading">视觉演示</h2>
+						</div>
+						<Card className="settings-card gap-0 py-0 ring-0">
+							<SettingRow label="示例资料预览" description="浏览示例作品、创作者与更新，演示操作不保存到资料库。">
+								<Button id="open-visual-demo" variant="outline" size="sm" onClick={onDemo}>
+									<Monitor aria-hidden="true" />
+									打开演示
+								</Button>
 							</SettingRow>
 						</Card>
 					</section>

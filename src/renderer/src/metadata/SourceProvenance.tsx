@@ -60,13 +60,20 @@ function fieldGroups(snapshots: SourceSnapshot[], key: string): { value: string;
 	const groups = new Map<string, { value: string; sources: string[]; comparisonKey: string }>();
 	for (const snapshot of snapshots) {
 		const field = snapshot.fields.find((field) => field.key === key);
+
 		// 缺失不是冲突；只有两个来源都给出非空且不同的值才显示字段差异。
-		if (!field?.value.trim()) continue;
+		if (!field?.value.trim()) {
+			continue;
+		}
 		const comparisonKey = field.comparisonKey ?? field.value.trim();
 		const group = groups.get(comparisonKey);
 		if (group) {
-			if (!group.sources.includes(snapshot.name)) group.sources.push(snapshot.name);
-		} else groups.set(comparisonKey, { value: field.value, sources: [snapshot.name], comparisonKey });
+			if (!group.sources.includes(snapshot.name)) {
+				group.sources.push(snapshot.name);
+			}
+		} else {
+			groups.set(comparisonKey, { value: field.value, sources: [snapshot.name], comparisonKey });
+		}
 	}
 	return [...groups.values()];
 }
@@ -80,6 +87,7 @@ const dateLabel = (value: string): string => {
 	const date = new Date(value);
 	return Number.isNaN(date.valueOf()) ? value || '未记录' : date.toLocaleString('zh-CN', { hour12: false });
 };
+
 const hostname = (value: string): string => {
 	try {
 		return new URL(value).hostname;
@@ -205,6 +213,7 @@ export function SourceProvenance({
 					{snapshots.map((snapshot) => {
 						const provided = snapshot.fields.filter((field) => field.value.trim());
 						const missing = snapshot.fields.filter((field) => !field.value.trim());
+
 						return (
 							<Collapsible
 								key={snapshot.id}

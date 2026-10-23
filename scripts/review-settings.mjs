@@ -14,43 +14,121 @@ export async function reviewSettings(page, application, output) {
 	assert.ok(catalogRect.width >= tabsRect.width - 1);
 	assert.ok(catalogRect.y >= tabsRect.y + tabsRect.height);
 	const metadataPriority = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority);
-	await page.getByRole('button', { name: '配置封面优先级', exact: true }).click();
-	const coverPanel = await page.locator('.cover-preferences').boundingBox();
-	const coverTrigger = await page.getByRole('button', { name: '配置封面优先级', exact: true }).boundingBox();
-	assert.ok(Math.abs(coverPanel.width - coverTrigger.width) <= 2);
-	assert.ok(coverTrigger.height >= 64);
+	const coverTrigger = page.getByRole('button', { name: '封面选择', exact: true });
+	const metadataTrigger = page.getByRole('button', { name: '资料采用顺序', exact: true });
+	const coverDialog = page.getByRole('dialog', { name: '封面选择', exact: true });
+	const metadataDialog = page.getByRole('dialog', { name: '资料采用顺序', exact: true });
+	assert.equal(await page.getByRole('textbox', { name: '搜索来源', exact: true }).count(), 0);
+	assert.equal(await page.locator('.settings-tabs > [data-slot="tabs-list"] > [data-slot="tabs-trigger"] > svg').count(), 4);
+	for (const trigger of [coverTrigger, metadataTrigger]) {
+		assert.equal(await trigger.locator('svg[aria-hidden="true"]').count(), 1);
+		assert.equal((await trigger.boundingBox()).height, 32);
+	}
+	const tableBounds = await page.locator('.source-table-card').boundingBox();
+	await coverTrigger.click();
+	await coverDialog.waitFor();
+	await page.waitForFunction(() => document.activeElement?.matches('.source-priority-heading h2'));
+	assert.deepEqual(await page.locator('.source-table-card').boundingBox(), tableBounds);
 	await chooseOption(page, '添加封面优先图源', 'MGStage');
 	await page.getByRole('button', { name: '上移 MGStage 封面优先级', exact: true }).click();
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority.join(',') === 'mgstage,dmm');
 	await page.screenshot({ path: join(output, '00-cover-priority.png') });
+	await coverDialog.getByRole('button', { name: '完成', exact: true }).click();
+	await metadataTrigger.click();
+	await metadataDialog.getByRole('button', { name: '下移 DMM / FANZA 资料优先级', exact: true }).focus();
+	await page.keyboard.press('Enter');
+	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority[0] === 'r18dev');
+	assert.deepEqual(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority), ['mgstage', 'dmm']);
+	await page.keyboard.press('Escape');
+	await page.waitForFunction(() => document.activeElement?.textContent?.trim() === '资料采用顺序');
+	const modalLayouts = [];
 	for (const width of [1280, 1000]) {
 		await application.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1280 ? 840 : 700), width);
 		await page.waitForFunction(width => innerWidth === width, width);
 		for (const theme of ['cream', 'night']) {
 			await page.evaluate(async theme => { const state = await window.nectisse.subscriptions.getState(); await window.nectisse.subscriptions.command({ action: 'preferences', value: { ...state.preferences, theme } }); }, theme);
 			await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
-			const layout = await page.locator('.cover-preferences').evaluate(element => {
-				const panel = element.getBoundingClientRect(), trigger = element.querySelector('button').getBoundingClientRect();
-				return { panelWidth: panel.width, triggerWidth: trigger.width, height: trigger.height, overflow: element.scrollWidth - element.clientWidth, outer: document.scrollingElement.scrollHeight - innerHeight };
+			await page.screenshot({ path: join(output, `00-source-toolbar-${width}-${theme}.png`), animations: 'disabled' });
+			const toolbar = await page.locator('.source-catalog-controls').evaluate(element => {
+				const controls = [...element.querySelectorAll('[data-slot="select-trigger"], [data-slot="button"]')].map(control => control.getBoundingClientRect());
+				return { heights: controls.map(box => box.height), tops: controls.map(box => box.top), overflow: element.scrollWidth - element.clientWidth };
 			});
-			assert.ok(Math.abs(layout.panelWidth - layout.triggerWidth) <= 2 && layout.height >= 64 && layout.overflow <= 1 && layout.outer <= 1, JSON.stringify(layout));
-			await page.screenshot({ path: join(output, `00-cover-priority-${width}-${theme}.png`) });
+			assert.ok(toolbar.heights.every(height => height === 32) && toolbar.tops.every(top => Math.abs(top - toolbar.tops[0]) <= 1) && toolbar.overflow <= 1, JSON.stringify(toolbar));
+			for (const [kind, trigger, dialog] of [['cover', coverTrigger, coverDialog], ['metadata', metadataTrigger, metadataDialog], ['cover-many', coverTrigger, coverDialog]]) {
+				if (kind === 'cover-many') {
+					await page.evaluate(async () => {
+						const state = await window.nectisse.subscriptions.getState();
+						await window.nectisse.subscriptions.command({ action: 'preferences', value: { ...state.preferences, coverPriority: ['mgstage', 'dmm', 'prestige', 'faleno', 'dahlia', '1pondo', 'fc2', 'javbus', 'avbase', 'airav'] } });
+					});
+					await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority.length === 10);
+				}
+				await trigger.click();
+				await dialog.waitFor();
+				assert.deepEqual(await dialog.getByRole('columnheader').allTextContents(), ['顺序', kind === 'metadata' ? '来源' : '图源', '调整']);
+				const layout = await dialog.evaluate(element => {
+					const panel = element.getBoundingClientRect();
+					const body = element.querySelector('.source-priority-scroll');
+					const rank = element.querySelector('td.source-priority-rank');
+					return { top: panel.top, bottom: panel.bottom, width: panel.width, height: panel.height, viewport: innerHeight, footer: element.querySelector('.source-priority-footer').getBoundingClientRect().bottom, overflow: element.scrollWidth - element.clientWidth, outer: document.scrollingElement.scrollHeight - innerHeight, scrolls: body.scrollHeight > body.clientHeight, heights: [...element.querySelectorAll('[data-slot="button"]')].map(control => control.getBoundingClientRect().height), rowHeights: [...element.querySelectorAll('.source-priority-item')].map(row => row.getBoundingClientRect().height), rankRadius: getComputedStyle(rank).borderRadius, rankBackground: getComputedStyle(rank).backgroundColor, titleFont: getComputedStyle(element.querySelector('h2')).fontSize, headerFont: getComputedStyle(element.querySelector('th')).fontSize };
+				});
+				assert.ok(layout.top >= 30 && layout.bottom <= layout.viewport - 30 && layout.footer <= layout.bottom && layout.overflow <= 1 && layout.outer <= 1 && layout.heights.every(height => height === 32), JSON.stringify(layout));
+				assert.ok(layout.width <= 520 && layout.height <= 480 && layout.rowHeights.every(height => height >= 40 && height <= 42), JSON.stringify(layout));
+				assert.equal(layout.rankRadius, '0px');
+				assert.equal(layout.rankBackground, 'rgba(0, 0, 0, 0)');
+				assert.equal(layout.titleFont, '16px');
+				assert.equal(layout.headerFont, '10px');
+				if (kind !== 'cover') {
+					assert.ok(layout.scrolls);
+					const headerTop = await dialog.locator('thead').evaluate(element => element.getBoundingClientRect().top);
+					const footerTop = await dialog.locator('.source-priority-footer').evaluate(element => element.getBoundingClientRect().top);
+					const addTop = kind === 'cover-many' ? await dialog.locator('.source-priority-add').evaluate(element => element.getBoundingClientRect().top) : null;
+					await dialog.locator('.source-priority-scroll').evaluate(element => element.scrollTop = element.scrollHeight);
+					assert.ok(Math.abs(await dialog.locator('thead').evaluate(element => element.getBoundingClientRect().top) - headerTop) <= 1);
+					assert.equal(await dialog.locator('.source-priority-footer').evaluate(element => element.getBoundingClientRect().top), footerTop);
+					if (addTop !== null) {
+						assert.equal(await dialog.locator('.source-priority-add').evaluate(element => element.getBoundingClientRect().top), addTop);
+					}
+					await dialog.locator('.source-priority-scroll').evaluate(element => element.scrollTop = 0);
+				}
+				modalLayouts.push({ width, theme, kind, ...layout });
+				await page.screenshot({ path: join(output, `00-${kind}-priority-${width}-${theme}.png`), animations: 'disabled' });
+				await page.keyboard.press('Escape');
+				await dialog.waitFor({ state: 'hidden' });
+				await page.waitForFunction(label => document.activeElement?.textContent?.trim() === label, kind === 'metadata' ? '资料采用顺序' : '封面选择');
+				if (kind === 'cover-many') {
+					await page.evaluate(async () => {
+						const state = await window.nectisse.subscriptions.getState();
+						await window.nectisse.subscriptions.command({ action: 'preferences', value: { ...state.preferences, coverPriority: ['mgstage', 'dmm'] } });
+					});
+					await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority.length === 2);
+				}
+			}
 		}
 	}
+	await writeFile(join(output, 'source-preferences-verification.json'), JSON.stringify({ modalLayouts, icons: 4, noSearch: true, independentPriorities: true }, null, 2));
 	await page.getByRole('button', { name: '切换到奶油档案', exact: true }).click();
 	await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1280, 840));
 	await page.reload();
 	await page.getByRole('button', { name: '设置', exact: true }).click();
-	await page.getByRole('button', { name: '配置封面优先级', exact: true }).click();
+	await coverTrigger.click();
 	assert.deepEqual(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority), ['mgstage', 'dmm']);
-	assert.deepEqual(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority), metadataPriority);
+	assert.deepEqual(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority), [metadataPriority[1], metadataPriority[0], ...metadataPriority.slice(2)]);
 	await page.getByRole('button', { name: '移除 MGStage 封面优先级', exact: true }).click();
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority.join(',') === 'dmm');
 	await page.getByRole('button', { name: '移除 DMM / FANZA 封面优先级', exact: true }).click();
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority.length === 0);
-	await page.locator('.cover-preferences').getByRole('button', { name: '恢复默认', exact: true }).click();
+	await coverDialog.getByText('未指定优先图源，所有合格候选按分辨率选择。', { exact: true }).waitFor();
+	await coverDialog.getByRole('button', { name: '恢复默认', exact: true }).click();
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.coverPriority.join(',') === 'dmm');
-	await page.getByRole('button', { name: '配置封面优先级', exact: true }).click();
+	await coverDialog.getByRole('button', { name: '关闭封面选择', exact: true }).click();
+	await metadataTrigger.click();
+	await metadataDialog.getByRole('button', { name: '上移 DMM / FANZA 资料优先级', exact: true }).click();
+	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority[0] === 'dmm');
+	await metadataDialog.getByRole('button', { name: '下移 DMM / FANZA 资料优先级', exact: true }).click();
+	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority[0] === 'r18dev');
+	await metadataDialog.getByRole('button', { name: '恢复默认', exact: true }).click();
+	await page.waitForFunction(async expected => (await window.nectisse.subscriptions.getState()).preferences.metadataPriority.join(',') === expected, metadataPriority.join(','));
+	await metadataDialog.getByRole('button', { name: '完成', exact: true }).click();
 	const source = page.getByRole('switch', { name: '启用 DMM / FANZA', exact: true });
 	await source.click();
 	const blocked = await page.evaluate(() => window.nectisse.metadata.query({ query: 'SSIS-057', sources: ['dmm'], force: true }));
@@ -62,9 +140,8 @@ export async function reviewSettings(page, application, output) {
 	await chooseOption(page, 'dmm 传输', '标准连接');
 	await page.screenshot({ path: join(output, '01-sources.png') });
 	await page.getByRole('button', { name: '配置 DMM / FANZA', exact: true }).click();
-	const sourceSearch = page.getByRole('textbox', { name: '搜索来源', exact: true });
-	await sourceSearch.fill('FANBOX');
-	assert.equal(await page.locator('.settings-source').count(), 1);
+	await chooseOption(page, '来源用途', '演员／创作者订阅');
+	assert.equal(await page.locator('.settings-source').count(), 8);
 	await page.getByRole('button', { name: '配置 FANBOX', exact: true }).click();
 	const accountSecure = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).encryptionAvailable);
 	if (accountSecure) {
@@ -72,12 +149,13 @@ export async function reviewSettings(page, application, output) {
 		await page.getByRole('button', { name: '安全保存', exact: true }).click();
 		await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).sources.find(row => row.id === 'fanbox').credentialPresent);
 		assert.equal(await page.getByLabel('fanbox Cookie', { exact: true }).inputValue(), '');
+		assert.equal(await page.evaluate(async () => JSON.stringify(await window.nectisse.subscriptions.getState()).includes('synthetic-fixture')), false);
 		await page.getByRole('button', { name: '清除 Cookie', exact: true }).click();
 		await page.waitForFunction(async () => !(await window.nectisse.subscriptions.getState()).sources.find(row => row.id === 'fanbox').credentialPresent);
 	}
 	await page.screenshot({ path: join(output, '01b-source-account.png') });
 	await page.getByRole('button', { name: '配置 FANBOX', exact: true }).click();
-	await sourceSearch.fill('');
+	await chooseOption(page, '来源用途', '全部来源 · 36');
 	await page.screenshot({ path: join(output, '01a-source-overview.png') });
 	await page.getByRole('tab', { name: '订阅管理', exact: true }).click();
 	await page.getByRole('switch', { name: '自动检查订阅', exact: true }).click();
@@ -116,7 +194,7 @@ export async function reviewSettings(page, application, output) {
 	assert.equal(await page.getByRole('combobox', { name: '演员默认检查频率', exact: true }).innerText(), '每 12 小时');
 	await chooseOption(page, '创作者默认检查频率', '每小时');
 	await chooseOption(page, '演员默认检查频率', '每 6 小时');
-	await page.screenshot({ path: join(output, '02-subscriptions-empty.png') });
+	await page.screenshot({ path: join(output, '02-subscription-policy.png') });
 	await page.getByRole('tab', { name: '网络与存储', exact: true }).click();
 	await chooseOption(page, '网络代理', '直接连接');
 	assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.proxyMode), 'direct');
@@ -144,13 +222,6 @@ export async function reviewSettings(page, application, output) {
 	await page.getByRole('button', { name: '切换到奶油档案', exact: true }).click();
 	await page.keyboard.press('Meta+,');
 	await page.getByRole('heading', { name: '设置', exact: true }).waitFor();
-	const secure = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).encryptionAvailable);
-	if (secure) {
-		const reply = await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'credential', provider: 'fanbox', cookie: 'nectisse-smoke=synthetic-fixture' }));
-		assert.equal(reply.ok, true); assert.equal((await page.evaluate(() => JSON.stringify(window.nectisse.subscriptions.getState()))).includes('synthetic-fixture'), false);
-		const state = await page.evaluate(() => window.nectisse.subscriptions.getState()); assert.equal(state.sources.find(row => row.id === 'fanbox').credentialPresent, true);
-		await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'credential', provider: 'fanbox', cookie: '' }));
-	}
 	await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1000, 700));
 	await page.waitForFunction(() => innerWidth === 1000);
 	const size = await page.locator('.page-scroll').evaluate(element => ({ scroll: element.scrollWidth, width: element.clientWidth })); assert.ok(size.scroll <= size.width + 1);

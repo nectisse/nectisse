@@ -1,12 +1,14 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { SaveWorkButton } from '../library/SaveWorkButton';
 import { coverSource, preferredCover } from '../../../shared/cover-selection';
 import { useSubscriptions } from '../subscriptions/context';
-import { ArrowLeft, Check, ChevronRight, Clock3, Image, Info, LoaderCircle, RefreshCw, Search, Square } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Clock3, Image, Info, LoaderCircle, RefreshCw, Search, Square, X } from 'lucide-react';
 import { MetadataSourcePicker } from './MetadataSourcePicker';
 import { WorkPeople } from './WorkPeople';
 import { SourceProvenance, metadataSnapshot, differingFields } from './SourceProvenance';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
 import { EmptyState } from '@/components/empty-state';
 import { PageHeader, PageToolbar } from '@/components/page-layout';
@@ -17,24 +19,33 @@ import { ReviewTabs, QuietButton, StatusBadge } from '../prototype/components';
 import { SOURCE_LABELS, isActiveTask, type SourceId, type QueryTask, type MetadataState, type MetadataRecord, type CoverCandidate } from '../../../shared/metadata';
 
 const statusLabels = { running: '查询中', cancelling: '正在取消', cancelled: '已取消', succeeded: '已完成', partial: '部分取得', failed: '未取得', interrupted: '已中断' };
+
 function hasMetadataValue(value: unknown): boolean {
 	return Array.isArray(value) ? value.length > 0 : typeof value === 'string' && !!value.trim();
 }
+
 // 按来源顺序采用首个非空字段，未提供的值继续留空，不从其他字段推断。
 function firstAvailableField<K extends keyof MetadataRecord>(records: MetadataRecord[], name: K): MetadataRecord[K] {
 	return (records.find((record) => hasMetadataValue(record[name])) ?? records[0]!)[name];
 }
+
 function groupRecordsByCode(records: MetadataRecord[], order: readonly SourceId[]): MetadataRecord[][] {
 	const map = new Map<string, MetadataRecord[]>();
-	for (const record of records) map.set(record.code, [...(map.get(record.code) ?? []), record]);
+	for (const record of records) {
+		map.set(record.code, [...(map.get(record.code) ?? []), record]);
+	}
 	return [...map.values()].map((group) => group.toSorted((a, b) => order.indexOf(a.source) - order.indexOf(b.source)));
 }
+
 const fetched = (value: string): string => new Date(value).toLocaleString('zh-CN', { hour12: false });
+
 const imageUrl = (cover: CoverCandidate, scope: string): string => `nectisse-cover://${scope}/${cover.asset?.sha256}`;
 
 export function CoverImage({ cover, className, scope = 'image' }: { cover?: CoverCandidate; className?: string; scope?: 'image' | 'library' }): React.JSX.Element {
 	const [broken, setBroken] = useState(false);
+
 	useEffect(() => setBroken(false), [cover?.asset?.sha256]);
+
 	return (
 		<div className={cn('live-cover', className)}>
 			{cover?.asset && !broken ? (
@@ -54,6 +65,7 @@ function SourceStatus({ task }: { task: QueryTask }): React.JSX.Element {
 		<div className="live-source-status">
 			{task.plan.sources.map((source) => {
 				const outcome = task.outcomes.find((outcome) => outcome.source === source);
+
 				return (
 					<div key={source}>
 						<strong>{SOURCE_LABELS[source]}</strong>
@@ -213,8 +225,11 @@ export function RealDetail({
 							<SourceProvenance
 								snapshots={snapshots}
 								onOpenSource={(snapshot) => {
-									if (onOpenSource) onOpenSource(snapshot.id);
-									else if (task) void window.nectisse.metadata.openSource(task.id, snapshot.id);
+									if (onOpenSource) {
+										onOpenSource(snapshot.id);
+									} else if (task) {
+										void window.nectisse.metadata.openSource(task.id, snapshot.id);
+									}
 								}}
 							/>
 						)}
@@ -243,55 +258,73 @@ export default function MetadataWorkspace({
 	onLibrary,
 }: { seed?: { query: string; token: number }; onPerformer?: (name: string) => void; onLibrary?: (id: string) => void } = {}): React.JSX.Element {
 	const { state: subscriptionState } = useSubscriptions();
+
 	useEffect(() => {
 		if (seed) {
 			setQuery(seed.query);
 			setSelectedCode('');
 		}
 	}, [seed]);
+
 	const [state, setState] = useState<MetadataState>({ revision: 0, tasks: [] });
 	const [query, setQuery] = useState('');
 	const [sources, setSources] = useState<SourceId[]>(['dmm', 'r18dev', 'fc2']);
 	const [selectedTaskId, setSelectedTaskId] = useState('');
 	const [selectedCode, setSelectedCode] = useState('');
+
 	useEffect(() => {
-		if (seed && !selectedCode) document.getElementById('work-query')?.focus();
+		if (seed && !selectedCode) {
+			document.getElementById('work-query')?.focus();
+		}
 	}, [seed, selectedCode]);
+
 	const [initializationError, setInitializationError] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [recentOpen, setRecentOpen] = useState(false);
+	const historyTrigger = useRef<HTMLButtonElement | null>(null);
+	const historyTitle = useRef<HTMLHeadingElement | null>(null);
+
 	useEffect(() => {
 		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
 	}, [selectedCode]);
+
 	useEffect(() => {
 		let mounted = true;
 		if (!window.nectisse?.metadata) {
 			setInitializationError(true);
 			return;
 		}
+
 		const apply = (next: MetadataState): void => {
-			if (!mounted) return;
+			if (!mounted) {
+				return;
+			}
 			setState((previous) => (next.revision >= previous.revision ? next : previous));
 			setSelectedTaskId((previous) => previous || next.tasks[0]?.id || '');
 			setInitializationError(false);
 		};
+
 		const unsubscribe = window.nectisse.metadata.onState(apply);
 		void window.nectisse.metadata
 			.getState()
 			.then(apply)
 			.catch(() => {
-				if (mounted) setInitializationError(true);
+				if (mounted) {
+					setInitializationError(true);
+				}
 			});
 		return () => {
 			mounted = false;
 			unsubscribe();
 		};
 	}, []);
+
 	const task = state.tasks.find((task) => task.id === selectedTaskId) ?? state.tasks[0];
 	const active = state.tasks.find((task) => task.id === state.activeId);
 	const busy = submitting || !!active;
 	const currentGroups = groupRecordsByCode(task?.records ?? [], subscriptionState.preferences.metadataPriority);
 	const selectedRecords = currentGroups.find((group) => group[0]?.code === selectedCode);
+
 	const retryInitialization = async (): Promise<void> => {
 		setSubmitting(true);
 		try {
@@ -305,23 +338,31 @@ export default function MetadataWorkspace({
 			setSubmitting(false);
 		}
 	};
+
 	const submit = async (force = false, value = query): Promise<void> => {
-		if (!value.trim() || !sources.length || busy) return;
+		if (!value.trim() || !sources.length || busy) {
+			return;
+		}
 		setSubmitting(true);
 		setSelectedCode('');
 		try {
 			const reply = await window.nectisse.metadata.query({ query: value, sources, force });
 			if (reply.ok && reply.taskId) {
 				setSelectedTaskId(reply.taskId);
-				if (reply.cached) toast.info('已读取本地查询结果', { id: 'metadata-query', description: '结果保留 1 小时；重新采集可发起新查询。' });
-			} else toast.error(reply.message || '无法开始查询', { id: 'metadata-query', duration: 8000 });
+				if (reply.cached) {
+					toast.info('已读取本地查询结果', { id: 'metadata-query', description: '结果保留 1 小时；重新采集可发起新查询。' });
+				}
+			} else {
+				toast.error(reply.message || '无法开始查询', { id: 'metadata-query', duration: 8000 });
+			}
 		} catch {
 			toast.error('无法开始查询，请检查输入与运行环境。', { id: 'metadata-query', duration: 8000 });
 		} finally {
 			setSubmitting(false);
 		}
 	};
-	if (task && selectedRecords)
+
+	if (task && selectedRecords) {
 		return (
 			<>
 				<RealDetail
@@ -356,13 +397,14 @@ export default function MetadataWorkspace({
 				)}
 			</>
 		);
+	}
 	return (
 		<div className="page query-page live-query" data-testid="live-query">
 			<PageHeader
 				title="资料查询"
 				description="查询作品资料与封面，留下每项信息的来处。"
 				actions={
-					<Button variant="outline" size="sm" onClick={() => setRecentOpen((previous) => !previous)} aria-expanded={recentOpen}>
+					<Button ref={historyTrigger} variant="outline" size="sm" onClick={() => setRecentOpen(true)} aria-haspopup="dialog" aria-expanded={recentOpen}>
 						<Clock3 />
 						查询记录
 					</Button>
@@ -445,31 +487,89 @@ export default function MetadataWorkspace({
 					</Button>
 				</div>
 			)}
-			{recentOpen && (
-				<section className="live-history" aria-label="查询记录">
-					{state.tasks.length ? (
-						state.tasks.map((previous) => (
-							<Button
-								variant="text"
-								size="text"
-								key={previous.id}
-								onClick={() => {
-									setSelectedTaskId(previous.id);
-									setSelectedCode('');
-									setQuery(previous.plan.query);
-									setRecentOpen(false);
-								}}
-							>
-								<span>{previous.plan.query}</span>
-								<small>{fetched(previous.startedAt)}</small>
-								<StatusBadge tone={previous.status === 'succeeded' ? 'success' : 'neutral'}>{statusLabels[previous.status]}</StatusBadge>
-							</Button>
-						))
-					) : (
-						<p>还没有查询记录。</p>
-					)}
-				</section>
-			)}
+			<Dialog open={recentOpen} onOpenChange={setRecentOpen}>
+				<DialogContent className="query-history-dialog" finalFocus={historyTrigger} initialFocus={historyTitle}>
+					<header className="query-history-header">
+						<div>
+							<DialogTitle ref={historyTitle} tabIndex={-1}>
+								查询记录
+							</DialogTitle>
+							<DialogDescription>选择记录，查看已保存在本机的查询结果。</DialogDescription>
+						</div>
+						<DialogClose render={<Button className="query-history-close" variant="ghost" size="icon-sm" aria-label="关闭查询记录" />}>
+							<X />
+						</DialogClose>
+					</header>
+					<div className="query-history-scroll">
+						{state.tasks.length ? (
+							<Table className="query-history-table" aria-label="本地查询记录">
+								<TableHeader>
+									<TableRow>
+										<TableHead>查询内容</TableHead>
+										<TableHead className="query-history-time-cell">查询时间</TableHead>
+										<TableHead className="query-history-status-cell">状态</TableHead>
+										<TableHead className="query-history-indicator-cell">
+											<span className="sr-only">当前记录</span>
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{state.tasks.map((previous) => {
+										const date = new Date(previous.startedAt);
+										return (
+											<TableRow
+												key={previous.id}
+												className="query-history-row"
+												data-current={previous.id === task?.id || undefined}
+												onClick={() => {
+													setSelectedTaskId(previous.id);
+													setSelectedCode('');
+													setQuery(previous.plan.query);
+													setRecentOpen(false);
+													document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
+												}}
+											>
+												<TableCell>
+													<Button
+														variant="text"
+														size="text"
+														className="query-history-open"
+														aria-current={previous.id === task?.id ? 'true' : undefined}
+														aria-label={`查看查询记录 ${previous.plan.query}`}
+													>
+														<span className="query-history-query" title={previous.plan.query}>
+															{previous.plan.query}
+														</span>
+														<small>{new Set(previous.records.map((record) => record.code)).size} 部作品</small>
+													</Button>
+												</TableCell>
+												<TableCell className="query-history-time-cell">
+													<time dateTime={previous.startedAt} title={fetched(previous.startedAt)} aria-label={fetched(previous.startedAt)}>
+														<span>{date.toLocaleDateString('zh-CN')}</span>
+														<small>{date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}</small>
+													</time>
+												</TableCell>
+												<TableCell className="query-history-status-cell">
+													<StatusBadge tone={previous.status === 'succeeded' ? 'success' : previous.status === 'partial' ? 'peach' : 'neutral'}>
+														{statusLabels[previous.status]}
+													</StatusBadge>
+												</TableCell>
+												<TableCell className="query-history-indicator-cell">{previous.id === task?.id && <Check aria-label="当前记录" />}</TableCell>
+											</TableRow>
+										);
+									})}
+								</TableBody>
+							</Table>
+						) : (
+							<EmptyState compact headingLevel={3} icon={Clock3} title="还没有查询记录" description="查询作品后，可以在这里重新查看结果。" />
+						)}
+					</div>
+					<footer className="query-history-footer">
+						<span>{state.tasks.length} 条记录</span>
+						<DialogClose render={<Button variant="outline" size="sm" />}>关闭</DialogClose>
+					</footer>
+				</DialogContent>
+			</Dialog>
 			{task ? (
 				<>
 					<PageToolbar

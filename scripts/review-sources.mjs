@@ -9,6 +9,7 @@ export async function reviewSources(page, output) {
 	await mkdir(output, { recursive: true });
 	await page.getByRole('button', { name: '设置', exact: true }).click();
 	await page.getByRole('heading', { level: 1, name: '设置', exact: true }).waitFor();
+	await page.getByRole('tab', { name: '来源与账号', exact: true }).click();
 	assert.equal(await page.locator('.settings-source').count(), 36);
 	await chooseOption(page, '来源用途', '作品资料与封面');
 	assert.equal(await page.locator('.settings-source').count(), 24);
@@ -35,6 +36,7 @@ export async function reviewSources(page, output) {
 	await chooseOption(page, '关注来源', 'SubscribeStar');
 	await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).fill('https://subscribestar.adult/creator');
 	assert.equal(await page.getByRole('button', { name: '查询身份', exact: true }).isDisabled(), true);
+	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
 	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '资料查询', exact: true }).click();
 	await page.getByRole('button', { name: '调整资料来源', exact: true }).click();
 	await page.getByRole('button', { name: '查询使用 AVBase', exact: true }).click();

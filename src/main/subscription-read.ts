@@ -12,6 +12,7 @@ class SnapshotPartError extends Error {
 		super('SUBSCRIPTION_SNAPSHOT_PART_FAILED', { cause });
 	}
 }
+
 export function readSubscriptionPart<T>(stage: SubscriptionStage, read: () => T): T {
 	try {
 		return read();
@@ -19,6 +20,7 @@ export function readSubscriptionPart<T>(stage: SubscriptionStage, read: () => T)
 		throw new SnapshotPartError(stage, error);
 	}
 }
+
 export function readSubscriptionState(read: () => unknown, report: (code: SubscriptionReadCode, context: SubscriptionFailureContext) => void): SubscriptionsState {
 	let stage: SubscriptionStage = 'snapshot';
 	try {
@@ -26,7 +28,9 @@ export function readSubscriptionState(read: () => unknown, report: (code: Subscr
 		stage = 'validation';
 		return subscriptionsStateSchema.parse(value);
 	} catch (error) {
-		if (error instanceof SnapshotPartError) stage = error.stage;
+		if (error instanceof SnapshotPartError) {
+			stage = error.stage;
+		}
 		const cause = error instanceof SnapshotPartError ? error.cause : error;
 		const code =
 			cause instanceof z.ZodError || cause instanceof SyntaxError
@@ -42,6 +46,7 @@ export function readSubscriptionState(read: () => unknown, report: (code: Subscr
 		throw new Error(code);
 	}
 }
+
 /** A bounded, private diagnostic log contains only fixed codes and timestamps. */
 export function recordSubscriptionReadFailure(root: string, code: SubscriptionReadCode, context?: SubscriptionFailureContext): void {
 	new DiagnosticLog(root).record(code, context);

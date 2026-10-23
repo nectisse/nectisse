@@ -25,7 +25,7 @@ export function PostCard({
 }): React.JSX.Element {
 	const creator = creatorFor(post.creatorId);
 	const textual = post.type === '公告' || post.type === '进度更新';
-	if (!expanded)
+	if (!expanded) {
 		return (
 			<FeedItem
 				className="update-item"
@@ -47,6 +47,7 @@ export function PostCard({
 				onAuthor={onCreator}
 			/>
 		);
+	}
 	return (
 		<article className={cn('creator-feed-card', read && 'is-read')} data-post-id={post.id}>
 			<div className="post-content">
@@ -113,6 +114,7 @@ export function CreatorPage({
 	const [tab, setTab] = useState<CreatorTab>('posts');
 	const ownPosts = posts.filter((post) => post.creatorId === creator.id);
 	const ownWorks = works.filter((work) => work.creatorId === creator.id);
+
 	return (
 		<div className="page creator-page">
 			<div className="creator-banner">

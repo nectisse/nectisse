@@ -42,26 +42,37 @@ export const LIBRARY_IPC = {
 } as const;
 export interface LibraryBridge {
 	getState(): Promise<LibraryState>;
+
 	retry(): Promise<LibraryState>;
+
 	getWork(id: string): Promise<SavedWork | undefined>;
+
 	save(input: LibrarySave): Promise<LibraryReply>;
+
 	remove(id: string): Promise<LibraryReply>;
+
 	openSource(id: string, recordId: string): Promise<void>;
+
 	onState(callback: (state: LibraryState) => void): () => void;
 }
+
 export function summarizeWork(work: SavedWork): WorkSummary {
 	const first = <K extends 'title' | 'people' | 'studio' | 'releaseDate' | 'tags'>(key: K): MetadataRecord[K] =>
 		(work.records.find((record) => record[key].length > 0) ?? work.records[0]!)[key];
+
 	const cover = work.records.flatMap((record) => record.covers).find((cover) => cover.id === work.coverId);
+
 	return {
 		id: work.id,
 		code: work.code,
 		savedAt: work.savedAt,
 		updatedAt: work.updatedAt,
 		title: first('title') || work.code,
+
 		people: first('people')
 			.filter((person) => person.role === 'performer')
 			.map((person) => person.name),
+
 		studio: first('studio'),
 		releaseDate: first('releaseDate'),
 		tags: first('tags'),

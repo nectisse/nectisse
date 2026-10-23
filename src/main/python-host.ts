@@ -54,10 +54,14 @@ export class PythonTaskHost {
 		params: Record<string, unknown> = {},
 		options: RunOptions = {},
 	): Promise<unknown> {
-		if (this.stopping || options.signal?.aborted) return Promise.reject(new TaskCancelledError());
+		if (this.stopping || options.signal?.aborted) {
+			return Promise.reject(new TaskCancelledError());
+		}
 		const id = randomUUID();
 		const args = ['-I', '-S', '-B', '-u', this.layout.bootstrap, '--dependencies', this.layout.dependencies];
-		if (this.options.diagnostics) args.push('--diagnostics');
+		if (this.options.diagnostics) {
+			args.push('--diagnostics');
+		}
 		// Use an explicit executable and inherited pipes; never invoke a shell or a host Python.
 		const child = spawn(this.layout.executable, args, {
 			detached: process.platform !== 'win32',
@@ -74,16 +78,22 @@ export class PythonTaskHost {
 		const timers: ReturnType<typeof setTimeout>[] = [];
 
 		const terminate = (signal: NodeJS.Signals): void => {
-			if (!child.pid) return;
+			if (!child.pid) {
+				return;
+			}
 			try {
-				if (process.platform === 'win32') child.kill(signal);
-				else process.kill(-child.pid, signal);
+				if (process.platform === 'win32') {
+					child.kill(signal);
+				} else {
+					process.kill(-child.pid, signal);
+				}
 			} catch (error) {
 				if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
 					failure ??= new PythonWorkerError('CLEANUP_FAILED', '无法结束采集进程');
 				}
 			}
 		};
+
 		const stop = (): void => {
 			try {
 				child.stdin.write(JSON.stringify({ protocol: PROTOCOL_VERSION, id, method: 'cancel' }) + '\n');
@@ -93,13 +103,19 @@ export class PythonTaskHost {
 			timers.push(setTimeout(() => terminate('SIGTERM'), this.options.graceMs ?? 300));
 			timers.push(setTimeout(() => terminate('SIGKILL'), (this.options.graceMs ?? 300) + 1500));
 		};
+
 		const cancel = (): void => {
-			if (cancelled) return;
+			if (cancelled) {
+				return;
+			}
 			cancelled = true;
 			stop();
 		};
+
 		const fail = (error: Error): void => {
-			if (failure) return;
+			if (failure) {
+				return;
+			}
 			failure = error;
 			stop();
 		};
@@ -108,7 +124,9 @@ export class PythonTaskHost {
 			let buffer = '';
 			const decoder = new StringDecoder('utf8');
 			child.stdout.on('data', (chunk: Buffer) => {
-				if (failure || cancelled || timedOut) return;
+				if (failure || cancelled || timedOut) {
+					return;
+				}
 				buffer += decoder.write(chunk);
 				let end: number;
 				while ((end = buffer.indexOf('\n')) !== -1) {
@@ -120,13 +138,19 @@ export class PythonTaskHost {
 					}
 					try {
 						const event = workerEventSchema.parse(JSON.parse(line));
-						if (event.id !== id) throw new Error('request id mismatch');
+						if (event.id !== id) {
+							throw new Error('request id mismatch');
+						}
 						if (event.kind === 'ready') {
-							if (ready) throw new Error('duplicate handshake');
+							if (ready) {
+								throw new Error('duplicate handshake');
+							}
 							ready = true;
 							options.onReady?.(child.pid!);
 						} else if (event.kind === 'result') {
-							if (!ready || gotResult) throw new Error('invalid result ordering');
+							if (!ready || gotResult) {
+								throw new Error('invalid result ordering');
+							}
 							gotResult = true;
 							result = event.payload;
 						} else if (event.kind === 'progress') {
@@ -140,16 +164,20 @@ export class PythonTaskHost {
 									!Number.isSafeInteger(sequence) ||
 									Number(sequence) < 1 ||
 									Number(sequence) > 8
-								)
+								) {
 									throw new Error('Invalid request permit');
+								}
 								void options
 									.onRequest({ source, host, sequence: Number(sequence) })
 									.then(() => {
-										if (!cancelled && !timedOut && !failure && !child.killed)
+										if (!cancelled && !timedOut && !failure && !child.killed) {
 											child.stdin.write(JSON.stringify({ protocol: PROTOCOL_VERSION, id, method: 'permit', sequence }) + '\n');
+										}
 									})
 									.catch(() => {
-										if (!cancelled && !timedOut) fail(new PythonWorkerError('REQUEST_BUDGET', '请求调度已停止或达到预算'));
+										if (!cancelled && !timedOut) {
+											fail(new PythonWorkerError('REQUEST_BUDGET', '请求调度已停止或达到预算'));
+										}
 									});
 							}
 						} else if (event.kind === 'error') {
@@ -162,7 +190,9 @@ export class PythonTaskHost {
 						return;
 					}
 				}
-				if (Buffer.byteLength(buffer) > MAX_PROTOCOL_BYTES) fail(new PythonWorkerError('PROTOCOL_LIMIT', '工作者响应超出大小限制'));
+				if (Buffer.byteLength(buffer) > MAX_PROTOCOL_BYTES) {
+					fail(new PythonWorkerError('PROTOCOL_LIMIT', '工作者响应超出大小限制'));
+				}
 			});
 			// Drain stderr without forwarding arbitrary native-library output into UI or ordinary logs.
 			child.stderr.on('data', () => {});
@@ -177,17 +207,25 @@ export class PythonTaskHost {
 				this.active.delete(id);
 				timers.forEach(clearTimeout);
 				options.signal?.removeEventListener('abort', cancel);
-				if (timedOut) reject(new PythonWorkerError('WORKER_TIMEOUT', '采集环境响应超时，请重试'));
-				else if (cancelled) reject(new TaskCancelledError());
-				else if (failure) reject(failure);
-				else if (code !== 0 || !gotResult || buffer.trim()) reject(new PythonWorkerError('UNEXPECTED_EXIT', '采集进程意外退出'));
-				else resolve(result);
+				if (timedOut) {
+					reject(new PythonWorkerError('WORKER_TIMEOUT', '采集环境响应超时，请重试'));
+				} else if (cancelled) {
+					reject(new TaskCancelledError());
+				} else if (failure) {
+					reject(failure);
+				} else if (code !== 0 || !gotResult || buffer.trim()) {
+					reject(new PythonWorkerError('UNEXPECTED_EXIT', '采集进程意外退出'));
+				} else {
+					resolve(result);
+				}
 			});
 		});
 
 		this.active.set(id, { child, completion, cancel });
 		options.signal?.addEventListener('abort', cancel, { once: true });
-		if (options.signal?.aborted) cancel();
+		if (options.signal?.aborted) {
+			cancel();
+		}
 		timers.push(
 			setTimeout(() => {
 				timedOut = true;

@@ -49,6 +49,7 @@ export function QueryPage({
 			return matches && work.sources.some((source) => selectedSources.has(source));
 		})
 		.toSorted((a, b) => (sort === 'newest' ? b.releaseDate.localeCompare(a.releaseDate) : 0));
+
 	return (
 		<div className="page query-page">
 			<div className="page-heading">
@@ -210,6 +211,7 @@ export function WorkDetail({
 			{ key: 'description', label: '简介', value: index ? '' : work.summary },
 		],
 	}));
+
 	return (
 		<div className="page detail-page">
 			<div className="detail-top">

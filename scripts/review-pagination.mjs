@@ -49,9 +49,11 @@ try {
 	assert.equal(await tabs.getByRole('tab', { name: '演员新作', exact: true }).getAttribute('aria-selected'), 'true');
 	await page.locator('.page-heading-actions').getByRole('button', { name: '添加关注', exact: true }).click();
 	assert.match(await page.getByRole('combobox', { name: '关注来源', exact: true }).innerText(), /JavDB/);
+	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
 	await tabs.getByRole('tab', { name: '创作者动态', exact: true }).click();
 	await page.locator('.page-heading-actions').getByRole('button', { name: '添加关注', exact: true }).click();
 	assert.equal(await page.getByRole('combobox', { name: '关注来源', exact: true }).innerText(), 'FANBOX');
+	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
 	await nav.getByRole('button', { name: '更新', exact: true }).click();
 	await page.getByRole('tab', { name: '全部', exact: true }).click();
 	const all = (await state()).entries;

@@ -122,4 +122,5 @@ export const METADATA_IPC = {
 	openSource: 'nectisse:metadata-open-source',
 	state: 'nectisse:metadata-state',
 } as const;
+
 export const isActiveTask = (task: QueryTask): boolean => task.status === 'running' || task.status === 'cancelling';

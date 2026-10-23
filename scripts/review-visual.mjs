@@ -22,8 +22,27 @@ export async function reviewVisual(page, application, output) {
 	assert.equal(await page.locator('.live-welcome').count(), 1);
 	await noOverflow();
 	await screenshot('00-live-query.png');
-	await page.getByRole('button', { name: '视觉演示', exact: true }).click();
-	if (await page.getByRole('button', { name: '返回真实工作区', exact: true }).count()) await page.getByRole('button', { name: '视觉演示', exact: true }).click();
+	assert.equal(await page.locator('.workspace-toolbar').getByRole('button', { name: '视觉演示', exact: true }).count(), 0);
+	assert.equal(await page.locator('.private-symbol, .private-space svg').count(), 0);
+	assert.match(await page.locator('.private-space').innerText(), /私人资料库.*收藏与关注保存在本机/s);
+	const localState = async () => page.evaluate(async () => {
+		const subscriptions = await window.nectisse.subscriptions.getState();
+		const library = await window.nectisse.library.getState();
+		return { preferences: subscriptions.preferences, subscriptions: subscriptions.subscriptions, entries: subscriptions.entries, works: library.works };
+	});
+	const beforeDemo = await localState();
+	await page.getByRole('button', { name: '设置', exact: true }).click();
+	await page.getByRole('tab', { name: '外观与应用', exact: true }).click();
+	const demoSection = page.getByRole('region', { name: '视觉演示', exact: true });
+	await demoSection.getByRole('button', { name: '打开演示', exact: true }).waitFor();
+	await noOverflow();
+	await screenshot('00-demo-settings-entry.png');
+	await demoSection.getByRole('button', { name: '打开演示', exact: true }).focus();
+	await page.keyboard.press('Enter');
+	await page.getByRole('button', { name: '返回真实工作区', exact: true }).waitFor();
+	assert.equal(await page.locator('.private-symbol, .private-space svg').count(), 0);
+	assert.equal(await page.getByRole('button', { name: '视觉演示', exact: true }).count(), 0);
+	assert.equal(await page.getByTestId('live-query').count(), 0);
 	assert.equal(await page.locator('.result-grid .work-card').count(), 3);
 	await screenshot('01-query.png');
 
@@ -112,5 +131,20 @@ export async function reviewVisual(page, application, output) {
 	await page.waitForFunction(() => document.activeElement?.id === 'work-query');
 	assert.equal(await page.getByRole('textbox', { name: '作品编号、标题或原站链接' }).evaluate((element) => element === document.activeElement), true);
 	await noOverflow();
-	if (await page.getByRole('button', { name: '返回真实工作区', exact: true }).count()) await page.getByRole('button', { name: '返回真实工作区', exact: true }).click();
+	await page.getByRole('button', { name: '返回真实工作区', exact: true }).click();
+	await page.getByRole('heading', { name: '设置', exact: true }).waitFor();
+	assert.equal(await page.getByRole('tab', { name: '外观与应用', exact: true }).getAttribute('aria-selected'), 'true');
+	await page.waitForFunction(() => document.activeElement?.id === 'open-visual-demo');
+	assert.deepEqual(await localState(), beforeDemo);
+	assert.equal(await page.locator('.workspace-toolbar').getByRole('button', { name: '视觉演示', exact: true }).count(), 0);
+	assert.equal(await page.locator('.private-symbol, .private-space svg').count(), 0);
+	await screenshot('11-return-to-settings.png');
+	// A source-specific settings action must still open Sources after previewing General.
+	await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
+	await page.locator('.page-heading-actions').getByRole('button', { name: '添加关注', exact: true }).click();
+	await chooseOption(page, '关注来源', 'SubscribeStar');
+	await page.getByRole('dialog', { name: '添加关注', exact: true }).getByRole('button', { name: '来源设置', exact: true }).click();
+	assert.equal(await page.getByRole('tab', { name: '来源与账号', exact: true }).getAttribute('aria-selected'), 'true');
+	await nav.getByRole('button', { name: '资料查询', exact: true }).click();
+	await page.getByTestId('live-query').waitFor();
 }

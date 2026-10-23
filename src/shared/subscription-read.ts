@@ -6,10 +6,12 @@ export const SUBSCRIPTION_READ = {
 	timeout: 'SUBSCRIPTIONS_READ_TIMEOUT',
 } as const;
 export type SubscriptionReadCode = (typeof SUBSCRIPTION_READ)[keyof typeof SUBSCRIPTION_READ];
+
 export function subscriptionReadCode(error: unknown): SubscriptionReadCode {
 	const message = error instanceof Error ? error.message : '';
 	return Object.values(SUBSCRIPTION_READ).find((code) => message.includes(code)) ?? SUBSCRIPTION_READ.unavailable;
 }
+
 export function subscriptionReadMessage(error: unknown): string {
 	const code = subscriptionReadCode(error);
 	return code === SUBSCRIPTION_READ.storage

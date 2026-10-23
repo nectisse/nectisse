@@ -155,9 +155,6 @@
 .workspace-shell .subscription-list {
 	margin-top: 0;
 }
-.workspace-shell .settings-page .subscription-list {
-	margin-top: 24px;
-}
 .workspace-shell .subscription-cards {
 	gap: 12px;
 }
@@ -224,7 +221,6 @@
 	gap: 4px;
 }
 .workspace-toolbar .toolbar-query,
-.workspace-toolbar .toolbar-demo,
 .workspace-toolbar .toolbar-theme {
 	color: var(--muted-foreground);
 	font-size: 11px;

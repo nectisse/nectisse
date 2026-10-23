@@ -16,7 +16,6 @@ export async function reviewMetadata(page, application, output) {
 	};
 	await mkdir(output, { recursive: true });
 	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '资料查询', exact: true }).click();
-	if (await page.getByRole('button', { name: '联网查询', exact: true }).count()) await page.getByRole('button', { name: '联网查询', exact: true }).click();
 	const input = page.getByRole('textbox', { name: '作品编号、标题或原站链接', exact: true });
 	await input.fill('https://video.dmm.co.jp/av/content/?id=ssis00057');
 	await page.getByRole('button', { name: '查询资料', exact: true }).click();
