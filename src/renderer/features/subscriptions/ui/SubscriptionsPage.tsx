@@ -63,7 +63,7 @@ function SubscriptionRow({ subscription: sub, onOpen }: { subscription: Subscrip
 							<StatusBadge tone={!sub.following ? 'neutral' : !sub.enabled || sub.autoPaused ? 'peach' : 'success'}>{status}</StatusBadge>
 						</div>
 						<p className="subscription-origin">
-							{providerName(sub.provider)} · {sub.recordType} · <span>{sub.ref}</span>
+							{providerName(sub.provider)} · {sub.recordType} · <span title={sub.ref}>{sub.handle ? `@${sub.handle}` : sub.ref}</span>
 						</p>
 						<p className="subscription-coverage" title={sub.coverage}>
 							{sub.coverage}
@@ -282,7 +282,7 @@ export function SubscriptionsPage({
 		<div className="page subscriptions-page">
 			<PageHeader
 				title={sub ? (sub.provider === 'javdb' ? '演员主页' : '创作者主页') : '演员与创作者'}
-				description={sub ? `${providerName(sub.provider)} · ${sub.ref}` : '留意演员的新作品，也关注创作者的动态。'}
+				description={sub ? `${providerName(sub.provider)} · ${sub.handle ? `@${sub.handle}` : sub.ref}` : '留意演员的新作品，也关注创作者的动态。'}
 				actions={
 					<>
 						{sub ? (

@@ -328,6 +328,21 @@
 		"credential": "cookie",
 		"note": "主页／账号查询、公开动态和受限摘要；已有在线成功样本"
 	},
+	"x": {
+		"name": "X",
+		"group": "创作者动态",
+		"engine": "fxembed",
+		"metadata": false,
+		"follow": true,
+		"families": [],
+		"root": "https://x.com/",
+		"apiRoot": "https://api.fxtwitter.com",
+		"requestDomains": ["api.fxtwitter.com"],
+		"domains": ["x.com", "twitter.com"],
+		"images": ["pbs.twimg.com"],
+		"credential": "none",
+		"note": "通过 FxEmbed 获取公开账号本人原创帖，无需登录；不收录回复、引用与转发，可能存在延迟或缺失"
+	},
 	"patreon": {
 		"name": "Patreon",
 		"group": "创作者动态",

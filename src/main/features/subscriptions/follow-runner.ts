@@ -6,7 +6,7 @@ import { SubscriptionStore } from './subscription-store';
 import { ImageCache } from './image-cache';
 import { outcomeSchema, type TaskContext } from './task-context';
 
-export const PROVIDER_ROOTS = Object.fromEntries(SOURCES.filter((row) => row.follow).map((row) => [row.id, row.root])) as Record<FollowProvider, string>;
+export const PROVIDER_ROOTS = Object.fromEntries(SOURCES.filter((row) => row.follow).map((row) => [row.id, row.apiRoot ?? row.root])) as Record<FollowProvider, string>;
 
 export class FollowRunner {
 	constructor(
@@ -36,6 +36,7 @@ export class FollowRunner {
 						name: sub?.name,
 						initialized: sub?.initialized ?? false,
 						seen: sub ? this.store.seen(sub.id) : [],
+						xSyncState: sub?.xSyncState,
 						proxy,
 						cookie: this.store.credential(task.provider),
 						transport,
@@ -67,8 +68,14 @@ export class FollowRunner {
 				return;
 			}
 			task.candidates = (outcome.candidates ?? []).filter(
-				(candidate) => candidate.provider === task.provider && candidate.url === canonical(candidate.provider, candidate.ref),
+				(candidate) => candidate.provider === task.provider && candidate.url === canonical(candidate.provider, candidate.ref, candidate.handle),
 			);
+			if (sub?.provider === 'x' && outcome.status !== 'error') {
+				const profile = outcome.profile;
+				if (!profile || profile.provider !== 'x' || profile.ref !== sub.ref || profile.url !== canonical('x', sub.ref, profile.handle)) {
+					throw new Error('账号资料与订阅身份不一致');
+				}
+			}
 			const current = this.store.source(task.provider);
 			const cooling = sourceCooldownSeconds(outcome.reason, outcome.retryAfter);
 			this.store.saveSource(task.provider, {
@@ -80,17 +87,24 @@ export class FollowRunner {
 			});
 			if (sub) {
 				const latest = this.store.subscription(sub.id)!;
-				if (outcome.avatarUrl) {
-					if (latest.avatarUrl !== outcome.avatarUrl) {
+				if (latest.provider === 'x' && outcome.profile && outcome.status !== 'error') {
+					latest.name = outcome.profile.name;
+					latest.handle = outcome.profile.handle;
+					latest.url = outcome.profile.url;
+					latest.bio = outcome.profile.bio;
+				}
+				const avatarUrl = latest.provider === 'x' ? (outcome.status === 'error' ? undefined : outcome.profile?.avatarUrl) : outcome.avatarUrl || undefined;
+				if (avatarUrl !== undefined) {
+					if (latest.avatarUrl !== avatarUrl) {
 						delete latest.avatarAsset;
 					}
-					latest.avatarUrl = outcome.avatarUrl;
+					latest.avatarUrl = avatarUrl;
 				}
 				latest.lastCheckedAt = new Date().toISOString();
 				latest.coverage = outcome.coverage ?? latest.coverage;
 				latest.lastError = outcome.status === 'error' ? outcome.message : outcome.gap ? outcome.coverage! : (outcome.warnings ?? []).join('；');
 				latest.failureCount = outcome.status === 'error' ? latest.failureCount + 1 : 0;
-				latest.initialized ||= outcome.status !== 'error';
+				latest.initialized ||= latest.provider === 'x' ? !!latest.xSyncState : outcome.status !== 'error';
 				const interval = latest.intervalMinutes ?? (task.provider === 'javdb' ? preferences.performerMinutes : preferences.creatorMinutes);
 				latest.nextCheckAt = new Date(
 					Math.max(
@@ -107,6 +121,18 @@ export class FollowRunner {
 			if (imageIssue && sub) {
 				const latest = this.store.subscription(sub.id)!;
 				latest.lastError = [latest.lastError, '部分头像或封面未取得，已保留资料与正文'].filter(Boolean).join('；');
+				this.store.saveSubscription(latest);
+			}
+			if (sub?.provider === 'x') {
+				const latest = this.store.subscription(sub.id)!;
+				// 头像阶段也可能取消；整轮仍有效时才提交下一次检查的观察窗口。
+				if (outcome.status === 'success' && outcome.xSyncState) {
+					latest.xSyncState = outcome.xSyncState;
+				}
+				if (outcome.gap && latest.xSyncState && !latest.xSyncState.gapSince) {
+					latest.xSyncState.gapSince = new Date().toISOString();
+				}
+				latest.initialized ||= !!latest.xSyncState;
 				this.store.saveSubscription(latest);
 			}
 			task.status = outcome.status === 'error' ? (task.added ? 'partial' : 'failed') : outcome.status === 'partial' || outcome.gap || imageIssue ? 'partial' : 'succeeded';

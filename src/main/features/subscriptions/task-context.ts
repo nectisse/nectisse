@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { imageAssetSchema } from '@shared/metadata';
-import { candidateSchema, type FollowTask } from '@shared/subscriptions';
+import { candidateSchema, xSyncStateSchema, type FollowTask } from '@shared/subscriptions';
 
 export const outcomeSchema = z.object({
 	status: z.enum(['success', 'partial', 'error']),
@@ -14,6 +14,8 @@ export const outcomeSchema = z.object({
 	warnings: z.array(z.string()).optional(),
 	asset: imageAssetSchema.optional(),
 	avatarUrl: z.string().max(2000).optional(),
+	profile: candidateSchema.optional(),
+	xSyncState: xSyncStateSchema.optional(),
 });
 
 /** 执行模块共享进度与许可；活动任务和取消意图归调度模块。 */

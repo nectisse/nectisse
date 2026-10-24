@@ -18,7 +18,7 @@ let last = 0;
 const records = [];
 try {
 	const params = kind === 'metadata' ? { ...planQuery({ query: input, sources: [source], force: true }), source, proxy } : { provider: source, query: input, proxy };
-	params.transport = flags.includes('--standard') ? 'httpx' : SOURCE_BY_ID[source].engine === 'amane' || !['dmm', 'r18dev', 'fc2'].includes(source) ? 'fingerprint' : 'httpx';
+	params.transport = flags.includes('--standard') ? 'httpx' : SOURCE_BY_ID[source].engine === 'amane' || !['dmm', 'r18dev', 'fc2', 'x'].includes(source) ? 'fingerprint' : 'httpx';
 	const result = await host.run(kind === 'metadata' ? 'metadata.query' : 'follow.lookup', params, { timeoutMs: 60_000, onRequest: async () => { await delay(Math.max(0, last + (source === 'javdb' ? 3000 : 2000) - Date.now())); last = Date.now(); }, onProgress: payload => { if (payload.event === 'record') records.push({ source: payload.record.source, identity: payload.record.code, titlePresent: !!payload.record.title, people: payload.record.people.length, covers: payload.record.covers.length, deliveryDatePresent: !!payload.record.deliveryDate }); } });
 	const report = { checkedAt: new Date().toISOString(), source, kind, status: result.status, reason: result.reason, message: result.message, requests: result.requests, records, candidates: result.candidates?.map(row => ({ ref: row.ref, namePresent: !!row.name, urlPresent: !!row.url })) };
 	if (kind === 'follow' && flags.includes('--check') && result.candidates?.[0]) {
