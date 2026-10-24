@@ -161,7 +161,7 @@ export class SubscriptionsService extends EventEmitter {
 
 					const task = this.store.tasks().find((task) => task.id === command.taskId && ['succeeded', 'partial'].includes(task.status));
 					const candidate = task?.candidates.find((item) => item.ref === command.ref);
-					if (!candidate || candidate.url !== canonical(candidate.provider, candidate.ref)) {
+					if (!candidate || candidate.url !== canonical(candidate.provider, candidate.ref, candidate.handle)) {
 						throw new Error('请先查询并确认有效候选');
 					}
 					const sub = this.store.follow(candidate);
@@ -229,7 +229,7 @@ export class SubscriptionsService extends EventEmitter {
 					const url =
 						entry && sub && validFollowEntry(sub.provider, sub.ref, entry)
 							? entry.url
-							: !entry && sub && sub.url === canonical(sub.provider, sub.ref)
+							: !entry && sub && sub.url === canonical(sub.provider, sub.ref, sub.handle)
 								? sub.url
 								: source?.root;
 					if (url) {

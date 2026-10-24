@@ -141,7 +141,7 @@ export async function reviewSettings(page, application, output) {
 	await page.screenshot({ path: join(output, '01-sources.png') });
 	await page.getByRole('button', { name: '配置 DMM / FANZA', exact: true }).click();
 	await chooseOption(page, '来源用途', '演员／创作者订阅');
-	assert.equal(await page.locator('.settings-source').count(), 6);
+	assert.equal(await page.locator('.settings-source').count(), 7);
 	await page.getByRole('button', { name: '配置 FANBOX', exact: true }).click();
 	const accountSecure = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).encryptionAvailable);
 	if (accountSecure) {
@@ -155,7 +155,7 @@ export async function reviewSettings(page, application, output) {
 	}
 	await page.screenshot({ path: join(output, '01b-source-account.png') });
 	await page.getByRole('button', { name: '配置 FANBOX', exact: true }).click();
-	await chooseOption(page, '来源用途', '全部来源 · 30');
+	await chooseOption(page, '来源用途', '全部来源 · 31');
 	await page.screenshot({ path: join(output, '01a-source-overview.png') });
 	await page.getByRole('tab', { name: '订阅管理', exact: true }).click();
 	await page.getByRole('switch', { name: '自动检查订阅', exact: true }).click();
@@ -225,7 +225,7 @@ export async function reviewSettings(page, application, output) {
 	await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1000, 700));
 	await page.waitForFunction(() => innerWidth === 1000);
 	const size = await page.locator('.page-scroll').evaluate(element => ({ scroll: element.scrollWidth, width: element.clientWidth })); assert.ok(size.scroll <= size.width + 1);
-	assert.equal(await page.locator('.settings-source').count(), 30);
+	assert.equal(await page.locator('.settings-source').count(), 31);
 	const sourceRowHeights = await page.locator('.settings-source').evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
 	assert.ok(sourceRowHeights.every(height => height >= 50 && height <= 72), JSON.stringify(sourceRowHeights));
 	await page.getByRole('button', { name: '配置 DMM / FANZA', exact: true }).click();

@@ -25,7 +25,7 @@ export const METADATA_IDS = [
 	'freejavbt',
 	'airav',
 ] as const;
-export const FOLLOW_IDS = ['fanbox', 'javdb', 'patreon', 'kemono', 'pawchive', 'coomer'] as const;
+export const FOLLOW_IDS = ['fanbox', 'javdb', 'x', 'patreon', 'kemono', 'pawchive', 'coomer'] as const;
 export const RETIRED_SOURCE_IDS = ['rule34video', 'subscribestar', 'rule34xxx', 'rule34paheal', 'fc2club', 'kmib'] as const;
 // 仅用于读取既有资料与收藏，不参与新查询。
 export const LEGACY_METADATA_IDS = ['fc2club', 'kmib'] as const;
@@ -43,6 +43,8 @@ export interface SourceSpec {
 	follow: boolean;
 	families: string[];
 	root: string;
+	apiRoot?: string;
+	requestDomains?: string[];
 	domains: string[];
 	images: string[];
 	note: string;

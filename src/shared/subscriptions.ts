@@ -11,6 +11,10 @@ export type AllSource = z.infer<typeof allSourceSchema>;
 export const candidateSchema = z.object({
 	provider: providerSchema,
 	ref: z.string().min(1).max(256),
+	handle: z
+		.string()
+		.regex(/^[A-Za-z0-9_]{1,15}$/)
+		.optional(),
 	name: z.string().min(1).max(200),
 	url: z.string().url().max(1000),
 	aliases: z.array(z.string().max(200)).max(12),
@@ -21,11 +25,25 @@ export const candidateSchema = z.object({
 	avatarAsset: imageAssetSchema.optional(),
 });
 export type FollowCandidate = z.infer<typeof candidateSchema>;
+export const xSyncStateSchema = z.object({
+	windowIds: z.array(z.string().regex(/^[1-9]\d{0,24}$/)).max(100),
+	checkedAt: z.string().datetime(),
+	gapSince: z.string().datetime().optional(),
+});
 export const entryInputSchema = z.object({
 	externalId: z.string().min(1).max(100),
 	title: z.string().max(1000),
 	summary: z.string().max(3000),
 	author: z.string().max(200),
+	authorRef: z
+		.string()
+		.regex(/^[1-9]\d{0,24}$/)
+		.optional(),
+	authorHandle: z
+		.string()
+		.regex(/^[A-Za-z0-9_]{1,15}$/)
+		.optional(),
+	postKind: z.literal('original').optional(),
 	publishedAt: z.string().max(100),
 	publishedPrecision: z.enum(['exact', 'date', 'approximate', 'unknown']).default('unknown'),
 	url: z.string().url().max(2000),
@@ -50,6 +68,7 @@ export const subscriptionSchema = candidateSchema.extend({
 	coverage: z.string(),
 	failureCount: z.number(),
 	unread: z.number().int(),
+	xSyncState: xSyncStateSchema.optional(),
 });
 export type Subscription = z.infer<typeof subscriptionSchema>;
 export const imageCacheSchema = z.object({

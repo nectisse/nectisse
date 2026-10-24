@@ -167,6 +167,12 @@ export class SubscriptionStore {
 					failureCount: 0,
 					unread: 0,
 				};
+		if (candidate.provider === 'x') {
+			value.name = candidate.name;
+			value.handle = candidate.handle;
+			value.url = candidate.url;
+			value.bio = candidate.bio;
+		}
 		if (candidate.avatarUrl) {
 			if (value.avatarUrl !== candidate.avatarUrl) {
 				delete value.avatarAsset;
@@ -206,7 +212,7 @@ export class SubscriptionStore {
 			id,
 			subscriptionId: subscription.id,
 			provider: subscription.provider,
-			name: subscription.name,
+			name: subscription.provider === 'x' ? input.author : subscription.name,
 			firstSeenAt: previous?.firstSeenAt ?? discoveredAt,
 			read: previous?.read ?? false,
 			initial: previous?.initial ?? !subscription.initialized,

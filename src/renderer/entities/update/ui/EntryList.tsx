@@ -24,7 +24,7 @@ function feedTitle(entry: FeedEntry): string {
 }
 
 function entryCategory(entry: FeedEntry): string {
-	return entry.provider === 'javdb' ? '演员新作' : ['kemono', 'pawchive', 'coomer'].includes(entry.provider) ? '归档收录' : '创作者动态';
+	return entry.provider === 'javdb' ? '演员新作' : entry.provider === 'x' ? '原创动态' : ['kemono', 'pawchive', 'coomer'].includes(entry.provider) ? '归档收录' : '创作者动态';
 }
 
 function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {

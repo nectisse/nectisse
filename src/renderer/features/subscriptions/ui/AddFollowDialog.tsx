@@ -183,7 +183,13 @@ export function AddFollowDialog({
 									generation.current++;
 								}}
 								placeholder={
-									provider === 'javdb' ? '输入演员名或 JavDB 演员主页' : provider === 'fanbox' ? '粘贴 FANBOX 主页或输入账号 id' : '填写本站主页或原生账号'
+									provider === 'javdb'
+										? '输入演员名或 JavDB 演员主页'
+										: provider === 'fanbox'
+											? '粘贴 FANBOX 主页或输入账号 id'
+											: provider === 'x'
+												? '粘贴 X 主页或输入 @账号'
+												: '填写本站主页或原生账号'
 								}
 								autoComplete="off"
 							/>
@@ -236,7 +242,7 @@ export function AddFollowDialog({
 											<h3 title={candidate.name}>{candidate.name}</h3>
 											<p className="follow-dialog-record">
 												<StatusBadge>{candidate.recordType}</StatusBadge>
-												<span>{candidate.ref}</span>
+												<span title={candidate.ref}>{candidate.handle ? `@${candidate.handle}` : candidate.ref}</span>
 											</p>
 											{aliases.length > 0 && (
 												<p className="follow-dialog-aliases" title={aliases.join(' · ')}>

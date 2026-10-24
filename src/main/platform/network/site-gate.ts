@@ -21,8 +21,8 @@ export class SiteGate {
 	constructor(private store: SourcePolicyStore) {}
 
 	async permit(source: AllSource, signal: AbortSignal): Promise<void> {
-		const domain = SOURCE_BY_ID[source].domains[0]!;
-		const peers = SOURCES.filter((row) => row.domains[0] === domain).map((row) => row.id);
+		const domain = (SOURCE_BY_ID[source].requestDomains ?? SOURCE_BY_ID[source].domains)[0]!;
+		const peers = SOURCES.filter((row) => (row.requestDomains ?? row.domains)[0] === domain).map((row) => row.id);
 		const previous = this.pending.get(domain) ?? Promise.resolve();
 		const turn = previous
 			.catch(() => {})

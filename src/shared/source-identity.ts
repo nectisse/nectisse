@@ -18,7 +18,7 @@ export function allowedSourceUrl(source: AllSource | LegacyMetadataSource, value
 	}
 }
 
-export function canonicalFollow(provider: FollowProvider, ref: string): string {
+export function canonicalFollow(provider: FollowProvider, ref: string, handle?: string): string {
 	const invalid = (): never => {
 		throw new Error('来源原生身份不正确');
 	};
@@ -28,6 +28,9 @@ export function canonicalFollow(provider: FollowProvider, ref: string): string {
 	}
 	if (provider === 'javdb') {
 		return /^[A-Za-z0-9]{1,16}$/.test(ref) ? `https://javdb.com/actors/${ref}` : invalid();
+	}
+	if (provider === 'x') {
+		return /^[1-9]\d{0,24}$/.test(ref) && handle && /^[A-Za-z0-9_]{1,15}$/.test(handle) ? `https://x.com/${handle}` : invalid();
 	}
 	if (['kemono', 'pawchive', 'coomer'].includes(provider)) {
 		const match = /^([a-z0-9_-]{1,32})\/([A-Za-z0-9_.-]{1,64})$/.exec(ref);
@@ -44,7 +47,11 @@ export function canonicalFollow(provider: FollowProvider, ref: string): string {
 	return invalid();
 }
 
-export function validFollowEntry(provider: FollowProvider, ref: string, entry: { url: string; externalId: string }): boolean {
+export function validFollowEntry(
+	provider: FollowProvider,
+	ref: string,
+	entry: { url: string; externalId: string; authorRef?: string; authorHandle?: string; postKind?: string },
+): boolean {
 	try {
 		const url = new URL(entry.url);
 		if (url.protocol !== 'https:' || url.username || url.password || url.port || url.search || url.hash) {
@@ -55,6 +62,18 @@ export function validFollowEntry(provider: FollowProvider, ref: string, entry: {
 		}
 		if (provider === 'javdb') {
 			return url.hostname === 'javdb.com' && url.pathname === entry.externalId && /^\/v\/[A-Za-z0-9]+$/.test(entry.externalId);
+		}
+		if (provider === 'x') {
+			return (
+				/^[1-9]\d{0,24}$/.test(ref) &&
+				/^[1-9]\d{0,24}$/.test(entry.externalId) &&
+				entry.authorRef === ref &&
+				entry.postKind === 'original' &&
+				!!entry.authorHandle &&
+				/^[A-Za-z0-9_]{1,15}$/.test(entry.authorHandle) &&
+				url.hostname === 'x.com' &&
+				url.pathname === `/${entry.authorHandle}/status/${entry.externalId}`
+			);
 		}
 		if (['kemono', 'pawchive', 'coomer'].includes(provider)) {
 			return /^[A-Za-z0-9_.-]{1,64}$/.test(entry.externalId) && entry.url === `${canonicalFollow(provider, ref)}/post/${entry.externalId}`;

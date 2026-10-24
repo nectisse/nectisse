@@ -106,7 +106,7 @@ function SourceDetail({
 			? preferences.fanboxTransport
 			: source.id === 'javdb'
 				? preferences.javdbTransport
-				: ['dmm', 'r18dev', 'fc2'].includes(source.id)
+				: ['dmm', 'r18dev', 'fc2', 'x'].includes(source.id)
 					? 'httpx'
 					: source.id === 'fc2ppvdb'
 						? 'browser'

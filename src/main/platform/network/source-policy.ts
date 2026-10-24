@@ -16,7 +16,7 @@ export function sourceTransport(source: AllSource, preferences?: Preferences): '
 	if (source === 'fc2ppvdb') {
 		return 'browser';
 	}
-	return ['dmm', 'r18dev', 'fc2'].includes(source) ? 'httpx' : 'fingerprint';
+	return ['dmm', 'r18dev', 'fc2', 'x'].includes(source) ? 'httpx' : 'fingerprint';
 }
 
 /** 解析失败不触发站点冷却；限流使用来源给出的等待时间，最长一天。 */
