@@ -39,6 +39,7 @@ export const preferencesSchema = z.object({
 		.default({})
 		.refine((items) => Object.entries(items).every(([id, transport]) => transport !== 'browser' || id === 'fc2ppvdb'), '此来源尚未接入浏览器会话'),
 	theme: z.enum(['cream', 'night']),
+	imageCacheMiB: z.number().int().min(64).max(8192).default(512),
 	magnetSearch: magnetSettingsSchema.default(DEFAULT_MAGNET_SETTINGS),
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
@@ -76,6 +77,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
 	javdbTransport: 'httpx',
 	sourceTransports: {},
 	theme: 'cream',
+	imageCacheMiB: 512,
 	magnetSearch: { ...DEFAULT_MAGNET_SETTINGS },
 };
 

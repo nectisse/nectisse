@@ -14,6 +14,7 @@ import { ImageCache } from './image-cache';
 import { ImageBackfill } from './image-backfill';
 import { FollowRunner } from './follow-runner';
 import { SubscriptionScheduler } from './subscription-scheduler';
+import type { ImageStore } from '../../platform/images';
 export { PROVIDER_ROOTS } from './follow-runner';
 
 export class SubscriptionsService extends EventEmitter {
@@ -30,9 +31,10 @@ export class SubscriptionsService extends EventEmitter {
 		private openExternal: (url: string) => Promise<void>,
 		intervalMs = 2000,
 		gate?: (source: FollowProvider, signal: AbortSignal) => Promise<void>,
+		sharedImages?: ImageStore,
 	) {
 		super();
-		this.images = new ImageCache(store, host, resolveProxy);
+		this.images = new ImageCache(store, host, resolveProxy, sharedImages);
 		this.backfill = new ImageBackfill(store, this.images);
 		const follow = new FollowRunner(store, host, resolveProxy, this.images);
 		this.scheduler = new SubscriptionScheduler(store, this.images, this.backfill, follow, () => this.publish(), intervalMs, gate);
@@ -81,6 +83,24 @@ export class SubscriptionsService extends EventEmitter {
 
 	refresh(): void {
 		this.publish();
+	}
+
+	async clearImageQueue(): Promise<void> {
+		await this.scheduler.command(async () => {
+			const cancelled = new Set(
+				this.store
+					.entries()
+					.filter((entry) => entry.imageCache?.status === 'cancelled')
+					.map((entry) => entry.id),
+			);
+			for (const task of this.store.tasks()) {
+				if (task.kind === 'covers' && ['running', 'cancelling'].includes(task.status)) {
+					await this.cancel(task.id);
+				}
+			}
+			this.store.clearImageReferences(cancelled);
+			this.publish();
+		});
 	}
 
 	start(): void {

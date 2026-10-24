@@ -158,6 +158,24 @@
 	color: var(--muted-foreground);
 	font-size: 11px;
 }
+.storage-value {
+	justify-content: space-between;
+	gap: 16px;
+	font-variant-numeric: tabular-nums;
+}
+.storage-value strong {
+	font-size: 13px;
+	font-weight: 500;
+}
+.storage-value p {
+	margin-top: 4px;
+	color: var(--muted-foreground);
+	font-size: 11px;
+}
+.storage-note {
+	align-items: center;
+	justify-content: space-between;
+}
 .settings-shortcut {
 	display: inline-flex;
 	align-items: center;

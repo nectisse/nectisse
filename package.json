@@ -31,6 +31,7 @@
 		"test:lifecycle": "node scripts/review-lifecycle.mjs",
 		"test:native-quit": "node scripts/review-native-quit.mjs",
 		"test:library": "node scripts/review-library.mjs",
+		"test:storage": "node scripts/review-storage.mjs",
 		"test:queries": "node scripts/review-queries.mjs",
 		"test:diagnostics": "node scripts/review-diagnostics.mjs",
 		"package:mac": "npm run icons:build && npm run build && node scripts/package-mac.mjs",

@@ -6,6 +6,7 @@ import { sourceTransport } from '../../platform/network';
 import { TaskCancelledError, type PythonTaskHost } from '../../platform/python';
 import { SubscriptionStore } from './subscription-store';
 import { outcomeSchema, type TaskContext } from './task-context';
+import { isImageCorruption, type ImageStore } from '../../platform/images';
 
 export class ImageCache {
 	private directory: string;
@@ -14,12 +15,47 @@ export class ImageCache {
 		private store: SubscriptionStore,
 		private host: Pick<PythonTaskHost, 'run'>,
 		private resolveProxy: (url: string) => Promise<string>,
+		private shared?: ImageStore,
 	) {
 		this.directory = join(store.root, 'cache', 'subscription-covers');
 	}
 
 	async prepare(): Promise<void> {
 		await mkdir(this.directory, { recursive: true, mode: 0o700 });
+		if (this.shared) {
+			const avatars = new Set(this.store.subscriptions().map((sub) => sub.avatarUrl));
+			await this.shared.retainPins('avatar:', new Set([...avatars].filter(Boolean).map((url) => `avatar:${url}`)));
+			const entries = this.store.entries();
+			for (const row of this.store.images()) {
+				const old = join(this.directory, `${row.asset.sha256}.image`);
+				const bytes = await readFile(old).catch(() => undefined);
+				if (bytes) {
+					try {
+						const entry = entries.find((entry) => entry.thumbnailUrl === row.url);
+						const saved = await this.shared.put(
+							row.url,
+							{ bytes, asset: row.asset },
+							{ unread: entry ? !entry.read : false, seen: entry ? Date.parse(entry.firstSeenAt) : 0, owner: avatars.has(row.url) ? `avatar:${row.url}` : undefined },
+						);
+						this.store.cacheImage(row.url, saved.thumbnail);
+						if (entry) {
+							this.store.saveImage(entry, saved.thumbnail);
+						}
+					} catch (error) {
+						if (!isImageCorruption(error)) {
+							throw error;
+						}
+						this.store.dropImage(row.url, true);
+					}
+				}
+			}
+			for (const name of await readdir(this.directory)) {
+				if (/^[a-f0-9]{64}\.image$/.test(name) || /^\.temporary-[a-f0-9-]+$/.test(name)) {
+					await rm(join(this.directory, name), { force: true });
+				}
+			}
+			return;
+		}
 		const indexed = new Set(this.store.images().map((row) => `${row.asset.sha256}.image`));
 		for (const file of await readdir(this.directory)) {
 			if (/^\.temporary-[a-f0-9-]+$/.test(file) || (/^[a-f0-9]{64}\.image$/.test(file) && !indexed.has(file))) {
@@ -32,6 +68,9 @@ export class ImageCache {
 	}
 
 	async read(sha256: string): Promise<{ bytes: Buffer; asset: ImageAsset } | undefined> {
+		if (this.shared) {
+			return this.shared.readHash(sha256);
+		}
 		if (!/^[a-f0-9]{64}$/.test(sha256)) {
 			return;
 		}
@@ -60,6 +99,9 @@ export class ImageCache {
 	}
 
 	async find(url: string, validation: 'hash' | 'presence' = 'hash'): Promise<ImageAsset | undefined> {
+		if (this.shared) {
+			return (await this.shared.read(url, 'thumbnail'))?.asset;
+		}
 		const asset = this.store.image(url);
 		if (!asset) {
 			return;
@@ -106,6 +148,15 @@ export class ImageCache {
 				const bytes = await readFile(destination);
 				ensureRunning();
 				this.verify(bytes, result.asset);
+				if (this.shared) {
+					const saved = await this.shared.put(
+						url,
+						{ bytes, asset: result.asset },
+						{ thumbnailOnly: context.task.kind === 'covers', owner: context.task.kind !== 'covers' ? `avatar:${url}` : undefined },
+					);
+					ensureRunning();
+					return { ...result, asset: context.task.kind === 'covers' ? saved.thumbnail : saved.original! };
+				}
 				await chmod(destination, 0o600);
 				await rename(destination, join(this.directory, `${result.asset.sha256}.image`));
 				ensureRunning();
@@ -117,6 +168,24 @@ export class ImageCache {
 	}
 
 	async prune(): Promise<void> {
+		if (this.shared) {
+			await this.shared.retainPins(
+				'avatar:',
+				new Set(
+					this.store
+						.subscriptions()
+						.filter((sub) => sub.following)
+						.map((sub) => `avatar:${sub.avatarUrl}`),
+				),
+			);
+			for (const entry of this.store.entries()) {
+				if (entry.imageAsset) {
+					this.shared.priority(entry.thumbnailUrl, !entry.read, Date.parse(entry.firstSeenAt));
+				}
+			}
+			await this.shared.setLimit(this.store.preferences().imageCacheMiB);
+			return;
+		}
 		const images = this.store.images();
 		const subscriptions = this.store.subscriptions();
 		const avatarHashes = new Set(subscriptions.flatMap((sub) => (sub.avatarAsset ? [sub.avatarAsset.sha256] : [])));

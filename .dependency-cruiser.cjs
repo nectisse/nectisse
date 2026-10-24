@@ -2,7 +2,7 @@ const renderer = '^src/renderer/';
 const features = ['work-query', 'library', 'subscriptions', 'updates', 'settings'];
 const entities = ['work', 'subscription', 'update'];
 const mainFeatures = ['metadata', 'library', 'magnets', 'subscriptions'];
-const platforms = ['python', 'network', 'diagnostics', 'lifecycle'];
+const platforms = ['python', 'network', 'diagnostics', 'lifecycle', 'images'];
 
 function publicModules(root, names) {
 	return names.map((name) => ({
@@ -82,13 +82,13 @@ module.exports = {
 			name: 'main-platform-has-no-business-dependencies',
 			severity: 'error',
 			from: { path: '^src/main/platform/' },
-			to: { path: '^src/main/(features/|index\\.ts$)' },
+			to: { path: '^src/main/(app/|features/|index\\.ts$)' },
 		},
 		{
 			name: 'main-features-have-no-entry-dependencies',
 			severity: 'error',
 			from: { path: '^src/main/features/' },
-			to: { path: '^src/main/index\\.ts$' },
+			to: { path: '^src/main/(app/|index\\.ts$)' },
 		},
 		{
 			name: 'subscription-image-cache-has-no-execution-dependencies',

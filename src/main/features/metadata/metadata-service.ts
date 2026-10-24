@@ -27,6 +27,7 @@ import type { Preferences } from '@shared/preferences';
 import { isMetadataSource, METADATA_IDS, SOURCE_BY_ID, type AllSource } from '@shared/sources';
 import { allowedSourceUrl } from '@shared/source-identity';
 import { sourceCooldownSeconds, sourceTransport } from '../../platform/network';
+import { isImageCorruption, type ImageStore } from '../../platform/images';
 
 const policySchema = z.object({ nextRequestAt: z.number().nonnegative(), cooldownUntil: z.number().nonnegative() });
 const policiesSchema = z
@@ -62,6 +63,7 @@ export class MetadataService extends EventEmitter {
 		private preferences?: () => Preferences,
 		private credential: (source: AllSource) => string = () => '',
 		private gate?: (source: AllSource, signal: AbortSignal) => Promise<void>,
+		private sharedImages?: ImageStore,
 	) {
 		super();
 		this.directory = join(dataRoot, 'metadata');
@@ -98,14 +100,38 @@ export class MetadataService extends EventEmitter {
 			}
 		}
 		delete this.store.activeId;
+		const migrated = new Set<string>();
 		for (const [id, asset] of Object.entries(this.store.assets)) {
 			try {
+				if (this.sharedImages) {
+					const covers = this.store.tasks
+						.flatMap((task) => task.records)
+						.flatMap((record) => record.covers)
+						.filter((cover) => cover.id === id || cover.asset?.sha256 === asset.sha256);
+					const old = join(this.cache, `${asset.sha256}.image`);
+					const bytes = await readFile(old).catch(() => undefined);
+					if (bytes && covers.length) {
+						for (const cover of covers) {
+							await this.sharedImages.put(cover.url, { bytes, asset });
+						}
+						migrated.add(old);
+					}
+					continue;
+				}
 				if ((await stat(join(this.cache, `${asset.sha256}.image`))).size !== asset.bytes) {
 					delete this.store.assets[id];
 				}
-			} catch {
-				delete this.store.assets[id];
+			} catch (error) {
+				if (this.sharedImages && !isImageCorruption(error)) {
+					throw error;
+				}
+				if (!this.sharedImages) {
+					delete this.store.assets[id];
+				}
 			}
+		}
+		for (const path of migrated) {
+			await rm(path, { force: true });
 		}
 		const byHash = new Map(Object.values(this.store.assets).map((asset) => [asset.sha256, asset]));
 		for (const task of this.store.tasks) {
@@ -129,7 +155,7 @@ export class MetadataService extends EventEmitter {
 		// 仅清理本应用封面缓存目录中的孤立文件，不访问或扫描用户媒体目录。
 		const indexed = new Set(Object.values(this.store.assets).map((asset) => asset.sha256));
 		for (const file of await readdir(this.cache)) {
-			if (/^[a-f0-9]{64}\.image$/.test(file) && !indexed.has(file.slice(0, 64))) {
+			if (/^[a-f0-9]{64}\.image$/.test(file) && (this.sharedImages || !indexed.has(file.slice(0, 64)))) {
 				await rm(join(this.cache, file), { force: true });
 			}
 		}
@@ -143,6 +169,38 @@ export class MetadataService extends EventEmitter {
 			...(this.store.activeId ? { activeId: this.store.activeId } : {}),
 			...(this.storageError ? { notice: this.storageError } : {}),
 		});
+	}
+
+	picture(id: string) {
+		for (const task of this.store.tasks) {
+			for (const record of task.records) {
+				const cover = record.covers.find((cover) => cover.id === id || cover.asset?.sha256 === id);
+				if (cover) {
+					return { cover: structuredClone(cover), record: structuredClone(record), cancelled: ['cancelled', 'cancelling'].includes(task.status) };
+				}
+			}
+		}
+	}
+
+	async rememberImage(id: string, asset: ImageAsset): Promise<void> {
+		if (this.disposed || this.storageError) {
+			return;
+		}
+		let changed = false;
+		for (const task of this.store.tasks) {
+			for (const record of task.records) {
+				for (const cover of record.covers) {
+					if (cover.id === id && cover.asset && cover.asset.sha256 !== asset.sha256) {
+						cover.asset = imageAssetSchema.parse(asset);
+						this.store.assets[id] = { ...asset, cachedAt: Date.now() };
+						changed = true;
+					}
+				}
+			}
+		}
+		if (changed) {
+			await this.commit();
+		}
 	}
 
 	async query(request: QueryRequest): Promise<QueryReply> {
@@ -227,6 +285,9 @@ export class MetadataService extends EventEmitter {
 	}
 
 	async image(sha256: string): Promise<{ bytes: Buffer; asset: ImageAsset } | undefined> {
+		if (this.sharedImages) {
+			return this.sharedImages.readHash(sha256);
+		}
 		if (!/^[a-f0-9]{64}$/.test(sha256)) {
 			return;
 		}
@@ -469,7 +530,12 @@ export class MetadataService extends EventEmitter {
 					}
 					try {
 						const cached = this.store.assets[candidate.id];
-						if (cached && (await stat(join(this.cache, `${cached.sha256}.image`)).catch(() => undefined))?.size === cached.bytes) {
+						if (
+							cached &&
+							(this.sharedImages
+								? await this.sharedImages.readHash(cached.sha256, false)
+								: (await stat(join(this.cache, `${cached.sha256}.image`)).catch(() => undefined))?.size === cached.bytes)
+						) {
 							candidate.probe = imageProbeSchema.parse(cached);
 							measured.push({ record, candidate, probe: cached });
 							continue;
@@ -535,7 +601,11 @@ export class MetadataService extends EventEmitter {
 
 	private async cover(task: QueryTask, record: MetadataRecord, candidate: CoverCandidate, probe: z.infer<typeof imageProbeSchema>, signal: AbortSignal): Promise<boolean> {
 		const cached = this.store.assets[candidate.id];
-		if (cached) {
+		if (this.sharedImages && cached && (await this.sharedImages.read(candidate.url, 'thumbnail'))) {
+			candidate.asset = cached;
+			return true;
+		}
+		if (cached && !this.sharedImages) {
 			try {
 				const bytes = await readFile(join(this.cache, `${cached.sha256}.image`));
 				if (!this.running(task, signal)) {
@@ -607,7 +677,11 @@ export class MetadataService extends EventEmitter {
 				throw new Error('Cover integrity failure');
 			}
 			promoted = outcome.asset.sha256;
-			await rename(destination, join(this.cache, `${outcome.asset.sha256}.image`));
+			if (this.sharedImages) {
+				await this.sharedImages.put(candidate.url, { bytes: image, asset: outcome.asset }, { thumbnailOnly: true });
+			} else {
+				await rename(destination, join(this.cache, `${outcome.asset.sha256}.image`));
+			}
 			if (!this.running(task, signal)) {
 				return false;
 			}
@@ -634,6 +708,15 @@ export class MetadataService extends EventEmitter {
 	}
 
 	private async retainCovers(): Promise<void> {
+		if (this.sharedImages) {
+			const referenced = new Set(this.store.tasks.flatMap((task) => task.records.flatMap((record) => record.covers.map((cover) => cover.id))));
+			for (const id of Object.keys(this.store.assets)) {
+				if (!referenced.has(id)) {
+					delete this.store.assets[id];
+				}
+			}
+			return;
+		}
 		const referenced = new Set<string>();
 		for (const task of this.store.tasks) {
 			for (const code of new Set(task.records.map((record) => record.code))) {
@@ -675,6 +758,10 @@ export class MetadataService extends EventEmitter {
 	}
 
 	private async trimCache(task: QueryTask): Promise<void> {
+		if (this.sharedImages) {
+			await this.sharedImages.setLimit(this.preferences?.().imageCacheMiB ?? 512);
+			return;
+		}
 		const protectedIds = new Set(task.records.flatMap((record) => record.covers.map((cover) => cover.id)));
 		const ordered = Object.entries(this.store.assets).sort((a, b) => a[1].cachedAt - b[1].cachedAt);
 		const sizes = new Map(ordered.map(([, asset]) => [asset.sha256, asset.bytes]));

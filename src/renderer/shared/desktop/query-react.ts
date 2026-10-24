@@ -3,6 +3,14 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useDesktop } from './context';
 import { queryKeys } from './queries';
 
+export function useStorageUsage() {
+	return useQuery(useDesktop().queries.storage());
+}
+
+export function useClearImageCache() {
+	return useMutation(useDesktop().queries.clearImageCache());
+}
+
 export function useSavedWork(id: string) {
 	return useQuery(useDesktop().queries.work(id));
 }
