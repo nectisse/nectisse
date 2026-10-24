@@ -4,6 +4,9 @@ import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/shared/lib/utils';
 
+// 超长图片最多展示两倍宽度的高度，详情仍显示完整图片。
+const MIN_CARD_IMAGE_RATIO = 1 / 2;
+
 export function FeedImage({ src, unavailable = '来源无图', alt }: { src?: string; unavailable?: string; alt: string }): React.JSX.Element {
 	const [failedSrc, setFailedSrc] = useState('');
 	return src && failedSrc !== src ? (
@@ -27,6 +30,8 @@ export function FeedItem({
 	flags = [],
 	read,
 	image,
+	imageKey,
+	imageAspectRatio,
 	published,
 	discovered,
 	onOpen,
@@ -47,6 +52,8 @@ export function FeedItem({
 	flags?: { label: string; warning?: boolean }[];
 	read: boolean;
 	image?: ReactNode;
+	imageKey?: string;
+	imageAspectRatio?: number;
 	published: ReactNode;
 	discovered?: ReactNode;
 	onOpen: () => void;
@@ -57,9 +64,35 @@ export function FeedItem({
 	itemId?: string;
 	presentation?: 'list' | 'cards';
 }): React.JSX.Element {
+	const [loadedImage, setLoadedImage] = useState<{ key: string | undefined; ratio: number }>();
+	const knownRatio = imageAspectRatio && Number.isFinite(imageAspectRatio) && imageAspectRatio > 0 ? imageAspectRatio : 16 / 9;
+	const ratio = loadedImage && loadedImage.key === imageKey ? loadedImage.ratio : knownRatio;
+	const natural = presentation === 'cards';
 	const thumbnail = image && (
-		<Button variant="media" size="media" className="feed-item-thumbnail" onClick={onOpen} aria-label={`查看封面与内容：${accessibleTitle}`}>
+		<Button
+			variant="media"
+			size="media"
+			className="feed-item-thumbnail"
+			style={natural ? { aspectRatio: Math.max(ratio, MIN_CARD_IMAGE_RATIO) } : undefined}
+			onLoadCapture={
+				natural
+					? (event) => {
+							const target = event.target;
+							if (target instanceof HTMLImageElement && target.naturalWidth > 0 && target.naturalHeight > 0) {
+								setLoadedImage({ key: imageKey, ratio: target.naturalWidth / target.naturalHeight });
+							}
+						}
+					: undefined
+			}
+			onClick={onOpen}
+			aria-label={`查看封面与内容：${accessibleTitle}`}
+		>
 			{image}
+			{natural && ratio < MIN_CARD_IMAGE_RATIO && (
+				<Badge variant="secondary" className="feed-item-long-image">
+					长图
+				</Badge>
+			)}
 		</Button>
 	);
 
