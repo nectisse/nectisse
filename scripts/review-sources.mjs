@@ -10,19 +10,19 @@ export async function reviewSources(page, output) {
 	await page.getByRole('button', { name: '设置', exact: true }).click();
 	await page.getByRole('heading', { level: 1, name: '设置', exact: true }).waitFor();
 	await page.getByRole('tab', { name: '来源与账号', exact: true }).click();
-	assert.equal(await page.locator('.settings-source').count(), 36);
+	assert.equal(await page.locator('.settings-source').count(), 30);
 	await chooseOption(page, '来源用途', '作品资料与封面');
-	assert.equal(await page.locator('.settings-source').count(), 24);
+	assert.equal(await page.locator('.settings-source').count(), 22);
 	const avbase = page.getByRole('switch', { name: '启用 AVBase', exact: true });
 	await avbase.click();
 	assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.enabledSources.includes('avbase')), true);
 	await page.screenshot({ path: join(output, '01-expanded-metadata.png') });
 	await chooseOption(page, '来源用途', '需要额外适配');
-	assert.equal(await page.locator('.settings-source').count(), 5);
-	for (const label of ['Rule34.xxx', 'Rule34 Paheal', 'F95zone', 'SimpCity', 'DUGA']) assert.equal(await page.getByRole('switch', { name: `启用 ${label}`, exact: true }).isDisabled(), true);
+	assert.equal(await page.locator('.settings-source').count(), 3);
+	for (const label of ['F95zone', 'SimpCity', 'DUGA']) assert.equal(await page.getByRole('switch', { name: `启用 ${label}`, exact: true }).isDisabled(), true);
 	await page.screenshot({ path: join(output, '02-explicit-boundaries.png') });
 	await chooseOption(page, '来源用途', '演员／创作者订阅');
-	assert.equal(await page.locator('.settings-source').count(), 8);
+	assert.equal(await page.locator('.settings-source').count(), 6);
 	await page.screenshot({ path: join(output, '03-expanded-follow.png') });
 	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '演员与创作者', exact: true }).click();
 	await page.getByRole('button', { name: '添加关注', exact: true }).first().click();
@@ -30,11 +30,11 @@ export async function reviewSources(page, output) {
 	await provider.waitFor();
 	await provider.click();
 	await page.getByRole('option').first().waitFor();
-	assert.equal(await page.getByRole('option').count(), 8);
+	assert.equal(await page.getByRole('option').count(), 6);
 	assert.equal(await page.locator('[data-slot="select-content"] input').count(), 0);
 	await page.keyboard.press('Escape');
-	await chooseOption(page, '关注来源', 'SubscribeStar');
-	await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).fill('https://subscribestar.adult/creator');
+	await chooseOption(page, '关注来源', 'Coomer');
+	await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).fill('https://coomer.st/onlyfans/user/creator');
 	assert.equal(await page.getByRole('button', { name: '查询身份', exact: true }).isDisabled(), true);
 	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
 	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '资料查询', exact: true }).click();
@@ -50,7 +50,7 @@ export async function reviewSources(page, output) {
 export async function reviewSourcesLive(page, output, proxy = '') {
 	await mkdir(output, { recursive: true });
 	const original = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences);
-	const enabled = [...new Set([...original.enabledSources, 'avbase', 'makers', '1pondo', 'subscribestar', 'kemono'])];
+	const enabled = [...new Set([...original.enabledSources, 'avbase', 'makers', '1pondo', 'kemono'])];
 	const reply = await page.evaluate(({ value, proxy }) => window.nectisse.subscriptions.command({ action: 'preferences', value: { ...value, ...(proxy ? { proxyMode: 'custom', proxyUrl: proxy } : {}) } }), { value: { ...original, enabledSources: enabled }, proxy });
 	assert.equal(reply.ok, true);
 	async function metadata(query, sources) {
@@ -84,7 +84,7 @@ export async function reviewSourcesLive(page, output, proxy = '') {
 	assert.equal(dated.records[0]?.code, '092415_001', JSON.stringify(dated.outcomes));
 	assert.ok(dated.records[0]?.covers.some(row => row.asset), JSON.stringify(dated.outcomes));
 	const subscriptions = [];
-	for (const [provider, query] of [['subscribestar', 'https://subscribestar.adult/initiala'], ['kemono', 'https://kemono.cr/fanbox/user/30917150']]) {
+	for (const [provider, query] of [['kemono', 'https://kemono.cr/fanbox/user/30917150']]) {
 		const lookup = await page.evaluate(({ provider, query }) => window.nectisse.subscriptions.command({ action: 'lookup', provider, query }), { provider, query });
 		assert.equal(lookup.ok, true, lookup.message);
 		let state = await idle(lookup.id);

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { SubscriptionStore, type Cipher } from '../src/main/features/subscriptions/subscription-store';
 import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
 import { TaskCancelledError, type PythonTaskHost } from '../src/main/platform/python/python-host';
-import type { EntryInput, FollowCandidate, Subscription } from '@shared/subscriptions';
+import type { EntryInput, FollowCandidate, Subscription, SubscriptionsState } from '@shared/subscriptions';
 
 const cipher: Cipher = {
 	available: () => false,
@@ -630,4 +630,130 @@ test('订阅暂停中断图片，明确恢复订阅后继续；不会将暂停�
 	assert.ok(store.entries().every((entry) => entry.imageAsset));
 	await service.stop();
 	store.close();
+});
+
+test('图片解析代理期间取消，取消意图先落盘且不再创建图片工作者', async (t) => {
+	const { store } = await setup(t, 2);
+	let release!: () => void;
+	let entered!: () => void;
+	const proxyReady = new Promise<void>((resolve) => {
+		entered = resolve;
+	});
+	const proxyWait = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	let workers = 0;
+	const service = new SubscriptionsService(
+		store,
+		{
+			run: async (...args) => {
+				workers++;
+				return runImage(...args);
+			},
+		},
+		async () => {
+			entered();
+			await proxyWait;
+			return '';
+		},
+		async () => {},
+		0,
+	);
+	try {
+		await service.tick();
+		await proxyReady;
+		const id = store.tasks()[0]!.id;
+		const persisted = new Promise<void>((resolve) => {
+			service.on('state', (state: SubscriptionsState) => {
+				if (state.tasks.some((task) => task.id === id && task.status === 'cancelling')) {
+					resolve();
+				}
+			});
+		});
+		const cancellation = service.command({ action: 'cancel', id });
+		await persisted;
+		assert.ok(store.tasks()[0]!.cancelRequestedAt);
+		release();
+		assert.equal((await cancellation).ok, true);
+		assert.equal(workers, 0);
+		assert.equal(store.tasks()[0]!.status, 'cancelled');
+		assert.ok(store.entries().every((entry) => entry.imageCache?.status === 'cancelled' && !entry.imageAsset));
+	} finally {
+		release();
+		await service.stop();
+		store.close();
+	}
+});
+
+test('查询头像与动态封面共用已验证图片，后续补齐不重复创建工作者', async (t) => {
+	const { store } = await setup(t);
+	const methods: string[] = [];
+	const service = new SubscriptionsService(
+		store,
+		{
+			run: async (...args) => {
+				methods.push(args[0]);
+				if (args[0] === 'follow.lookup') {
+					return { ...success, candidates: [{ ...candidate, url: 'https://testcreator.fanbox.cc/', avatarUrl: image(1).thumbnailUrl }] };
+				}
+				return runImage(...args);
+			},
+		},
+		async () => '',
+		async () => {},
+		0,
+	);
+	try {
+		const reply = await service.command({ action: 'lookup', provider: 'fanbox', query: 'testcreator' });
+		assert.equal(reply.ok, true);
+		await idle(service);
+		assert.deepEqual(methods, ['follow.lookup', 'follow.image']);
+		assert.equal(store.tasks().find((task) => task.id === reply.id)?.candidates[0]?.avatarAsset?.sha256, asset.sha256);
+		assert.equal(store.entries()[0]?.imageAsset?.sha256, asset.sha256);
+		assert.equal(store.tasks().find((task) => task.kind === 'covers')?.requests, 0);
+	} finally {
+		await service.stop();
+		store.close();
+	}
+});
+
+test('到期订阅检查优先于旧封面，检查完成后串行补齐且仅有一个工作者', async (t) => {
+	const { store, sub } = await setup(t);
+	store.saveSubscription({ ...sub, nextCheckAt: new Date(0).toISOString() });
+	store.savePreferences({ ...store.preferences(), automatic: true });
+	const methods: string[] = [];
+	let active = 0;
+	let peak = 0;
+	const service = new SubscriptionsService(
+		store,
+		{
+			run: async (...args) => {
+				methods.push(args[0]);
+				peak = Math.max(peak, ++active);
+				try {
+					if (args[0] === 'follow.check') {
+						await args[2]?.onRequest?.({ source: 'fanbox', host: 'api.fanbox.cc', sequence: 1 });
+						return { ...success, coverage: '已覆盖到上次记录', gap: false };
+					}
+					return await runImage(...args);
+				} finally {
+					active--;
+				}
+			},
+		},
+		async () => '',
+		async () => {},
+		0,
+	);
+	try {
+		await service.tick();
+		await idle(service);
+		assert.deepEqual(methods, ['follow.check', 'follow.image']);
+		assert.equal(peak, 1);
+		assert.equal(store.entries()[0]?.imageAsset?.sha256, asset.sha256);
+		assert.ok(store.subscription(sub.id)?.lastCheckedAt);
+	} finally {
+		await service.stop();
+		store.close();
+	}
 });

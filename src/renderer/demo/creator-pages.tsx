@@ -454,7 +454,7 @@ export function UpdatesPage({
 					</section>
 					<section className="aside-block">
 						<h2>来源状态 · 示例</h2>
-						{(['FANBOX', 'Patreon', 'SubscribeStar'] as const).map((source) => (
+						{(['FANBOX', 'Patreon'] as const).map((source) => (
 							<div className="aside-keyvalue" key={source}>
 								<span>
 									<SourceMark source={source} />

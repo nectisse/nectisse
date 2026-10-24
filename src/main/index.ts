@@ -6,6 +6,7 @@ import { pythonLayout, RuntimeService } from './platform/python';
 import { MetadataService } from './features/metadata';
 import { proxyFromRules, SiteGate, sourceCooldownSeconds } from './platform/network';
 import { METADATA_IPC, queryRequestSchema } from '@shared/metadata';
+import { isMetadataSource, LEGACY_METADATA_IDS } from '@shared/sources';
 import { z } from 'zod';
 import { SubscriptionStore, SubscriptionsService, readSubscriptionState } from './features/subscriptions';
 import { SUBS_IPC, followCommandSchema } from '@shared/subscriptions';
@@ -304,7 +305,7 @@ if (!app.requestSingleInstanceLock()) {
 						if (!['cancelled', 'interrupted'].includes(task.status)) {
 							for (const outcome of task.outcomes) {
 								const key = `${task.id}:${outcome.source}:${outcome.reason}`;
-								if (observedOutcomes.has(key) || outcome.reason === 'cooldown' || outcome.reason === 'budget_exceeded') {
+								if (!isMetadataSource(outcome.source) || observedOutcomes.has(key) || outcome.reason === 'cooldown' || outcome.reason === 'budget_exceeded') {
 									continue;
 								}
 								observedOutcomes.add(key);
@@ -426,7 +427,7 @@ if (!app.requestSingleInstanceLock()) {
 				await waitMetadata();
 
 				const task = metadata!.getState().tasks.find((task) => task.id === input.taskId);
-				const order = subscriptionStore!.preferences().metadataPriority;
+				const order: readonly string[] = [...subscriptionStore!.preferences().metadataPriority, ...LEGACY_METADATA_IDS];
 				const records = task?.records.filter((record) => record.code === input.code).sort((a, b) => order.indexOf(a.source) - order.indexOf(b.source));
 				if (!records?.length) {
 					return { ok: false, message: '查询记录已不在最近列表中，请重新查询后收藏。' };

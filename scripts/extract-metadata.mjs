@@ -44,12 +44,9 @@ const coverRules = cover.slice(cover.indexOf('_DMM_CID ='), cover.indexOf('def _
 const thumbnail = cover.split('\n').find(line => line.startsWith('THUMBNAIL ='));
 if (!thumbnail) throw new Error('封面缩略图规则未识别');
 await writeFile(join(destination, 'cover_identity.py'), '"""提取自 Peach jav_cover_fetch.py 的跨作品封面判定。"""\nimport re\nfrom urllib.parse import urlparse\nfrom .catalog_rules import normalise_code_key, code_letter_stem\n\nMIN_WIDTH = 700\nSMALL_MIN_WIDTH = 240\n' + thumbnail + '\n\n' + coverRules + '\n');
-const kmib = await readFile(join(upstream, 'metadata_kmib.py'));
-await writeFile(join(destination, 'metadata_kmib.py'), kmib);
-records.push({ path: 'metadata_kmib.py', upstreamSha256: createHash('sha256').update(kmib).digest('hex') });
 for (const path of ['metadata.py', 'jav_cover_fetch.py']) {
 	const extractedPath = path === 'metadata.py' ? 'identity.py' : 'cover_identity.py';
 	records.push({ path, upstreamSha256: createHash('sha256').update(await readFile(join(upstream, path))).digest('hex'), extractedPath, extractedSha256: createHash('sha256').update(await readFile(join(destination, extractedPath))).digest('hex'), extractedSections: path === 'metadata.py' ? 'IDENTITY_FIELDS 到 identifies_code' : '_DMM_CID 到 is_cross_product_cover；MIN_WIDTH/SMALL_MIN_WIDTH' });
 }
 await writeFile(join(destination, '../metadata-extraction.json'), JSON.stringify({ peachVersion: '0.46.1', records }, null, 2) + '\n');
-console.log('已提取 Peach 的资料连接器、三份 Wiki 与 K-MIB 解析及身份规则。');
+console.log('已提取 Peach 的资料连接器、三份 Wiki 解析及身份规则。');

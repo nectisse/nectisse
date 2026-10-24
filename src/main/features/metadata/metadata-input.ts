@@ -67,16 +67,6 @@ export function planQuery(value: QueryRequest): QueryPlan {
 			}
 			code = id;
 			specific = '1pondo';
-		} else if (host === 'www.k-mib.com' || host === 'k-mib.com') {
-			const idx = url.searchParams.get('idx');
-			if (url.pathname !== '/video/video-view.php' || !idx || !/^\d+$/.test(idx)) {
-				throw new Error('请输入 K-MIB 单片链接');
-			}
-			if (!request.sources.includes('kmib')) {
-				throw new Error('请先选择 K-MIB 来源');
-			}
-			const sourceUrl = `https://www.k-mib.com/video/video-view.php?idx=${idx}`;
-			return { kind: 'url', query: sourceUrl, code: '', contentId: idx, sourceUrl, sources: ['kmib'] };
 		} else if (host === 'javdb.com' && /^\/v\/[A-Za-z0-9]+\/?$/.test(url.pathname)) {
 			if (!request.sources.includes('javdb')) {
 				throw new Error('请先选择 JavDB 来源');
@@ -97,7 +87,7 @@ export function planQuery(value: QueryRequest): QueryPlan {
 
 			code = component ? normalizeCode(component) : '';
 			if (!code) {
-				throw new Error('链接中没有可靠的作品编号，请改用编号；K-MIB 与 JavDB 支持单片原生链接');
+				throw new Error('链接中没有可靠的作品编号，请改用编号；JavDB 支持单片原生链接');
 			}
 		}
 		if (!code) {
@@ -127,7 +117,7 @@ export function planQuery(value: QueryRequest): QueryPlan {
 		throw new Error('标题最多输入 200 个字符');
 	}
 	const family = code.startsWith('FC2') ? 'fc2' : dated ? 'dated' : 'standard';
-	const allowed: SourceId[] = kind === 'title' ? ['dmm'] : specific ? [specific] : METADATA_IDS.filter((id) => id !== 'kmib' && SOURCE_BY_ID[id].families.includes(family));
+	const allowed: SourceId[] = kind === 'title' ? ['dmm'] : specific ? [specific] : METADATA_IDS.filter((id) => SOURCE_BY_ID[id].families.includes(family));
 	const sources = allowed.filter((source) => request.sources.includes(source));
 
 	if (!sources.length) {

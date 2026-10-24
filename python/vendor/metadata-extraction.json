@@ -62,10 +62,6 @@
       "extractedSha256": "5e1987d25c273babadbd66e42342a3893bbea0c6c096e898b4ec507d4a55b08e"
     },
     {
-      "path": "metadata_kmib.py",
-      "upstreamSha256": "cbc224094ec05d3c81a689fb83d04c59ac04780b95ae2846f78176fc239d364a"
-    },
-    {
       "path": "metadata.py",
       "upstreamSha256": "9d2b537585431a3d7e6a024c44f163c0fe6e526c2e3018b08509f66ecc30cd38",
       "extractedPath": "identity.py",

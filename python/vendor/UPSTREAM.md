@@ -47,11 +47,11 @@ Peach 的 `CurlCffiTransport` 会自动跟随重定向。本应用增加 `follow
 
 ## 来源扩展
 
-- `extract-metadata.mjs` 提取全部直接资料解析器：DMM、r18.dev、一本道、FC2、FC2CMADB、FC2PPV-DB、JAVten、JavArchive、AVBase、JavBus、JavDB、三份 Seesaa Wiki 与 K-MIB。适配最小契约 import；JavDB 剔除资源与磁链方法，Wiki 剔除原取页／缓存类，搜索最多三条、厂牌补页最多一条，所有取页经过 Nectisse Session。
-- `extract-follow.mjs` 另提取 Patreon / SubscribeStar 的公开卡片、日期与 URL 解析段至 `peach_core/official_posts.py`，由 `follow_official_support.py` 注入受限网络契约。归档三站与 Rule34Video 按原 API、身份和列表选择器适配，不调用详情资源展开，不按“交付资源”筛帖。
-- `extract-amane.mjs` 从固定 revision `cc42cee6ecf290cf05af1caa347d2dc2d5aeffcd` 的 SHA-256 校验快照提取九个站点及十九个纯依赖文件，包入口替换为无副作用入口。完整爬虫文件保持原样；不存在上游聚合、数据库或服务的运行依赖。仅补充 parsel / pydantic / structlog 的锁定依赖；GPL 许可证与逐文件哈希随包保留。
+- `extract-metadata.mjs` 提取全部直接资料解析器：DMM、r18.dev、一本道、FC2、FC2CMADB、FC2PPV-DB、JAVten、JavArchive、AVBase、JavBus、JavDB、三份 Seesaa Wiki。适配最小契约 import；JavDB 剔除资源与磁链方法，Wiki 剔除原取页／缓存类，搜索最多三条、厂牌补页最多一条，所有取页经过 Nectisse Session。
+- `extract-follow.mjs` 另提取 Patreon 的公开卡片、日期与 URL 解析段至 `peach_core/official_posts.py`，由 `follow_official_support.py` 注入受限网络契约。归档三站按原 API 与身份适配，不调用详情资源展开，不按“交付资源”筛帖。
+- `extract-amane.mjs` 从固定 revision `cc42cee6ecf290cf05af1caa347d2dc2d5aeffcd` 的 SHA-256 校验快照提取八个站点及纯依赖文件，包入口替换为无副作用入口。完整爬虫文件保持原样；不存在上游聚合、数据库或服务的运行依赖。仅补充 parsel / pydantic / structlog 的锁定依赖；GPL 许可证与逐文件哈希随包保留。
 - `metadata/amane.py` 的有界异步客户端将爬虫请求转回 Nectisse Session：保持 curl_cffi 指纹选择、逐跳域名检查、请求预算、取消与失败分类；不使用上游自动重试、下载或渲染器。Prestige 配信开始日单独保存，紧凑编号规范化后与其他来源归到同一作品。
-- Seesaa 提取哈希含必要适配，其纯作品表解析、精确编号与不确定人物警告保留；K-MIB 仅读取用户指定的单片 URL，不引入列表采集或磁盘扫描。
+- Seesaa 提取哈希含必要适配，其纯作品表解析、精确编号与不确定人物警告保留。
 
 支持矩阵位于仓库的 `docs/SOURCE_SUPPORT.md`。在线成功样本与尚未完成的验收分开记录；源码存在、导入通过和真实查询成功是不同的验证等级。
 

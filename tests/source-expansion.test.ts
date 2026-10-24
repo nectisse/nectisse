@@ -4,7 +4,11 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { SOURCES, METADATA_IDS, FOLLOW_IDS, SOURCE_BY_ID } from '@shared/sources';
+import { SOURCES, METADATA_IDS, FOLLOW_IDS, SOURCE_BY_ID, RETIRED_SOURCE_IDS } from '@shared/sources';
+import { DEFAULT_PREFERENCES, preferencesPatchSchema } from '@shared/preferences';
+import { followCommandSchema, followTaskSchema } from '@shared/subscriptions';
+import { queryRequestSchema } from '@shared/metadata';
+import { randomUUID } from 'node:crypto';
 import { canonicalFollow, validFollowEntry } from '@shared/source-identity';
 import { planQuery } from '../src/main/features/metadata/metadata-input';
 import { MetadataService } from '../src/main/features/metadata/metadata-service';
@@ -41,7 +45,7 @@ test('来源目录只将已接入能力暴露为可派发，不把历史、标�
 			.sort(),
 		[...FOLLOW_IDS].sort(),
 	);
-	for (const id of ['rule34xxx', 'rule34paheal', 'f95zone', 'simpcity', 'duga'] as const) {
+	for (const id of ['f95zone', 'simpcity', 'duga'] as const) {
 		assert.equal(SOURCE_BY_ID[id].available, false);
 	}
 	assert.equal(SOURCE_BY_ID.javdb.metadata, true);
@@ -52,13 +56,13 @@ test('资料路由尊重 FC2 家族与日期式编号的发行方证据，原生
 	const base = { sources: [...METADATA_IDS], force: false };
 	const fc2 = planQuery({ ...base, query: 'FC2-PPV-1234567' });
 	assert.ok(fc2.sources.includes('fc2cmadb'));
-	assert.ok(fc2.sources.includes('fc2club'));
 	assert.equal(fc2.sources.includes('dmm'), false);
 	assert.throws(() => planQuery({ ...base, query: '092415_001' }), /发行方/);
 	assert.deepEqual(planQuery({ ...base, query: 'https://www.1pondo.tv/movies/092415_001/' }).sources, ['1pondo']);
 	assert.deepEqual(planQuery({ ...base, sources: ['1pondo'], query: '092415_001' }).sources, ['1pondo']);
 	assert.equal(planQuery({ ...base, query: 'https://javdb.com/v/Ab123?token=private' }).sourceUrl, 'https://javdb.com/v/Ab123');
-	assert.equal(planQuery({ ...base, query: 'https://www.k-mib.com/video/video-view.php?idx=7&token=private' }).sourceUrl, 'https://www.k-mib.com/video/video-view.php?idx=7');
+	assert.throws(() => planQuery({ ...base, query: 'https://www.k-mib.com/video/video-view.php?idx=7' }), /未识别此站点/);
+	assert.throws(() => planQuery({ ...base, query: 'https://fc2club.top/html/FC2-1234567.html' }), /未识别此站点/);
 	assert.throws(() => planQuery({ ...base, query: 'https://127.0.0.1/video/video-view.php?idx=7' }));
 });
 
@@ -78,6 +82,115 @@ test('旧设置迁移保留代理、来源开关与已读数据，补齐新来�
 	assert.deepEqual(current.enabledSources, legacy.enabledSources);
 	assert.deepEqual(current.sourceTransports, {});
 	restored.close();
+});
+
+test('已移除来源不出现在目录中，也不能通过设置或查询命令重新启用', () => {
+	for (const id of RETIRED_SOURCE_IDS) {
+		assert.equal(
+			SOURCES.some((source) => source.id === (id as string)),
+			false,
+		);
+		assert.equal(preferencesPatchSchema.safeParse({ enabledSources: [id] }).success, false);
+		assert.equal(followCommandSchema.safeParse({ action: 'lookup', provider: id, query: 'creator' }).success, false);
+		assert.equal(queryRequestSchema.safeParse({ query: 'ABC-001', sources: [id] }).success, false);
+	}
+});
+
+test('旧设置去除已移除来源；旧订阅、动态与任务不参与运行，仍保留在数据库中', async (t) => {
+	const root = await directory(t);
+	const store = new SubscriptionStore(root, cipher);
+	const active = store.follow({
+		provider: 'patreon',
+		ref: 'creator',
+		url: canonicalFollow('patreon', 'creator'),
+		name: '作者',
+		recordType: '主页',
+		aliases: [],
+		bio: '',
+		evidence: '',
+	});
+	store.upsertEntry(active, {
+		externalId: '12345',
+		title: '公告',
+		summary: '',
+		author: '作者',
+		publishedAt: '',
+		publishedPrecision: 'unknown',
+		url: 'https://www.patreon.com/posts/12345',
+		thumbnailUrl: '',
+		code: '',
+		restricted: false,
+		partial: true,
+	});
+	store.markRead([store.entries()[0]!.id], true);
+	const task = followTaskSchema.parse({
+		id: randomUUID(),
+		kind: 'check',
+		provider: 'patreon',
+		status: 'succeeded',
+		phase: '',
+		startedAt: '2026-10-01',
+		finishedAt: '',
+		requests: 0,
+		candidates: [],
+		added: 0,
+		reason: '',
+		cancelRequestedAt: '',
+	});
+	store.saveTask(task);
+	store.db.prepare('INSERT INTO preferences VALUES(1,?)').run(
+		JSON.stringify({
+			...DEFAULT_PREFERENCES,
+			enabledSources: [...DEFAULT_PREFERENCES.enabledSources, ...RETIRED_SOURCE_IDS],
+			querySources: ['kmib', 'fc2club'],
+			metadataPriority: ['kmib', 'r18dev', 'fc2club'],
+			coverPriority: ['kmib', 'dmm', 'fc2club'],
+			sourceTransports: { kmib: 'fingerprint', subscribestar: 'httpx', javdb: 'fingerprint' },
+			proxyMode: 'custom',
+			proxyUrl: 'http://127.0.0.1:7890',
+			theme: 'night',
+		}),
+	);
+	const retiredIds: string[] = [];
+	for (const provider of ['subscribestar', 'rule34video']) {
+		const id = randomUUID();
+		retiredIds.push(id);
+		store.db.prepare('INSERT INTO subscriptions VALUES(?,?,?,?)').run(id, provider, 'creator', JSON.stringify({ ...active, id, provider }));
+		store.db.prepare('INSERT INTO entries VALUES(?,?,?,?,?)').run(id, id, '12345', JSON.stringify({ ...store.entries()[0], id, subscriptionId: id, provider }), '2026-11-01');
+		for (let i = 0; i < 20; i++) {
+			store.db.prepare('INSERT INTO follow_tasks VALUES(?,?,?)').run(randomUUID(), '2026-11-01', JSON.stringify({ ...task, provider, status: 'running' }));
+		}
+	}
+	store.close();
+	const restored = new SubscriptionStore(root, cipher);
+	t.after(() => restored.close());
+	const preferences = restored.preferences();
+	assert.deepEqual(preferences.querySources, []);
+	assert.deepEqual(preferences.enabledSources, DEFAULT_PREFERENCES.enabledSources);
+	assert.equal(preferences.metadataPriority[0], 'r18dev');
+	assert.equal(preferences.metadataPriority.length, METADATA_IDS.length);
+	assert.deepEqual(preferences.coverPriority, ['dmm']);
+	assert.deepEqual(preferences.sourceTransports, { javdb: 'fingerprint' });
+	assert.equal(preferences.proxyUrl, 'http://127.0.0.1:7890');
+	assert.equal(preferences.theme, 'night');
+	assert.deepEqual(
+		restored.subscriptions().map((sub) => sub.id),
+		[active.id],
+	);
+	assert.equal(restored.entries().length, 1);
+	assert.equal(restored.entries()[0]!.read, true);
+	assert.deepEqual(
+		restored.tasks().map((item) => item.id),
+		[task.id],
+	);
+	for (const id of retiredIds) {
+		assert.equal(restored.subscription(id), undefined);
+		assert.equal(restored.entry(id), undefined);
+		assert.deepEqual(restored.entries(id), []);
+	}
+	assert.equal(restored.db.prepare('SELECT count(*) AS n FROM subscriptions').get()?.n, 3);
+	assert.equal(restored.db.prepare('SELECT count(*) AS n FROM entries').get()?.n, 3);
+	assert.equal(restored.db.prepare('SELECT count(*) AS n FROM follow_tasks').get()?.n, 41);
 });
 
 test('扩展资料链仍限制整次 24 个请求，预算耗尽的来源不再创建工作者', async (t) => {
@@ -104,30 +217,25 @@ test('扩展资料链仍限制整次 24 个请求，预算耗尽的来源不再�
 	await service.stop();
 });
 
-test('订阅保存全部已接入来源的原生身份；SubscribeStar 两个主机互不合并', async (t) => {
+test('订阅保存已接入来源的原生身份，不按相同显示名合并', async (t) => {
 	const store = new SubscriptionStore(await directory(t), cipher);
 	for (const [provider, ref] of [
 		['patreon', 'creator'],
-		['subscribestar', 'subscribestar.com/creator'],
-		['subscribestar', 'subscribestar.adult/creator'],
 		['kemono', 'fanbox/123'],
 		['pawchive', 'patreon/123'],
 		['coomer', 'onlyfans/123'],
-		['rule34video', 'creator'],
 	] as const) {
 		const sub = store.follow({ provider, ref, url: canonicalFollow(provider, ref), name: '相同显示名', recordType: '来源身份', aliases: [], bio: '', evidence: '来源已核对' });
 		assert.equal(sub.kind, 'creator_posts');
 	}
-	assert.equal(store.subscriptions().length, 7);
+	assert.equal(store.subscriptions().length, 4);
 	store.close();
 });
 
 test('扩展订阅不会接收另一账号、另一主机或不匹配的帖子身份', () => {
 	assert.equal(validFollowEntry('kemono', 'fanbox/123', { externalId: '456', url: 'https://kemono.cr/fanbox/user/123/post/456' }), true);
 	assert.equal(validFollowEntry('kemono', 'fanbox/123', { externalId: '456', url: 'https://kemono.cr/fanbox/user/999/post/456' }), false);
-	assert.equal(validFollowEntry('subscribestar', 'subscribestar.adult/creator', { externalId: '456', url: 'https://subscribestar.com/posts/456' }), false);
 	assert.equal(validFollowEntry('patreon', 'creator', { externalId: '456', url: 'https://www.patreon.com/posts/announcement-456' }), true);
-	assert.equal(validFollowEntry('rule34video', 'creator', { externalId: '456', url: 'https://rule34video.com/video/456/announcement/' }), true);
 	assert.throws(() => canonicalFollow('coomer', 'onlyfans/..'));
 });
 

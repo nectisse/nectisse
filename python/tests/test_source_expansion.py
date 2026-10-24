@@ -33,6 +33,24 @@ class Session:
 
 
 class ExpansionTests(unittest.TestCase):
+    def test_removed_sources_cannot_dispatch_or_make_requests(self):
+        session = Session(lambda url: self.fail('已移除来源不应发起网络请求'))
+        for source in ['rule34video', 'subscribestar', 'rule34xxx', 'rule34paheal', 'fc2club', 'kmib']:
+            self.assertNotIn(source, CATALOG)
+            self.assertNotIn(source, SOURCES)
+        for source in ['fc2club', 'kmib']:
+            with self.assertRaises(SourceFailure) as raised:
+                query({'source': source, 'kind': 'code', 'code': 'ABC-001'}, session)
+            self.assertEqual(raised.exception.reason, 'unsupported')
+        for provider in ['rule34video', 'subscribestar']:
+            with self.assertRaises(SourceFailure) as raised:
+                lookup({'provider': provider, 'query': 'creator'}, session)
+            self.assertEqual(raised.exception.reason, 'unsupported')
+            with self.assertRaises(SourceFailure) as raised:
+                check({'provider': provider, 'ref': 'creator'}, session, lambda entry: None)
+            self.assertEqual(raised.exception.reason, 'unsupported')
+        self.assertEqual(session.calls, [])
+
     def test_all_declared_metadata_adapters_load_without_peach_or_database(self):
         self.assertEqual(set(SOURCES), {key for key, row in CATALOG.items() if row['metadata']})
         for key, factory in SOURCES.items():
@@ -84,18 +102,6 @@ class ExpansionTests(unittest.TestCase):
         self.assertEqual(record['releaseDate'], '')
         self.assertEqual(len(session.calls), 2)
 
-    def test_fc2club_identity_requires_matching_page_heading(self):
-        for heading in ['FC2-7654321 其他作品', '作品标题但没有编号']:
-            with self.subTest(heading=heading), self.assertRaises(SourceFailure) as raised:
-                AmaneSource('fc2club').query('FC2-PPV-1234567', session=Session(
-                    lambda url: f'<div class="show-top-grids"><h3>{heading}</h3></div>'))
-            self.assertEqual(raised.exception.reason, 'parse_error')
-        for heading in ['FC2-1234567 正确作品', 'FC2-PPV-1234567 正确作品']:
-            with self.subTest(heading=heading):
-                result = AmaneSource('fc2club').query('FC2-PPV-1234567', session=Session(
-                    lambda url: f'<div class="show-top-grids"><h3>{heading}</h3></div>'))
-                self.assertEqual(normalize(result)['code'], 'FC2-PPV-1234567')
-
     def test_amane_compact_numbers_group_with_other_metadata_sources(self):
         from nectisse_worker.metadata.base import SiteRecord
         result = normalize(SiteRecord('makers', 'amane-0.20.0', 'SSIS057', 'https://s1s1s1.com/works/detail/SSIS057', title='公式作品'))
@@ -112,14 +118,6 @@ class ExpansionTests(unittest.TestCase):
         record = SOURCES['javdb']().parse(Page('https://javdb.com/v/test', html.encode()), 'ABW-220')
         self.assertEqual(normalize(record)['covers'], [])
 
-    def test_kmib_single_url_does_not_expand_lists_or_infer_partner_as_actor(self):
-        html = ''.join(f'<div class="info-box"><div class="head">{name}</div><div class="conts">{value}</div></div>' for name, value in [('Code', 'JS-012'), ('Title', '公式作品'), ('Release date', '2026-10-01'), ('Actor', 'JS MEDIA')])
-        session = Session(lambda url: html)
-        result = query({'source': 'kmib', 'kind': 'url', 'sourceUrl': 'https://www.k-mib.com/video/video-view.php?idx=7'}, session)[0]
-        self.assertEqual(result['studio'], 'JS MEDIA')
-        self.assertEqual(result['people'], [])
-        self.assertEqual(len(session.calls), 1)
-
     def test_wiki_names_reuse_work_evidence_and_preserve_review_warning(self):
         root = 'https://seesaawiki.jp/av_name/'
         html = f'<div id="page-body"><div class="user-area"><table><tr><th>品番</th><td>ABC-001</td></tr><tr><th>出演女優</th><td><a href="{root}d/A">架空花子</a></td></tr></table></div></div>'
@@ -128,18 +126,6 @@ class ExpansionTests(unittest.TestCase):
         result = normalize(rows[0])
         self.assertEqual(result['people'][0]['name'], '架空花子')
         self.assertTrue(result['warnings'])
-
-    def test_official_public_profiles_and_text_cards_keep_source_domains(self):
-        html = '<html><title>公開作者</title><h1>公開作者</h1><div class="post" data-id="12345"><div class="post-title"><h2>制作进度</h2></div><div class="post-content">没有附件的公告</div><div class="post-date"><a>Oct 01, 2026 12:00 PM</a></div></div></html>'
-        params = {'provider': 'subscribestar', 'query': 'https://subscribestar.adult/creator'}
-        candidate = lookup(params, Session(lambda url: html))[0]
-        self.assertEqual(candidate['ref'], 'subscribestar.adult/creator')
-        entries = []
-        result = check({**params, 'ref': candidate['ref'], 'initialized': False}, Session(lambda url: html), entries.append)
-        self.assertEqual(entries[0]['summary'], '没有附件的公告')
-        self.assertEqual(entries[0]['url'], 'https://subscribestar.adult/posts/12345')
-        self.assertFalse(result['gap'])
-        self.assertNotEqual(identity('subscribestar', 'https://subscribestar.com/creator'), candidate['ref'])
 
     def test_patreon_public_card_time_is_marked_approximate(self):
         html = '<html><h1>公開作者</h1><article><h3>进度公告</h3><p>1 day ago</p><a href="/posts/announcement-12345">原文</a></article></html>'
@@ -152,7 +138,7 @@ class ExpansionTests(unittest.TestCase):
 
     def test_official_unrecognized_page_is_not_a_successful_empty_check(self):
         html = '<html><h1>Creator</h1><div>Temporarily unavailable</div></html>'
-        for provider, ref in [('patreon', 'creator'), ('subscribestar', 'subscribestar.adult/creator')]:
+        for provider, ref in [('patreon', 'creator')]:
             with self.subTest(provider=provider, operation='lookup'), self.assertRaises(SourceFailure) as raised:
                 lookup({'provider': provider, 'query': ref}, Session(lambda url: html))
             self.assertEqual(raised.exception.reason, 'parse_error')
@@ -178,7 +164,7 @@ class ExpansionTests(unittest.TestCase):
             check({'provider': 'kemono', 'ref': 'fanbox/12345'}, Session(lambda url: [{'id': '1', 'user': '999', 'service': 'fanbox'}]), lambda entry: None)
 
     def test_extended_profile_identity_rejects_posts_reserved_pages_and_private_hosts(self):
-        for provider, value in [('patreon', 'https://www.patreon.com/login'), ('patreon', 'https://evil.example/cw/creator'), ('subscribestar', 'https://subscribestar.com/posts/123'), ('kemono', 'https://kemono.cr/fanbox/user/123/post/1'), ('coomer', 'service/..'), ('rule34video', 'https://rule34video.com/video/123/test/')]:
+        for provider, value in [('patreon', 'https://www.patreon.com/login'), ('patreon', 'https://evil.example/cw/creator'), ('kemono', 'https://kemono.cr/fanbox/user/123/post/1'), ('coomer', 'service/..')]:
             with self.assertRaises(SourceFailure, msg=(provider, value)):
                 identity(provider, value)
 

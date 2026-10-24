@@ -1,6 +1,6 @@
 // Visual review fixtures only. No identities, URLs, source results or dimensions
 // here represent verified sites. All changes stay in React memory.
-export type Site = 'DMM' | 'r18.dev' | 'JavDB' | 'FANBOX' | 'Patreon' | 'SubscribeStar';
+export type Site = 'DMM' | 'r18.dev' | 'JavDB' | 'FANBOX' | 'Patreon';
 export type Tile = 0 | 1 | 2 | 3 | 4 | 5;
 export type Route = { page: 'query' | 'detail' | 'creator' | 'updates' };
 
@@ -83,7 +83,7 @@ export const creators: readonly Creator[] = [
 		bio: '记录作品完成之前，那些细小而温柔的过程。',
 		avatar: '灯',
 		banner: 4,
-		sites: ['SubscribeStar'],
+		sites: ['Patreon'],
 	},
 	{
 		id: 'seaside',
@@ -197,7 +197,7 @@ export const posts: readonly Post[] = [
 	{
 		id: 'akari-schedule',
 		creatorId: 'akari',
-		source: 'SubscribeStar',
+		source: 'Patreon',
 		time: '昨天',
 		publishedAt: '2026.10.22 18:00',
 		title: '十月末的更新安排',

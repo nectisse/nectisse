@@ -56,6 +56,10 @@ test('架构检查拒绝功能互引、私有入口、反向业务依赖及绕�
 		'src/main/platform/python/index.ts': "export { host } from './host';",
 		'src/main/platform/python/host.ts': 'export const host = true;',
 		'src/main/features/subscriptions/index.ts': 'export type Store = { name: string };',
+		'src/main/features/subscriptions/image-cache.ts': "import './image-backfill';",
+		'src/main/features/subscriptions/image-backfill.ts': "import './subscription-scheduler';",
+		'src/main/features/subscriptions/subscription-scheduler.ts': "import './subscriptions-service';",
+		'src/main/features/subscriptions/subscriptions-service.ts': 'export const facade = true;',
 		'src/main/features/metadata/illegal.ts': "import '../subscriptions'; import '../../platform/python/host';",
 		'src/renderer/shared/desktop/private.ts': 'export const state = true;',
 		'src/renderer/shared/desktop/illegal.ts': "import type { View } from '../../entities/work/ui/Detail'; export type State = View;",
@@ -89,6 +93,9 @@ test('架构检查拒绝功能互引、私有入口、反向业务依赖及绕�
 		'main-platform-has-no-business-dependencies',
 		'src-main-platform-python-public-interface',
 		'src-main-features-metadata-independent',
+		'subscription-image-cache-has-no-execution-dependencies',
+		'subscription-runners-have-no-coordination-dependencies',
+		'subscription-scheduler-has-no-facade-dependencies',
 	]) {
 		assert.ok(rules.has(rule), `missing violation: ${rule}; ${JSON.stringify(report.summary.violations)}`);
 	}

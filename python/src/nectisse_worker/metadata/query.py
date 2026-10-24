@@ -25,15 +25,11 @@ from peach_core.sources.javdb import JavDBSource
 from peach_core.sources.seesaa import WIKI_SOURCES
 from nectisse_worker.catalog import CATALOG, image_domains
 from .amane import AmaneSource, CLASSES
-from .base import FailureReason, Page, SourceFailure, SiteConfig
+from .base import FailureReason, Page, SourceFailure
 from .network import allowed_url
 from .cover_candidates import cover_urls
 
-class KmibSource:
-    config = SiteConfig('kmib', 'K-MIB', 'k-mib', 'https://www.k-mib.com', ('k-mib.com',), 'official')
-
-
-SOURCES = {"r18dev": R18DevSource, "dmm": VerifiedDmmSource, "fc2": Fc2Source, '1pondo': OnePondoSource, 'fc2cmadb': Fc2cmadbSource, 'fc2ppvdb': Fc2ppvdbSource, 'javten': JavtenSource, 'javarchive': JavArchiveSource, 'avbase': AVBaseSource, 'javbus': JavBusSource, 'javdb': JavDBSource, 'kmib': KmibSource, **WIKI_SOURCES, **{key: (lambda key=key: AmaneSource(key)) for key in CLASSES}}
+SOURCES = {"r18dev": R18DevSource, "dmm": VerifiedDmmSource, "fc2": Fc2Source, '1pondo': OnePondoSource, 'fc2cmadb': Fc2cmadbSource, 'fc2ppvdb': Fc2ppvdbSource, 'javten': JavtenSource, 'javarchive': JavArchiveSource, 'avbase': AVBaseSource, 'javbus': JavBusSource, 'javdb': JavDBSource, **WIKI_SOURCES, **{key: (lambda key=key: AmaneSource(key)) for key in CLASSES}}
 SAFE_CODE = re.compile(r"^(?:FC2-PPV-\d{5,}|(?:\d{1,3})?[A-Z]{2,8}-\d{2,5}|\d{6}[-_]\d{2,4})$")
 
 
@@ -146,7 +142,7 @@ def query(params: dict, session, on_record=lambda record: None) -> list[dict]:
         return results
     code = str(params.get("code") or "")
     family = 'fc2' if code.startswith('FC2') else 'dated' if re.fullmatch(r'\d{6}[-_]\d{2,4}', code) else 'standard'
-    if not SAFE_CODE.fullmatch(code) or family not in CATALOG[source]['families'] or source == 'kmib':
+    if not SAFE_CODE.fullmatch(code) or family not in CATALOG[source]['families']:
         raise SourceFailure(FailureReason.UNSUPPORTED, "该来源不支持此编号类型；分段 FC2 编号不会合并成整部作品")
     cid = str(params.get("contentId") or "")
     if cid and not re.fullmatch(r"[a-zA-Z0-9_]{2,100}", cid):
@@ -170,18 +166,7 @@ def query_url(params, adapter, session, on_record):
     if not allowed_url(url, tuple(CATALOG[source]['domains'])):
         raise SourceFailure(FailureReason.UNSUPPORTED, '原站链接不属于所选资料来源')
     page = session.get(url, config=adapter.config)
-    if source == 'kmib':
-        from peach_core.metadata_kmib import parse_video
-        from urllib.parse import parse_qs
-        from .base import SiteRecord
-        idx = parse_qs(urlsplit(url).query).get('idx', [''])[0]
-        if urlsplit(url).path != '/video/video-view.php' or not idx.isdigit():
-            raise SourceFailure(FailureReason.UNSUPPORTED, '请使用 K-MIB 单片链接')
-        item = parse_video(page.body, idx)
-        if not item:
-            raise SourceFailure(FailureReason.PARSE_ERROR, 'K-MIB 单片身份未取得')
-        record = SiteRecord(source='kmib', provenance='k-mib', code=item['id'], source_url=item['source_url'], title=item['title'], performers=tuple(item['actresses']), studio=item['maker'], release_date=item['release_date'], tags=tuple(item['genres']), cover_urls=(item['cover_url'],) if item['cover_url'] else (), extra={'description': item['description'], 'content_id': idx})
-    elif source == 'javdb':
+    if source == 'javdb':
         from peach_core.sources.javdb import _PANEL
         from peach_core.javdb import clean
         shown = clean(dict((clean(label), value) for label, value in _PANEL.findall(page.text)).get('番號', '')).replace(' ', '')

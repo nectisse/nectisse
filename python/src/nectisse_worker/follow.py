@@ -96,6 +96,8 @@ def get(session, url, params, *, detail=False):
 
 def lookup(params, session):
     provider, value = params["provider"], str(params.get("query") or "").strip()
+    if provider not in CONFIGS:
+        raise SourceFailure(FailureReason.UNSUPPORTED, '未接入此动态来源')
     if provider not in {'fanbox', 'javdb'}:
         return follow_extended.lookup(params, session, CONFIGS[provider])
     if provider == "fanbox":
@@ -127,6 +129,8 @@ def lookup(params, session):
 
 def check(params, session, publish):
     provider = params["provider"]
+    if provider not in CONFIGS:
+        raise SourceFailure(FailureReason.UNSUPPORTED, '未接入此动态来源')
     if provider not in {'fanbox', 'javdb'}:
         return follow_extended.check(params, session, publish, CONFIGS[provider])
     ref = identity(provider, params.get("ref"))

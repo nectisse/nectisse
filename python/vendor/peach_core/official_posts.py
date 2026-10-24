@@ -1,4 +1,4 @@
-"""Peach Patreon 与 SubscribeStar 公开卡片解析。网络由 Nectisse 注入。"""
+"""Peach Patreon 公开卡片解析。网络由 Nectisse 注入。"""
 from __future__ import annotations
 import re
 import urllib.parse
@@ -7,8 +7,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Mapping
 from bs4 import BeautifulSoup
 from nectisse_worker.follow_official_support import _BaseConnector, ParsedSource, FollowSourceError, plain_text
-
-_DIRECT_CREATOR_RE = re.compile(r"^/([A-Za-z0-9_-]{1,80})(?:/|$)")
 
 @dataclass(frozen=True)
 class FollowCandidate:
@@ -66,23 +64,6 @@ def _iso_utc(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _iso_from_epoch(value) -> str | None:
-    try:
-        return _iso_utc(datetime.fromtimestamp(int(value), tz=timezone.utc))
-    except (TypeError, ValueError, OSError, OverflowError):
-        return None
-
-
-def _iso_from_text(value) -> str | None:
-    if not isinstance(value, str) or not value.strip():
-        return None
-    text = value.strip().replace("Z", "+00:00")
-    try:
-        return _iso_utc(datetime.fromisoformat(text))
-    except ValueError:
-        return None
-
-
 _RELATIVE_RE = re.compile(
     r"(\d+)\s*(second|minute|hour|day|week|month|year)s?\s*(?:ago)?", re.IGNORECASE)
 
@@ -96,7 +77,7 @@ _RELATIVE_SECONDS = {
 def _iso_from_relative(text: str | None, *, now: datetime | None = None) -> str | None:
     """把 `1 week ago` 这类相对时间换算成近似 UTC 时间戳。
 
-    rule34video 的列表页只给相对时间，没有绝对时间。换算结果**是近似值**，
+    部分公开卡片只给相对时间，没有绝对时间。换算结果**是近似值**，
     调用方必须在 `extra` 里标出 `published_precision='approximate'`，
     界面上也要照实显示，不能当成站点给出的精确发布时间。
     """
@@ -127,91 +108,6 @@ def _slug_label(slug: str) -> str:
 def _visible_post_image(node) -> str | None:
     image = node.select_one("img[src]") if node is not None else None
     return str(image.get("src")) if image is not None and image.get("src") else None
-
-
-class SubscribeStarConnector(_BaseConnector):
-    """SubscribeStar 的公开创作者页；不登录，也不穿过付费墙。"""
-
-    provider = "subscribestar"
-    HOSTS = frozenset({"subscribestar.adult", "subscribestar.com"})
-    _SLUG_RE = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
-
-    #: 这些首段路径是站点自己的功能页，不是创作者。
-    _RESERVED = frozenset({"posts", "search", "login", "signup"})
-
-    @classmethod
-    def parse_url(cls, provider: str, parsed: urllib.parse.SplitResult,
-                  host: str) -> "ParsedSource":
-        matched = _DIRECT_CREATOR_RE.match(parsed.path or "/")
-        if not matched or matched.group(1) in cls._RESERVED:
-            raise FollowSourceError(
-                "SubscribeStar 的链接要指向创作者主页，形如 "
-                "https://subscribestar.adult/creator")
-        slug = matched.group(1)
-        # ref 带上主机名：`.adult` 与 `.com` 是两个站，同名创作者不一定是一个人。
-        return ParsedSource("subscribestar", f"{host}/{slug}",
-                            f"https://{host}/{slug}", slug)
-
-    @classmethod
-    def profile_handle(cls, ref: str) -> str:
-        # ref 带着站点主机名（`subscribestar.adult/initiala`），手柄只是最后那截。
-        return str(ref or "").strip().rsplit("/", 1)[-1]
-
-    @classmethod
-    def _split_ref(cls, ref: str) -> tuple[str, str]:
-        host, _, slug = str(ref or "").strip().partition("/")
-        if host not in cls.HOSTS or not cls._SLUG_RE.fullmatch(slug):
-            raise FollowSourceError(
-                "subscribestar 的 ref 必须形如 subscribestar.adult/creator")
-        return host, slug
-
-    def fetch(self, ref: str, *, etag: str | None = None,
-              last_modified: str | None = None, page: int = 0) -> SourceFetch:
-        host, slug = self._split_ref(ref)
-        if page:
-            raise FollowSourceError("SubscribeStar 官方来源暂不支持向前翻页")
-        url = f"https://{host}/{slug}"
-        common, response = self._request(url, ref=ref, etag=etag,
-                                         last_modified=last_modified,
-                                         headers={"Accept": "text/html"})
-        if response is None:
-            return SourceFetch(not_modified=True, **common)
-        try:
-            soup = BeautifulSoup(response.body.decode("utf-8"), "html.parser")
-        except UnicodeDecodeError as exc:
-            raise FollowSourceError("subscribestar 返回的页面不是 UTF-8") from exc
-        candidates = []
-        for post in soup.select("div.post[data-id]")[:self.max_items]:
-            post_id = str(post.get("data-id") or "")
-            if not post_id.isdigit():
-                continue
-            title_node = post.select_one(".post-title h2")
-            date_node = post.select_one(".post-date a[href]")
-            author_node = post.select_one(".post-user")
-            title = plain_text(title_node.get_text(" ") if title_node else "")
-            published = _iso_from_text(date_node.get_text(" ") if date_node else "")
-            if published is None and date_node is not None:
-                try:
-                    parsed = datetime.strptime(
-                        date_node.get_text(" ").strip(), "%b %d, %Y %I:%M %p")
-                    published = _iso_utc(parsed)
-                except ValueError:
-                    pass
-            candidates.append(FollowCandidate(
-                provider=self.provider,
-                external_id=post_id,
-                title=title or f"SubscribeStar 帖子 {post_id}",
-                url=f"https://{host}/posts/{post_id}",
-                thumb_url=_visible_post_image(post.select_one(".post-uploads")),
-                published_at=published,
-                author=plain_text(author_node.get_text(" ") if author_node else ""),
-                summary=plain_text(
-                    post.select_one(".post-content").get_text(" ")
-                    if post.select_one(".post-content") else ""),
-                group_hint=f"subscribestar:{post_id}",
-                extra={"official": True, "published_precision": "approximate"},
-            ))
-        return SourceFetch(candidates=tuple(candidates), raw_body=response.body, **common)
 
 
 class PatreonConnector(_BaseConnector):

@@ -29,7 +29,7 @@
       "source": "follow_sources.py",
       "target": "official_posts.py",
       "upstreamSha256": "2d8817d40a8d86208d722c7de94b3a155a4026f73a377a581802da0c7438f3b8",
-      "extractedSha256": "30112b3d0f7cd87695d3d5b8639498362d1c8e13f4176c0e4feec0ee5856b962"
+      "extractedSha256": "7bbc210716680f7838975a3febddb99922f405665e0c1ab57918e7231d50ad6d"
     }
   ]
 }
