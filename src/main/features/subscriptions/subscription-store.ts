@@ -28,6 +28,9 @@ export interface Cipher {
 const now = (): string => new Date().toISOString();
 // 保留旧行，但不让已移除的订阅进入调度、动态或任务列表。
 const retainedProvider = "COALESCE(json_extract(value,'$.provider'),'') NOT IN ('subscribestar','rule34video')";
+const discoveryOrder = 'first_seen DESC,rowid ASC';
+// 帖子按发布时间阅读；后补的旧帖不置顶，缺少有效日期时回退到发现时间。
+const publicationOrder = "COALESCE(julianday(json_extract(value,'$.publishedAt')),julianday(first_seen)) DESC,first_seen DESC,rowid ASC";
 
 export class SubscriptionStore {
 	readonly db: DatabaseSync;
@@ -139,7 +142,9 @@ export class SubscriptionStore {
 					.get(value.id)!;
 				value.unread = Number(counts.unread);
 				value.collected = Number(counts.collected);
-				const latest = this.db.prepare('SELECT value FROM entries WHERE subscription_id=? ORDER BY first_seen DESC,rowid ASC LIMIT 1').get(value.id);
+				const latest = this.db
+					.prepare(`SELECT value FROM entries WHERE subscription_id=? ORDER BY ${value.kind === 'creator_posts' ? publicationOrder : discoveryOrder} LIMIT 1`)
+					.get(value.id);
 				value.latestEntry = latest ? JSON.parse(String(latest.value)) : undefined;
 				return value;
 			});
@@ -206,9 +211,10 @@ export class SubscriptionStore {
 
 	entryPage(request: EntryPageRequest): EntryPage {
 		const where = `subscription_id=? AND ${retainedProvider}${request.unread ? " AND json_extract(value,'$.read')=0" : ''}`;
+		const order = this.subscription(request.subscriptionId)?.kind === 'creator_posts' ? publicationOrder : discoveryOrder;
 		const total = Number(this.db.prepare(`SELECT count(*) AS n FROM entries WHERE ${where}`).get(request.subscriptionId)!.n);
 		const rows = this.db
-			.prepare(`SELECT value FROM entries WHERE ${where} ORDER BY first_seen DESC,rowid ASC LIMIT ? OFFSET ?`)
+			.prepare(`SELECT value FROM entries WHERE ${where} ORDER BY ${order} LIMIT ? OFFSET ?`)
 			.all(request.subscriptionId, request.pageSize, (request.page - 1) * request.pageSize);
 		const retryable = !!this.db
 			.prepare(

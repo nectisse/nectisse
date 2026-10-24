@@ -204,6 +204,49 @@ async function setup(t: { after: (fn: () => Promise<void>) => void }, run: Pytho
 	return { service, store, sub };
 }
 
+test('检查补入旧原创后仍按发布时间显示，已读与首次发现时间不变', async (t) => {
+	const newest = { ...entry('creator_1', '2113968472447439133'), publishedAt: '2026-10-24T12:18:54Z' };
+	const recent = { ...entry('creator_1', '2113593679055343959'), publishedAt: '2026-10-23T11:29:36Z' };
+	const older = { ...entry('creator_1', '2109604073288904890'), publishedAt: '2026-10-12T11:16:20Z' };
+	const { service, store, sub } = await setup(t, async (_method, _params, options) => {
+		for (const item of [newest, older, recent]) {
+			options?.onProgress?.({ event: 'entry', entry: item });
+		}
+		return { ...success, profile: profile(), xSyncState: { windowIds: [newest.externalId], checkedAt } };
+	});
+	store.upsertEntry(sub, newest, '2026-10-24T18:25:04.373Z');
+	store.upsertEntry(sub, recent, '2026-10-24T18:25:04.373Z');
+	const newestId = store.entries(sub.id)[0]!.id;
+	store.markRead([newestId], true);
+	const reply = await service.command({ action: 'check', id: sub.id });
+	assert.equal((await idle(service, reply.id))?.status, 'succeeded');
+	const page = store.entryPage({ subscriptionId: sub.id, unread: false, page: 1, pageSize: 20 });
+	assert.deepEqual(
+		page.entries.map((item) => item.externalId),
+		[newest.externalId, recent.externalId, older.externalId],
+	);
+	assert.equal(store.subscriptions()[0]?.latestEntry?.externalId, newest.externalId);
+	assert.deepEqual(
+		store.entryPage({ subscriptionId: sub.id, unread: true, page: 1, pageSize: 20 }).entries.map((item) => item.externalId),
+		[recent.externalId, older.externalId],
+	);
+	const paged = [1, 2, 3].flatMap((page) => store.entryPage({ subscriptionId: sub.id, unread: false, page, pageSize: 1 }).entries);
+	assert.deepEqual(
+		paged.map((item) => item.externalId),
+		[newest.externalId, recent.externalId, older.externalId],
+	);
+	assert.equal(store.entry(newestId)?.firstSeenAt, '2026-10-24T18:25:04.373Z');
+	assert.equal(store.entry(newestId)?.read, true);
+	assert.equal(store.entries(sub.id)[0]?.externalId, older.externalId, '后台近期快照继续按发现时间选取，避免漏掉补入条目的图片任务');
+	await service.stop();
+	const restored = new SubscriptionStore(store.root, cipher);
+	t.after(() => restored.close());
+	assert.deepEqual(
+		restored.entryPage({ subscriptionId: sub.id, unread: false, page: 1, pageSize: 20 }).entries.map((item) => item.externalId),
+		[newest.externalId, recent.externalId, older.externalId],
+	);
+});
+
 test('部分页失败保留已到达原创和旧窗口；缺口在之后成功时继续保留', async (t) => {
 	let count = 0;
 	const { service, store, sub } = await setup(t, async (_method, _params, options) => {
