@@ -69,6 +69,37 @@ const runner: Run = async (method, params, options) => {
 	return { ...success, coverage: '已覆盖到上次记录', gap: false };
 };
 
+test('创作者按实际发布时间分页，缺失日期回退发现时间；演员新作保持发现顺序', async (t) => {
+	const store = new SubscriptionStore(await directory(t), cipher);
+	t.after(() => store.close());
+	const creator = store.follow(candidate);
+	const performer = store.follow({ ...candidate, provider: 'javdb', ref: 'actor', url: 'https://javdb.com/actors/actor' });
+	const dates = [
+		{ id: 'older', published: '2026-10-01', discovered: '2026-10-25T00:00:00Z' },
+		{ id: 'newer', published: '2026-10-24T00:00:00Z', discovered: '2026-10-24T01:00:00Z' },
+		{ id: 'timezone', published: '2026-10-24T07:00:00+08:00', discovered: '2026-10-24T02:00:00Z' },
+		{ id: 'missing', published: '', discovered: '2026-10-23T00:00:00Z' },
+		{ id: 'invalid', published: 'unknown', discovered: '2026-10-22T00:00:00Z' },
+	];
+	for (const { id, published, discovered } of dates) {
+		for (const sub of [creator, performer]) {
+			store.upsertEntry(sub, { ...entry, externalId: id, publishedAt: published }, discovered);
+		}
+	}
+	const pages = [1, 2, 3].map((page) => store.entryPage({ subscriptionId: creator.id, unread: false, page, pageSize: 2 }));
+	assert.ok(pages.every((page) => page.total === 5));
+	assert.deepEqual(
+		pages.flatMap((page) => page.entries.map((item) => item.externalId)),
+		['newer', 'timezone', 'missing', 'invalid', 'older'],
+	);
+	assert.deepEqual(
+		store.entryPage({ subscriptionId: performer.id, unread: false, page: 1, pageSize: 20 }).entries.map((item) => item.externalId),
+		['older', 'timezone', 'newer', 'missing', 'invalid'],
+	);
+	assert.equal(store.subscriptions().find((sub) => sub.id === creator.id)?.latestEntry?.externalId, 'newer');
+	assert.equal(store.subscriptions().find((sub) => sub.id === performer.id)?.latestEntry?.externalId, 'older');
+});
+
 test('真实候选才能关注，关注去重；条目与已读重启保留，摘要不因缺资源过滤', async (t) => {
 	const root = await directory(t);
 	const store = new SubscriptionStore(root, cipher);
