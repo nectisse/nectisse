@@ -4,10 +4,10 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { MetadataService } from '../src/main/metadata-service';
-import { planQuery, codeFromCid } from '../src/main/metadata-input';
-import { proxyFromRules } from '../src/main/network-route';
-import { PythonTaskHost, TaskCancelledError } from '../src/main/python-host';
+import { MetadataService } from '../src/main/features/metadata/metadata-service';
+import { planQuery, codeFromCid } from '../src/main/features/metadata/metadata-input';
+import { proxyFromRules } from '../src/main/platform/network/network-route';
+import { PythonTaskHost, TaskCancelledError } from '../src/main/platform/python/python-host';
 import type { MetadataRecord, QueryTask, SourceId } from '@shared/metadata';
 
 type Run = PythonTaskHost['run'];

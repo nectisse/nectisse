@@ -6,11 +6,11 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { fork } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
-import { PythonTaskHost, PythonWorkerError, TaskCancelledError } from '../src/main/python-host';
-import { pythonLayout } from '../src/main/python-layout';
+import { PythonTaskHost, PythonWorkerError, TaskCancelledError } from '../src/main/platform/python/python-host';
+import { pythonLayout } from '../src/main/platform/python/python-layout';
 import { preferencesSchema, DEFAULT_PREFERENCES } from '@shared/subscriptions';
-import { sourceTransport } from '../src/main/source-policy';
-import { planQuery } from '../src/main/metadata-input';
+import { sourceTransport } from '../src/main/platform/network/source-policy';
+import { planQuery } from '../src/main/features/metadata/metadata-input';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const params = { source: 'fc2ppvdb', transport: 'browser', code: 'FC2-PPV-4898837', proxy: 'invalid://proxy' };

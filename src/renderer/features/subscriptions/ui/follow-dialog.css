@@ -1,0 +1,183 @@
+.follow-dialog[data-slot='dialog-content'] {
+	width: min(680px, calc(100vw - 48px));
+}
+.follow-dialog-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 20px 24px 16px;
+	border-bottom: 1px solid var(--border);
+}
+.follow-dialog-header h2 {
+	margin: 0;
+	font-size: 18px;
+	line-height: 28px;
+	font-weight: 550;
+}
+.follow-dialog-header p {
+	margin: 6px 0 0;
+	color: var(--muted-foreground);
+	font-size: 12px;
+	line-height: 20px;
+}
+.follow-dialog-scroll {
+	min-height: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 20px 24px;
+}
+.follow-dialog-form {
+	display: grid;
+	grid-template-columns: 156px minmax(0, 1fr) auto;
+	align-items: end;
+	gap: 10px;
+}
+.follow-dialog-form > div {
+	display: grid;
+	min-width: 0;
+	gap: 8px;
+}
+.follow-dialog-form [data-slot='label'] {
+	font-size: 12px;
+}
+.follow-dialog-form input[data-slot='input'],
+.follow-dialog-form [data-slot='select-trigger'],
+.follow-dialog-form > button {
+	width: 100%;
+	height: 36px;
+	font-size: 12px;
+}
+.follow-dialog-hint {
+	margin: 10px 0 20px;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 18px;
+	overflow-wrap: anywhere;
+}
+.follow-dialog-notice,
+.follow-dialog-status {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 100px;
+	padding: 16px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--muted);
+}
+.follow-dialog-notice {
+	justify-content: space-between;
+	font-size: 12px;
+}
+.follow-dialog-status > svg {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	color: var(--primary);
+}
+.follow-dialog-status strong {
+	font-size: 12px;
+	font-weight: 500;
+}
+.follow-dialog-status p {
+	margin-top: 6px;
+	font-size: 11px;
+	color: var(--muted-foreground);
+}
+.follow-dialog-results-heading {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+.follow-dialog-results-heading h3 {
+	font-size: 12px;
+	font-weight: 550;
+}
+.follow-dialog-results-heading > span {
+	font-size: 11px;
+	color: var(--muted-foreground);
+}
+.follow-dialog-candidate {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	background: var(--card);
+}
+.follow-dialog-candidate + .follow-dialog-candidate {
+	margin-top: 8px;
+}
+.follow-dialog-identity {
+	flex: 1;
+	min-width: 0;
+}
+.follow-dialog-identity h3 {
+	font-size: 13px;
+	line-height: 20px;
+	font-weight: 550;
+	overflow-wrap: anywhere;
+}
+.follow-dialog-identity h3 {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+.follow-dialog-record {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 6px;
+}
+.follow-dialog-record > span:last-child {
+	font-size: 11px;
+	color: var(--muted-foreground);
+	overflow-wrap: anywhere;
+}
+.follow-dialog-aliases,
+.follow-dialog-url,
+.follow-dialog-bio {
+	margin-top: 6px;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 18px;
+	overflow-wrap: anywhere;
+}
+.follow-dialog-aliases,
+.follow-dialog-bio {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+.follow-dialog-url {
+	font-size: 10px;
+}
+.follow-dialog-error {
+	margin-bottom: 12px;
+	padding: 12px;
+	border-radius: 6px;
+	background: var(--muted);
+	color: var(--destructive);
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+.follow-dialog-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 14px 24px;
+	border-top: 1px solid var(--border);
+}
+.follow-dialog-footer p {
+	margin: 0;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	line-height: 18px;
+}

@@ -19,7 +19,7 @@ const reports = [];
 const errors = [];
 try {
 	execFileSync(process.execPath, ['--import', 'tsx', join(root, 'scripts/seed-workspace-fixtures.ts'), profile], { cwd: root, stdio: 'pipe' });
-	const seed = `import { SubscriptionStore } from './src/main/subscription-store.ts';
+	const seed = `import { SubscriptionStore } from './src/main/features/subscriptions/subscription-store.ts';
 	const store = new SubscriptionStore(process.argv[1], {available:()=>false,encrypt:()=>Buffer.alloc(0),decrypt:()=>''});
 	const sub = store.subscriptions().find(sub=>sub.provider==='fanbox');
 	for(let index=0;index<213;index++) store.upsertEntry(sub,{externalId:'pagination-'+index,title:'本地更新分页样本 '+(index+1),summary:'分页检查使用的本地条目，不连接原站。',author:sub.name,publishedAt:'2026-10-24',publishedPrecision:'date',url:'https://example.invalid/pagination/'+index,thumbnailUrl:'',code:'',restricted:false,partial:false},new Date(Date.UTC(2026,9,24,0,0,index)).toISOString());

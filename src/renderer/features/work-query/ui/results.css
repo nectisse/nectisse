@@ -1,0 +1,30 @@
+.live-card-open {
+	display: block;
+	width: 100%;
+	text-align: left;
+}
+.live-card-open .work-code {
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 16px;
+	font-size: 11px;
+}
+.live-card-open h3 {
+	line-height: 1.65;
+	font-size: 14px;
+	margin-top: 8px;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+}
+.live-card-caption {
+	margin-top: 9px;
+	font-size: 10px;
+	color: var(--muted-foreground);
+}
+.live-card-open:hover .live-cover {
+	border-color: var(--primary);
+}

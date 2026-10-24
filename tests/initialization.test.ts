@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { InitializationStep } from '../src/main/initialization-step';
+import { InitializationStep } from '../src/main/platform/lifecycle/initialization-step';
 
 test('初始化失败不会毒化显式恢复；并发重试只重新初始化一次，健康服务不重建', async () => {
 	let calls = 0;

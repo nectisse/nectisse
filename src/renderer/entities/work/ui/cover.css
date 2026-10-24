@@ -1,0 +1,32 @@
+.live-cover {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 2184 / 1468;
+	background: var(--muted);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+	display: grid;
+	place-items: center;
+}
+.live-cover img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+.live-cover-placeholder {
+	display: grid;
+	justify-items: center;
+	gap: 12px;
+	padding: 15px;
+	color: var(--muted-foreground);
+	font-size: 11px;
+	text-align: center;
+}
+.live-cover-placeholder svg {
+	width: 30px;
+	height: 30px;
+	opacity: 0.5;
+}

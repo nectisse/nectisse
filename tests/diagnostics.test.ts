@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { DiagnosticLog } from '../src/main/diagnostics';
+import { DiagnosticLog } from '../src/main/platform/diagnostics/diagnostics';
 import { formatDiagnosticReport, runtimeDiagnosticCode, diagnosticReportSchema } from '@shared/diagnostics';
 import { subscriptionFailureContext } from '@shared/subscription-failure';
 const environment = { appVersion: '0.1.0', system: 'darwin 27.0.0', architecture: 'arm64', electronVersion: '45.0.0', pythonVersion: '3.14.9', runtimePhase: 'ready' as const };

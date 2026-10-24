@@ -5,7 +5,7 @@ import { mkdtemp, rm, writeFile, mkdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { LibraryService } from '../src/main/library-service';
+import { LibraryService } from '../src/main/features/library/library-service';
 import { metadataRecordSchema, type ImageAsset } from '@shared/metadata';
 
 const bytes = Buffer.from('independently validated source image fixture');

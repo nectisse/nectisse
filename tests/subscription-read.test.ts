@@ -5,10 +5,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DEFAULT_PREFERENCES, type SubscriptionsState } from '@shared/subscriptions';
 import { SUBSCRIPTION_READ } from '@shared/subscription-read';
-import { SubscriptionStateReader } from '../src/renderer/src/state/subscription-reader';
-import { readSubscriptionState, recordSubscriptionReadFailure } from '../src/main/subscription-read';
-import { SubscriptionStore } from '../src/main/subscription-store';
-import { SubscriptionsService } from '../src/main/subscriptions-service';
+import { SubscriptionStateReader } from '../src/renderer/shared/desktop/subscription-reader';
+import { readSubscriptionState, recordSubscriptionReadFailure } from '../src/main/features/subscriptions/subscription-read';
+import { SubscriptionStore } from '../src/main/features/subscriptions/subscription-store';
+import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
 
 const state = (revision = 1): SubscriptionsState => ({
 	revision,

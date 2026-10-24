@@ -14,7 +14,7 @@ Python 依赖版本与完整性哈希锁定在 `python/requirements.lock`；包�
 
 ## Electron 和界面依赖
 
-Electron、React、Zustand、Tailwind CSS、shadcn/ui 组件及其他 JavaScript 依赖的固定版本见 `package.json` 与 `package-lock.json`。各依赖的许可证声明随安装包元数据保留；Electron 自带许可证位于 `.app/Contents/` 下。当前产物仅用于本机开发验证，尚未进行正式发布的签名、公证和完整分发材料整理。
+Electron、React、Zustand、TanStack Query、Tailwind CSS、shadcn/ui 组件及其他 JavaScript 依赖的固定版本见 `package.json` 与 `package-lock.json`。TanStack Query 5.104.5（`@tanstack/react-query`、`@tanstack/query-core`）采用 MIT 许可证。各依赖的许可证声明随安装包元数据保留；Electron 自带许可证位于 `.app/Contents/` 下。当前产物仅用于本机开发验证，尚未进行正式发布的签名、公证和完整分发材料整理。
 
 ## amane
 

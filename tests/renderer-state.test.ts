@@ -5,8 +5,8 @@ import { DEFAULT_PREFERENCES } from '@shared/preferences';
 import type { SubscriptionsState } from '@shared/subscriptions';
 import type { LibraryState } from '@shared/library';
 import type { MetadataState } from '@shared/metadata';
-import { createDesktopState } from '../src/renderer/src/state/desktop';
-import { connectSnapshot, createSnapshot } from '../src/renderer/src/state/snapshot';
+import { createDesktopState } from '../src/renderer/shared/desktop/desktop';
+import { connectSnapshot, createSnapshot } from '../src/renderer/shared/desktop/snapshot';
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 

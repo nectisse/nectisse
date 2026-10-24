@@ -25,7 +25,14 @@ async function launch() {
 const nav = () => page.getByRole('navigation', { name: '主导航', exact: true });
 async function quit() { assert.deepEqual(await app.evaluate(() => globalThis.__libraryRequests), []); await app.close(); app = undefined; }
 async function library() { await nav().getByRole('button', { name: '作品收藏', exact: true }).click(); }
-async function count(value) { await page.waitForFunction(count => document.querySelectorAll('.library-work').length === count, value, { timeout: 5000 }); }
+async function count(value) {
+ try { await page.waitForFunction(count => document.querySelectorAll('.library-work').length === count, value, { timeout: 5000 }); }
+ catch (error) {
+  await page.screenshot({ path: join(output, 'failure.png') });
+  console.error(JSON.stringify({ expected: value, actual: await page.locator('.library-work').count(), heading: await page.locator('#page-heading').innerText(), errors, snapshotCount: await page.evaluate(async () => (await window.nectisse.library.getState()).works.length) }));
+  throw error;
+ }
+}
 async function check(name) {
  const bounds = await page.evaluate(() => ({ scroll: scrollY, outer: document.scrollingElement.scrollHeight, viewport: innerHeight, horizontal: document.querySelector('.page-scroll').scrollWidth - document.querySelector('.page-scroll').clientWidth }));
  assert.equal(bounds.scroll, 0); assert.ok(bounds.outer <= bounds.viewport + 1 && bounds.horizontal <= 1, JSON.stringify({ name, bounds }));

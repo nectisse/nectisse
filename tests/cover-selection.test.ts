@@ -5,12 +5,12 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { MetadataService } from '../src/main/metadata-service';
-import { PythonTaskHost } from '../src/main/python-host';
+import { MetadataService } from '../src/main/features/metadata/metadata-service';
+import { PythonTaskHost } from '../src/main/platform/python/python-host';
 import { coverSource, preferredCover, type CoverSource } from '@shared/cover-selection';
 import { metadataRecordSchema, type ImageAsset, type SourceId } from '@shared/metadata';
 import { DEFAULT_PREFERENCES, preferencesSchema } from '@shared/subscriptions';
-import { SubscriptionStore } from '../src/main/subscription-store';
+import { SubscriptionStore } from '../src/main/features/subscriptions/subscription-store';
 
 const hash = (text: string): string => createHash('sha256').update(text).digest('hex');
 

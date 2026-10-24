@@ -1,14 +1,14 @@
 // 有限的真实查询；隔离 profile，不读取应用收藏、订阅、Cookie 或浏览器默认资料。
-import { PythonTaskHost } from '../src/main/python-host.ts';
-import { pythonLayout } from '../src/main/python-layout.ts';
-import { planQuery } from '../src/main/metadata-input.ts';
+import { PythonTaskHost } from '../src/main/platform/python/python-host.ts';
+import { pythonLayout } from '../src/main/platform/python/python-layout.ts';
+import { planQuery } from '../src/main/features/metadata/metadata-input.ts';
 import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import assert from 'node:assert/strict';
-import { TaskCancelledError } from '../src/main/python-host.ts';
+import { TaskCancelledError } from '../src/main/platform/python/python-host.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const code = process.argv[2] || 'FC2-PPV-4898837';

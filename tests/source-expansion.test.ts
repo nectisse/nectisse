@@ -6,12 +6,12 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { SOURCES, METADATA_IDS, FOLLOW_IDS, SOURCE_BY_ID } from '@shared/sources';
 import { canonicalFollow, validFollowEntry } from '@shared/source-identity';
-import { planQuery } from '../src/main/metadata-input';
-import { MetadataService } from '../src/main/metadata-service';
-import { SubscriptionStore } from '../src/main/subscription-store';
-import { SubscriptionsService } from '../src/main/subscriptions-service';
-import { SiteGate } from '../src/main/site-gate';
-import type { PythonTaskHost } from '../src/main/python-host';
+import { planQuery } from '../src/main/features/metadata/metadata-input';
+import { MetadataService } from '../src/main/features/metadata/metadata-service';
+import { SubscriptionStore } from '../src/main/features/subscriptions/subscription-store';
+import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
+import { SiteGate } from '../src/main/platform/network/site-gate';
+import type { PythonTaskHost } from '../src/main/platform/python/python-host';
 
 const cipher = {
 	available: () => false,

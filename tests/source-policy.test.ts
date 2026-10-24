@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { SOURCES } from '@shared/sources';
 import { allowedSourceUrl } from '@shared/source-identity';
 import { DEFAULT_PREFERENCES } from '@shared/subscriptions';
-import { sourceCooldownSeconds, sourceTransport } from '../src/main/source-policy';
+import { sourceCooldownSeconds, sourceTransport } from '../src/main/platform/network/source-policy';
 
 test('来源页面覆盖完整登记目录，独立图床按图片域名清单校验', () => {
 	for (const source of SOURCES) {
