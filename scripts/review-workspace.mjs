@@ -59,7 +59,18 @@ try {
   assert.ok(layout.controls.every(control => near(control.height, 32)), `${name}: toolbar control heights ${JSON.stringify(layout.controls)}`);
   await page.screenshot({ path: join(output, `${name}.png`) });
  };
- const query = async () => { await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await page.locator('.live-result-grid').waitFor(); };
+ const query = async () => {
+  await nav.getByRole('button', { name: '资料查询', exact: true }).click();
+  await page.locator('[data-testid="live-query"], .live-detail').first().waitFor();
+  if (await page.locator('.live-detail').count()) {
+   await page.getByRole('button', { name: '返回查询结果', exact: true }).click();
+  }
+  if (!await page.locator('.live-result-grid').count()) {
+   await page.getByRole('button', { name: '查询记录', exact: true }).click();
+   await page.getByRole('button', { name: '查看查询记录 NECT-024', exact: true }).click();
+  }
+  await page.locator('.live-result-grid').waitFor();
+ };
  const detail = async () => { await query(); await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click(); await page.locator('.live-detail').waitFor(); await page.waitForFunction(() => document.querySelector('.page-scroll').scrollTop === 0); };
  const creator = () => openProfile(page, '白石 澪', 'creators');
  const updates = (scope = 'creators') => openUpdates(page, scope);
@@ -78,16 +89,17 @@ try {
  await archived.uncheck();
  await creator();
  const frequencyName = '白石 澪 · 私人作品与创作手记（布局检查样本） 检查频率';
- await page.getByRole('button', { name: '关注设置', exact: true }).click();
+ await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
+ await openPeople(page, 'creators', 'manage');
  await chooseOption(page, frequencyName, '每 3 小时');
  assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions.find(sub => sub.provider === 'fanbox').intervalMinutes), 180);
  await chooseOption(page, frequencyName, '使用默认频率');
  assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions.find(sub => sub.provider === 'fanbox').intervalMinutes), null);
- await page.getByRole('dialog').getByRole('button', { name: '完成', exact: true }).click();
+ await creator();
  await updates();
  assert.equal(await page.locator('.real-feed-entry').count(), 3);
- assert.equal(await page.locator('.real-feed-entry .feed-image-placeholder').count(), 0);
- assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail').count(), 1);
+ assert.equal(await page.locator('.real-feed-entry .feed-image-placeholder').count(), 2);
+ assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail').count(), 3);
  assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail img').count(), 1);
  const title = page.getByRole('button', { name: '十月的拍摄手记：让光再停留一会儿（布局检查样本）', exact: true });
  await title.click();
@@ -196,24 +208,44 @@ try {
  await updates('actors');
  const evolving = page.locator('.real-feed-entry').filter({ has: page.getByRole('button', { name: '查询 NECT-024 资料', exact: true }) });
  await evolving.locator('.feed-item-title').click();
+ await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'source-enabled', source: 'javdb', enabled: false }));
  const live = await page.evaluate(() => window.nectisse.subscriptions.getState());
  const changing = live.entries.find(entry => entry.provider === 'javdb');
- const localAsset = live.entries.find(entry => entry.imageAsset)?.imageAsset;
+ const localImage = live.entries.find(entry => entry.imageAsset);
+ const localAsset = localImage.imageAsset;
  changing.thumbnailUrl = 'https://c0.jdbstatic.com/fixture.jpg';
+ delete changing.imageAsset;
+ const coverTask = { id: crypto.randomUUID(), kind: 'covers', provider: changing.provider, subscriptionId: changing.subscriptionId, status: 'running', phase: '本地封面状态验证', startedAt: new Date().toISOString(), finishedAt: '', requests: 0, candidates: [], added: 0, reason: '', cancelRequestedAt: '' };
+ live.tasks.unshift(coverTask);
+ const publishImageState = async () => {
+  await app.evaluate(({ BrowserWindow }, { root, entry, snapshot }) => {
+   const require = process.getBuiltinModule('module').createRequire(process.execPath);
+   const db = new (require('node:sqlite').DatabaseSync)(require('node:path').join(root, 'nectisse.sqlite'));
+   try {
+    db.prepare('UPDATE entries SET value=? WHERE id=?').run(JSON.stringify(entry), entry.id);
+   } finally {
+    db.close();
+   }
+   BrowserWindow.getAllWindows()[0].webContents.send('nectisse:subscriptions-state', snapshot);
+  }, { root: userData, entry: changing, snapshot: live });
+ };
  const emitImageState = async status => {
   live.revision++;
   changing.imageCache = { status, attempts: 1, nextAttemptAt: 0, reason: status === 'failed' ? 'not_found' : '' };
-  await app.evaluate(({ BrowserWindow }, snapshot) => BrowserWindow.getAllWindows()[0].webContents.send('nectisse:subscriptions-state', snapshot), live);
+  coverTask.status = status === 'failed' ? 'failed' : 'running';
+  await publishImageState();
  };
  await emitImageState('queued');
- await page.getByRole('dialog').getByRole('img', { name: '排队缓存', exact: true }).waitFor();
+ await page.getByRole('dialog').getByRole('img', { name: '封面不可用', exact: true }).waitFor();
  await emitImageState('failed');
- await page.getByRole('dialog').getByRole('img', { name: '封面未取得', exact: true }).waitFor();
+ await page.getByRole('dialog').getByRole('img', { name: '封面不可用', exact: true }).waitFor();
  assert.equal(await page.getByRole('button', { name: '重试未缓存封面', exact: true, includeHidden: true }).isEnabled(), true);
  await emitImageState('loading');
- await page.getByRole('dialog').getByRole('img', { name: '正在缓存', exact: true }).waitFor();
+ await page.getByRole('dialog').getByRole('img', { name: '封面不可用', exact: true }).waitFor();
+ changing.thumbnailUrl = localImage.thumbnailUrl;
  changing.imageAsset = localAsset; delete changing.imageCache; live.revision++;
- await app.evaluate(({ BrowserWindow }, snapshot) => BrowserWindow.getAllWindows()[0].webContents.send('nectisse:subscriptions-state', snapshot), live);
+ coverTask.status = 'succeeded';
+ await publishImageState();
  await page.waitForFunction(() => { const image = document.querySelector('.entry-detail-image img'); return image?.complete && image.naturalWidth > 0; });
  assert.equal(await page.getByRole('dialog').getByRole('button', { name: '放大封面', exact: true }).count(), 0);
  const updatedCover = await page.getByRole('dialog').locator('.entry-detail-image').boundingBox();

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -23,6 +24,7 @@ try {
 	const page = await app.firstWindow();
 	page.on('pageerror', error => errors.push(error.message));
 	await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor();
+	await selectQueryRecord(page, 'NECT-024');
 	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
 	const feedback = page.locator('[data-sonner-toast]');
 	const aligned = async name => {

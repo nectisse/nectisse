@@ -1,7 +1,7 @@
 import type { DesktopBridge, RuntimeState } from '@shared/protocol';
 import type { MetadataState } from '@shared/metadata';
 import type { LibraryState } from '@shared/library';
-import type { FollowCommand, CommandReply, SubscriptionsState } from '@shared/subscriptions';
+import type { FollowCommand, CommandReply, SubscriptionsState, AvatarReply } from '@shared/subscriptions';
 import { DEFAULT_PREFERENCES, type PreferencesPatch } from '@shared/preferences';
 import { createSnapshot, connectSnapshot } from './snapshot';
 import { SubscriptionStateReader } from './subscription-reader';
@@ -59,6 +59,14 @@ export function createDesktopState(
 
 	const actions = {
 		invoke,
+		uploadAvatar: async (id: string): Promise<AvatarReply> => {
+			try {
+				const upload = required().subscriptions.uploadAvatar;
+				return upload ? await upload(id) : { ok: false, message: '当前模式暂不支持上传头像，请返回本地空间后使用' };
+			} catch {
+				return { ok: false, message: '头像未能保存，请重试' };
+			}
+		},
 		markRead: async (ids: string[], read: boolean) => {
 			let processed = 0;
 			for (let start = 0; start < ids.length; start += 500) {

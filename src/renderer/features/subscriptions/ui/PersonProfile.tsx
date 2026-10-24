@@ -1,29 +1,16 @@
-import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Settings2 } from 'lucide-react';
-import type { FollowProvider, Subscription } from '@shared/subscriptions';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import type { Subscription } from '@shared/subscriptions';
 import { SOURCE_LABELS, isPerformerProvider } from '@shared/sources';
 import { IdentityAvatar, TaskProgress } from '@/entities/subscription';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useSubscriptionControls } from '../model/use-subscription-controls';
 import { CollectedEntries } from './CollectedEntries';
-import { SubscriptionRow } from './SubscriptionRow';
+import { AvatarActions } from './AvatarActions';
 import { PeopleArtwork } from './PeopleArtwork';
 
-export function PersonProfile({
-	subscription: sub,
-	onBack,
-	onAdd,
-	onWork,
-}: {
-	subscription: Subscription;
-	onBack: () => void;
-	onAdd: (provider?: FollowProvider) => void;
-	onWork: (code: string) => void;
-}): React.JSX.Element {
+export function PersonProfile({ subscription: sub, onBack, onWork }: { subscription: Subscription; onBack: () => void; onWork: (code: string) => void }): React.JSX.Element {
 	const { status, statusTone, openSource } = useSubscriptionControls(sub);
-	const [settingsOpen, setSettingsOpen] = useState(false);
 	const actor = isPerformerProvider(sub.provider);
 	const providerName = SOURCE_LABELS[sub.provider];
 	const unread = sub.unread;
@@ -36,10 +23,7 @@ export function PersonProfile({
 					<ArrowLeft />
 					返回关注列表
 				</Button>
-				<Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
-					<Settings2 />
-					关注设置
-				</Button>
+				<AvatarActions subscription={sub} />
 			</div>
 			<header className="person-overview" aria-label={actor ? '演员资料' : '创作者资料'}>
 				<div className="person-cover">
@@ -85,24 +69,6 @@ export function PersonProfile({
 			<div className="creator-content">
 				<CollectedEntries subscription={sub} onWork={onWork} presentation={actor ? 'list' : 'cards'} title={actor ? '最近新作' : '最新动态'} />
 			</div>
-			<Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-				<DialogContent className="person-settings-dialog">
-					<DialogTitle>关注设置</DialogTitle>
-					<DialogDescription>管理 {sub.name} 的关注状态与检查频率。</DialogDescription>
-					<SubscriptionRow subscription={sub} />
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => {
-							setSettingsOpen(false);
-							onAdd(sub.provider);
-						}}
-					>
-						添加其他关注
-					</Button>
-					<DialogClose render={<Button size="sm" />}>完成</DialogClose>
-				</DialogContent>
-			</Dialog>
 		</div>
 	);
 }

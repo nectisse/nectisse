@@ -58,6 +58,7 @@ export function Workspace({
 	const followTrigger = useRef<HTMLElement | null>(null);
 	const followSequence = useRef(0);
 	const [workSeed, setWorkSeed] = useState<{ query: string; token: number }>();
+	const [queryTaskId, setQueryTaskId] = useState<string | null>(null);
 	const metadataTask = useMetadata((state) => state.tasks.find((task) => task.id === state.activeId));
 
 	useEffect(() => {
@@ -254,7 +255,14 @@ export function Workspace({
 					{page === 'query' ? (
 						<MetadataWorkspace
 							seed={workSeed}
-							onClear={() => setWorkSeed({ query: '', token: Date.now() })}
+							selectedTaskId={queryTaskId}
+							onSelectTask={(id) => {
+								setQueryTaskId(id);
+								if (id) {
+									setWorkSeed(undefined);
+								}
+							}}
+							onClear={() => setWorkSeed(undefined)}
 							onPerformer={(query, provider = 'javdb') => add(provider, query)}
 							renderSaveAction={(props) => <SaveWorkButton {...props} onOpen={openLibrary} />}
 						/>

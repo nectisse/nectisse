@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -129,12 +130,14 @@ try {
 	assert.equal(disabled.reason, 'disabled');
 	assert.equal(disabled.requests, 0);
 	await page.getByRole('navigation', { name: '主导航' }).getByRole('button', { name: '资料查询', exact: true }).click();
+	await selectQueryRecord(page, 'NECT-024');
 	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
 	assert.equal(await page.getByRole('tab', { name: '磁链搜索', exact: true }).count(), 0);
 	await open();
 	await page.getByRole('switch', { name: '启用磁链搜索', exact: true }).click();
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.magnetSearch.enabled);
 	await page.getByRole('navigation', { name: '主导航' }).getByRole('button', { name: '资料查询', exact: true }).click();
+	await selectQueryRecord(page, 'NECT-024');
 	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
 	assert.equal(await page.getByRole('tab', { name: '磁链搜索', exact: true }).count(), 1);
 	assert.deepEqual(errors, []);

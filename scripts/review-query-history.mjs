@@ -49,12 +49,16 @@ try {
 	const background = await page.locator('.query-box').boundingBox();
 	await open();
 	assert.equal(await dialog.locator('.query-history-row').count(), 20);
+	assert.equal(await dialog.locator('.query-history-row[data-current="true"]').count(), 0, '启动时没有默认选中的历史记录');
 	await page.waitForFunction(() => document.activeElement?.matches('.query-history-header h2'));
 	assert.deepEqual(await dialog.getByRole('columnheader').allTextContents(), ['查询内容', '查询时间', '状态', '当前记录']);
 	assert.deepEqual(await page.locator('.query-box').boundingBox(), background);
 	assert.equal(await page.locator('.live-history').count(), 0);
 	for (const label of ['已完成', '部分取得', '未取得', '已取消', '已中断']) assert.ok(await dialog.getByText(label, { exact: true }).count() > 0);
 	await close();
+	await open();
+	await dialog.locator('.query-history-open').first().click();
+	await dialog.waitFor({ state: 'hidden' });
 	for (const width of [1000, 1600]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 1200), width);
 		for (const theme of ['cream', 'night']) {
