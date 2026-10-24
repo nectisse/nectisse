@@ -277,8 +277,20 @@ test('清空记录写入失败时回滚，内存与重启后的磁盘记录都�
 	);
 	await service.initialize();
 	t.after(() => service.stop());
+	// 完成状态可能先于落盘可见，收到提交事件后再移动目录注入故障。
+	const committed = new Promise<void>((resolve) => {
+		const onState = (): void => {
+			const state = service.getState();
+			if (!state.activeId && state.tasks[0]?.status === 'succeeded') {
+				service.off('state', onState);
+				resolve();
+			}
+		};
+		service.on('state', onState);
+	});
 	await service.query(request);
 	await finished(service);
+	await committed;
 	const tasks = service.getState().tasks;
 	await rename(join(root, 'metadata'), join(root, 'metadata-held'));
 	try {
