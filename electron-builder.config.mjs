@@ -5,6 +5,7 @@ export default {
 	directories: { output: 'dist', buildResources: 'resources' },
 	files: ['out/**/*', 'package.json'],
 	extraResources: [
+		{ from: 'resources/notices', to: 'third-party' },
 		{ from: 'resources/icons/icon-macos.png', to: 'icons/icon-macos.png' },
 		{
 			from: '.build/python/darwin-${arch}',

@@ -59,7 +59,7 @@ try {
  await page.locator('.live-result-grid').waitFor();
  assert.equal(await page.getByRole('button', { name: '收藏作品', exact: true }).count(), 3);
  await page.getByRole('button', { name: '收藏作品', exact: true }).first().click();
- await page.waitForFunction(async () => (await window.nectisse.library.getState()).works.length === 1);
+ await page.getByRole('button', { name: '已收藏 · 查看', exact: true }).waitFor();
  const first = (await page.evaluate(() => window.nectisse.library.getState())).works[0];
  await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
  assert.equal(await page.locator('.live-detail .live-cover').count(), 1);
@@ -72,7 +72,12 @@ try {
  const selected = await page.evaluate(id => window.nectisse.library.getWork(id), first.id);
  assert.equal(selected.coverId, metadata.tasks[0].records[0].covers[0].id); assert.equal(selected.savedAt, first.savedAt);
  await page.getByRole('button', { name: '返回查询结果', exact: true }).click();
- for (let i = 0; i < 2; i++) { await page.getByRole('button', { name: '收藏作品', exact: true }).first().click(); await page.waitForFunction(n => window.nectisse.library.getState().then(state => state.works.length === n), i + 2); }
+ for (const [index, code] of ['NECT-025', 'NECT-026'].entries()) {
+  const card = page.locator('.work-card').filter({ has: page.getByRole('button', { name: `查看真实作品 ${code}`, exact: true }) });
+  await card.getByRole('button', { name: '收藏作品', exact: true }).click();
+  await card.getByRole('button', { name: '已收藏 · 查看', exact: true }).waitFor();
+  assert.equal((await page.evaluate(() => window.nectisse.library.getState())).works.length, index + 2);
+ }
  await library(); await count(3);
  if (navigationOnly) {
   for (let cycle = 0; cycle < 8; cycle++) { await nav().getByRole('button', { name: '资料查询', exact: true }).click(); await selectQueryRecord(page, 'NECT-024'); await page.locator('.live-result-grid').waitFor(); await library(); await count(3); }
@@ -82,6 +87,7 @@ try {
  await search.fill('NECT-025'); await count(1);
  await search.fill('没有匹配的编号'); await page.getByRole('heading', { name: '没有匹配的收藏', exact: true }).waitFor();
  await search.fill(''); await count(3);
+ await page.locator('[data-sonner-toast] [data-close-button]').evaluateAll(buttons => buttons.forEach(button => button.click()));
  for (const width of [1280, 1000]) {
   await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 840), width);
   await page.waitForFunction(width => innerWidth === width, width);
@@ -90,14 +96,16 @@ try {
    await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
    await page.getByRole('tab', { name: '资料卡片', exact: true }).click(); await check(`${width}-${theme}-cards`);
    await page.getByRole('tab', { name: '照片墙', exact: true }).click();
-   await page.waitForFunction(() => [...document.querySelectorAll('.library-wall img')].every(img => img.complete && img.naturalWidth > 0));
-   assert.equal(await page.locator('.library-wall img').count(), 2); assert.equal(await page.locator('.library-wall .live-cover-placeholder').count(), 1);
+   await page.waitForFunction(() => [...document.querySelectorAll('.collection-wall img')].every(img => img.complete && img.naturalWidth > 0));
+   assert.equal(await page.locator('.collection-wall-tile img').count(), 2); assert.equal(await page.locator('.collection-wall-tile .live-cover-placeholder').count(), 1);
    await check(`${width}-${theme}-wall`);
-   await page.getByRole('button', { name: '查看收藏作品 NECT-024', exact: true }).click();
+   await page.getByRole('button', { name: '预览收藏封面 NECT-024', exact: true }).click();
+   await page.getByRole('button', { name: '查看作品资料', exact: true }).click();
    await page.getByRole('button', { name: '取消收藏', exact: true }).waitFor(); await check(`${width}-${theme}-detail`);
    await page.getByRole('tab', { name: '来源与差异', exact: true }).click();
    assert.equal(await page.getByRole('table', { name: '来源字段差异对照', exact: true }).count(), 1);
-   await page.getByRole('button', { name: '返回作品收藏', exact: true }).click();
+   await page.getByRole('button', { name: '返回照片墙', exact: true }).click();
+   await page.getByRole('button', { name: '返回收藏', exact: true }).click();
   }
  }
  await page.getByRole('button', { name: '查看收藏作品 NECT-024', exact: true }).click();
@@ -113,7 +121,7 @@ try {
  await launch(); await library(); await count(2);
  assert.equal((await page.evaluate(() => window.nectisse.metadata.getState())).tasks.length, 0);
  await page.getByRole('tab', { name: '照片墙', exact: true }).click();
- await page.waitForFunction(() => { const img = document.querySelector('.library-wall img'); return img?.complete && img.naturalWidth > 0; });
+ await page.waitForFunction(() => { const img = document.querySelector('.collection-wall img'); return img?.complete && img.naturalWidth > 0; });
  await check('offline-after-query-history-and-cache-removed');
  await quit();
  await rename(join(profile, 'library'), join(profile, 'library-preserved'));

@@ -1,5 +1,5 @@
 import { useDesktopActions, useLibrary, useLibraryStatus, useSavedWork, useRemoveWork } from '@/shared/desktop';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Bookmark, Images, LoaderCircle, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { toast } from '@/shared/ui/sonner';
@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/
 import { OptionSelect } from '@/shared/ui/select';
 import { ContentTabs } from '@/shared/components/content-tabs';
 import { CoverImage, WorkDetail } from '@/entities/work';
+import { CollectionWall } from './CollectionWall';
+import type { WallCamera } from '../model/wall-layout';
 
 export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: number }; onQuery: (code: string) => void }): React.JSX.Element {
 	const actions = useDesktopActions();
@@ -19,6 +21,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 	const { loading, error } = useLibraryStatus();
 	const { reloadLibrary: reload } = actions;
 	const [view, setView] = useState<'cards' | 'wall'>('cards');
+	const wallCamera = useRef<WallCamera | undefined>(undefined);
 	const [search, setSearch] = useState('');
 	const [sort, setSort] = useState('saved');
 	const [visible, setVisible] = useState(60);
@@ -76,7 +79,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 						scope="library"
 						magnetOrigin={{ kind: 'library', id: work.id }}
 						coverId={work.coverId}
-						backLabel="返回作品收藏"
+						backLabel={view === 'wall' ? '返回照片墙' : '返回作品收藏'}
 						onBack={() => setSelected('')}
 						onRefresh={() => onQuery(work.code)}
 						onOpenSource={(recordId) => {
@@ -163,6 +166,25 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 					: b.savedAt.localeCompare(a.savedAt),
 		);
 
+	if (view === 'wall') {
+		return (
+			<CollectionWall
+				works={works}
+				search={search}
+				onSearch={setSearch}
+				initialCamera={wallCamera.current}
+				onCameraChange={(camera) => {
+					wallCamera.current = camera;
+				}}
+				onClose={() => {
+					setView('cards');
+					requestAnimationFrame(() => document.querySelector<HTMLElement>('[role="tablist"][aria-label="收藏视图"] [aria-selected="true"]')?.focus());
+				}}
+				onDetails={setSelected}
+			/>
+		);
+	}
+
 	return (
 		<div className="page library-page">
 			<PageHeader
@@ -240,7 +262,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 				/>
 			) : (
 				<>
-					<div className={`library-grid ${view === 'wall' ? 'library-wall' : 'library-cards'}`} aria-label={view === 'wall' ? '作品照片墙' : '收藏作品列表'}>
+					<div className="library-grid library-cards" aria-label="收藏作品列表">
 						{works.slice(0, visible).map((work) => (
 							<Card key={work.id} className="library-work gap-0 py-0 ring-0">
 								<Button
@@ -255,13 +277,11 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 									<CoverImage cover={work.cover} scope="library" />
 									<span className="library-work-caption">
 										<strong>{work.code}</strong>
-										{view === 'cards' && (
-											<>
-												<span className="library-work-title">{work.title}</span>
-												<small>{work.people.slice(0, 3).join('、') || work.studio || '人物资料未提供'}</small>
-												<small>{work.releaseDate || '发行日期未提供'}</small>
-											</>
-										)}
+										<>
+											<span className="library-work-title">{work.title}</span>
+											<small>{work.people.slice(0, 3).join('、') || work.studio || '人物资料未提供'}</small>
+											<small>{work.releaseDate || '发行日期未提供'}</small>
+										</>
 									</span>
 								</Button>
 							</Card>

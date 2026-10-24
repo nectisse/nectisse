@@ -6,14 +6,17 @@ const DialogClose = DialogPrimitive.Close;
 const DialogTitle = DialogPrimitive.Title;
 const DialogDescription = DialogPrimitive.Description;
 
-function DialogContent({ className, children, ...props }: DialogPrimitive.Popup.Props) {
+function DialogContent({ className, children, fullScreen = false, ...props }: DialogPrimitive.Popup.Props & { fullScreen?: boolean }) {
 	return (
 		<DialogPrimitive.Portal>
 			<DialogPrimitive.Backdrop data-slot="dialog-overlay" className="fixed inset-0 z-50 bg-black/35" />
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					'fixed top-1/2 left-1/2 z-60 flex max-h-[calc(100dvh-64px)] w-[min(560px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-input bg-popover text-popover-foreground shadow-xl outline-none',
+					'z-60 flex flex-col overflow-hidden border border-input bg-popover text-popover-foreground outline-none',
+					fullScreen
+						? 'fixed inset-0 h-dvh w-screen max-h-none'
+						: 'fixed top-1/2 left-1/2 max-h-[calc(100dvh-64px)] w-[min(560px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-xl',
 					className,
 				)}
 				{...props}

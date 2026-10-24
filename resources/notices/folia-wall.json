@@ -1,0 +1,10 @@
+{
+	"component": "收藏照片墙拼贴模板",
+	"source": "https://github.com/chthollyphile/folia-major",
+	"revision": "9a01e788ed52d25ea01b1f0d37934e5e371ae82b",
+	"via": "https://github.com/peach-mitao/peach/tree/master/frontend/src/react/video-wall",
+	"license": "AGPL-3.0",
+	"licenseTextInApp": "python/app/vendor/PEACH-LICENSE",
+	"adaptation": "保留四套矩形区块模板；仅用于有限收藏封面的布局，不包含播放器、队列和循环副本。",
+	"files": ["src/renderer/features/library/model/wall-layout.ts"]
+}

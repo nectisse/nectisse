@@ -27,10 +27,6 @@
 	align-items: start;
 	gap: 20px;
 }
-.library-wall {
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
-	gap: 12px;
-}
 .library-work {
 	min-width: 0;
 	overflow: hidden;
@@ -86,9 +82,6 @@
 	color: var(--muted-foreground);
 	font-size: 11px;
 	line-height: 1.6;
-}
-.library-wall .library-work-caption {
-	padding: 9px 12px;
 }
 .library-more {
 	display: flex;
