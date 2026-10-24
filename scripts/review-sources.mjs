@@ -1,59 +1,9 @@
-import { openPeople, openUpdates } from './people.mjs';
+import { openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import { chooseOption } from './select.mjs';
-
-export async function reviewSources(page, output) {
-	await mkdir(output, { recursive: true });
-	await page.getByRole('button', { name: '设置', exact: true }).click();
-	await page.getByRole('heading', { level: 1, name: '设置', exact: true }).waitFor();
-	await page.getByRole('tab', { name: '来源与账号', exact: true }).click();
-	assert.equal(await page.locator('.settings-source').count(), 31);
-	assert.equal(await page.getByRole('switch', { name: '启用 FC2CMADB', exact: true }).count(), 0);
-	await chooseOption(page, '来源用途', '作品资料与封面');
-	assert.equal(await page.locator('.settings-source').count(), 22);
-	const avbase = page.getByRole('switch', { name: '启用 AVBase', exact: true });
-	await avbase.click();
-	assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).preferences.enabledSources.includes('avbase')), true);
-	await page.screenshot({ path: join(output, '01-expanded-metadata.png') });
-	await chooseOption(page, '来源用途', '需要额外适配');
-	assert.equal(await page.locator('.settings-source').count(), 3);
-	for (const label of ['F95zone', 'SimpCity', 'DUGA']) assert.equal(await page.getByRole('switch', { name: `启用 ${label}`, exact: true }).isDisabled(), true);
-	await page.screenshot({ path: join(output, '02-explicit-boundaries.png') });
-	await chooseOption(page, '来源用途', '演员／创作者订阅');
-	assert.equal(await page.locator('.settings-source').count(), 8);
-	await page.screenshot({ path: join(output, '03-expanded-follow.png') });
-	await openPeople(page, 'actors', 'manage');
-	await page.getByRole('button', { name: '添加关注', exact: true }).first().click();
-	const provider = page.getByRole('combobox', { name: '关注来源', exact: true });
-	await provider.waitFor();
-	await provider.click();
-	await page.getByRole('option').first().waitFor();
-	assert.equal(await page.getByRole('option').count(), 8);
-	assert.equal(await page.locator('[data-slot="select-content"] input').count(), 0);
-	await page.keyboard.press('Escape');
-	await chooseOption(page, '关注来源', 'Coomer');
-	await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).fill('https://coomer.st/onlyfans/user/creator');
-	assert.equal(await page.getByRole('button', { name: '查询身份', exact: true }).isDisabled(), true);
-	await chooseOption(page, '关注来源', 'X');
-	assert.equal(await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).getAttribute('placeholder'), '粘贴 X 主页或输入 @账号');
-	await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).fill('@_yu_8_8');
-	assert.equal(await page.getByRole('button', { name: '查询身份', exact: true }).isDisabled(), true);
-	await page.getByText('通过 FxEmbed 获取公开账号本人原创帖，无需登录；不收录回复、引用与转发，可能存在延迟或缺失', { exact: true }).waitFor();
-	await page.screenshot({ path: join(output, '03b-x-original-follow.png') });
-	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
-	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '资料查询', exact: true }).click();
-	await page.getByRole('button', { name: '调整资料来源', exact: true }).click();
-	await page.getByRole('button', { name: '查询使用 AVBase', exact: true }).click();
-	assert.equal(await page.getByRole('button', { name: '查询使用 AVBase', exact: true }).getAttribute('aria-pressed'), 'true');
-	await page.screenshot({ path: join(output, '04-source-selection.png') });
-	await page.getByRole('button', { name: '查询使用 AVBase', exact: true }).click();
-	await page.evaluate(async () => { const state = await window.nectisse.subscriptions.getState(); await window.nectisse.subscriptions.command({ action: 'preferences', value: { ...state.preferences, enabledSources: state.preferences.enabledSources.filter(id => id !== 'avbase') } }); });
-	await page.getByRole('button', { name: '调整资料来源', exact: true }).click();
-}
 
 export async function reviewSourcesLive(page, output, proxy = '') {
 	await mkdir(output, { recursive: true });

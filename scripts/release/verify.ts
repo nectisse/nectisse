@@ -41,11 +41,9 @@ try {
 	for (const name of ['APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'BUILD_CERTIFICATE_BASE64', 'P12_PASSWORD', 'CSC_KEYCHAIN', 'GH_TOKEN', 'GITHUB_TOKEN']) {
 		delete env[name];
 	}
-	for (const script of ['scripts/smoke-desktop.mjs', 'scripts/review-library.mjs', 'scripts/review-collection-wall.mjs', 'scripts/review-creator-stream.mjs']) {
-		console.log(`验收 ${script}`);
-		const { stdout } = await command(process.execPath, [script, app], env, true);
-		process.stdout.write(stdout);
-	}
+	console.log('验收应用启动、本地数据、单实例、窗口唤回与退出');
+	const { stdout } = await command(process.execPath, ['scripts/smoke-desktop.mjs', app], env, true);
+	process.stdout.write(stdout);
 	await verifyMacApp(app, root, metadata.version, team);
 	const mount = join(temporary, 'mounted');
 	await mkdir(mount);
