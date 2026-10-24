@@ -8,8 +8,14 @@ import { subscriptionFailureContext, subscriptionFailureContextSchema } from '@s
 import { LIBRARY_IPC, libraryStateSchema, savedWorkSchema, libraryIdSchema, librarySaveSchema, libraryReplySchema } from '@shared/library';
 import { MAGNET_IPC, magnetRequestSchema, magnetResultSchema, magnetActionSchema, externalMagnetSiteSchema } from '@shared/magnets';
 import { z } from 'zod';
+import { STORAGE_IPC, storageUsageSchema, storageClearSchema } from '@shared/storage';
 
 const bridge: DesktopBridge = {
+	storage: {
+		usage: async () => storageUsageSchema.parse(await ipcRenderer.invoke(STORAGE_IPC.usage)),
+
+		clear: async () => storageClearSchema.parse(await ipcRenderer.invoke(STORAGE_IPC.clear)),
+	},
 	magnets: {
 		search: async (request) => magnetResultSchema.parse(await ipcRenderer.invoke(MAGNET_IPC.search, magnetRequestSchema.parse(request))),
 

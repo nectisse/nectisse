@@ -1,4 +1,9 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, session, shell, safeStorage, type IpcMainInvokeEvent } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, session, shell, safeStorage, nativeImage, type IpcMainInvokeEvent } from 'electron';
+import { createHash } from 'node:crypto';
+import { ImageStore } from './platform/images';
+import { ImageAccess } from './app/image-access';
+import { STORAGE_IPC } from '@shared/storage';
+import { preferredCover } from '@shared/cover-selection';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { IPC } from '@shared/protocol';
@@ -36,6 +41,8 @@ let localReady: InitializationStep | undefined;
 let metadataReady: InitializationStep | undefined;
 let libraryReady: InitializationStep | undefined;
 let library: LibraryService | undefined;
+let images: ImageStore | undefined;
+let imageAccess: ImageAccess | undefined;
 let subscriptions: SubscriptionsService | undefined;
 let subscriptionStore: SubscriptionStore | undefined;
 let quitting = false;
@@ -133,9 +140,10 @@ if (!app.requestSingleInstanceLock()) {
 			try {
 				await Promise.all([localReady?.close(), metadataReady?.close(), libraryReady?.close()]);
 				await magnets?.stop();
-				await library?.stop();
 				await subscriptions?.stop();
 				await metadata?.stop();
+				await images?.close();
+				await library?.stop();
 				await runtime?.stop();
 				subscriptionStore?.close();
 			} finally {
@@ -190,6 +198,22 @@ if (!app.requestSingleInstanceLock()) {
 				pythonLayout(app.isPackaged ? process.resourcesPath : app.getAppPath(), app.isPackaged),
 				join(app.getPath('userData'), 'browser-sessions', 'fc2ppvdb'),
 			);
+			images = new ImageStore(app.getPath('userData'), ({ bytes }) => {
+				const decoded = nativeImage.createFromBuffer(bytes);
+				if (decoded.isEmpty()) {
+					throw new Error('IMAGE_DECODE_FAILED');
+				}
+				const size = decoded.getSize();
+				const ratio = Math.min(1, 800 / Math.max(size.width, size.height));
+				const width = Math.max(1, Math.round(size.width * ratio));
+				const height = Math.max(1, Math.round(size.height * ratio));
+				const thumbnail = decoded.resize({ width, height, quality: 'best' }).toJPEG(78);
+				return {
+					bytes: thumbnail,
+					asset: { sha256: createHash('sha256').update(thumbnail).digest('hex'), width, height, bytes: thumbnail.length, format: 'JPEG', quality: 'standard' },
+				};
+			});
+			const imagesReady = new InitializationStep(() => images!.initialize());
 
 			const resolveProxy = async (url: string): Promise<string> => {
 				const preferences = subscriptionStore!.preferences();
@@ -216,6 +240,7 @@ if (!app.requestSingleInstanceLock()) {
 
 			let gate: SiteGate | undefined;
 			localReady = new InitializationStep(async () => {
+				await imagesReady.retry();
 				subscriptionStore ??= new SubscriptionStore(app.getPath('userData'), {
 					available: () => safeStorage.isEncryptionAvailable(),
 
@@ -232,6 +257,7 @@ if (!app.requestSingleInstanceLock()) {
 						(url) => shell.openExternal(url),
 						2000,
 						(source, signal) => gate!.permit(source, signal),
+						images,
 					);
 					subscriptions.on('state', (state) => {
 						if (window?.isDestroyed() === false) {
@@ -243,6 +269,7 @@ if (!app.requestSingleInstanceLock()) {
 					});
 				}
 				await subscriptions.initialize();
+				await images!.setLimit(subscriptionStore.preferences().imageCacheMiB);
 				if (!quitting) {
 					subscriptions.start();
 				}
@@ -291,6 +318,7 @@ if (!app.requestSingleInstanceLock()) {
 				const reply = await subscriptions!.command(input);
 				if (reply.ok && ['preferences', 'preferences-patch', 'source-enabled'].includes(input.action)) {
 					await magnets!.settingsChanged();
+					await images!.setLimit(subscriptionStore!.preferences().imageCacheMiB);
 				}
 				return reply;
 			});
@@ -308,6 +336,7 @@ if (!app.requestSingleInstanceLock()) {
 					() => subscriptionStore!.preferences(),
 					(source) => subscriptionStore!.credential(source),
 					(source, signal) => gate!.permit(source, signal),
+					images,
 				);
 				metadata = candidate;
 				metadata.on('state', (state: ReturnType<MetadataService['getState']>) => {
@@ -394,7 +423,8 @@ if (!app.requestSingleInstanceLock()) {
 				if (quitting) {
 					throw new Error('APP_STOPPING');
 				}
-				const candidate = new LibraryService(app.getPath('userData'));
+				await imagesReady.retry();
+				const candidate = new LibraryService(app.getPath('userData'), images);
 				try {
 					await candidate.initialize();
 				} catch (error) {
@@ -446,7 +476,20 @@ if (!app.requestSingleInstanceLock()) {
 					return { ok: false, message: '查询记录已不在最近列表中，请重新查询后收藏。' };
 				}
 				try {
-					const work = await library!.save(records, input.coverId, input.replace, (hash) => metadata!.image(hash));
+					const covers = records.flatMap((record) => record.covers);
+					const cover = input.coverId ? covers.find((cover) => cover.id === input.coverId) : preferredCover(covers, task?.coverPriority);
+					if (cover?.asset) {
+						await imageAccess!.read('image', cover.id, 'original');
+					}
+					const latest = metadata!
+						.getState()
+						.tasks.find((task) => task.id === input.taskId)
+						?.records.filter((record) => record.code === input.code)
+						.sort((a, b) => order.indexOf(a.source) - order.indexOf(b.source));
+					if (!latest?.length) {
+						return { ok: false, message: '查询记录已更改，请重新选择要收藏的作品。' };
+					}
+					const work = await library!.save(latest, input.coverId, input.replace, (hash) => imageAccess!.read('image', hash, 'original'));
 					return { ok: true, id: work.id };
 				} catch (error) {
 					return {
@@ -543,6 +586,33 @@ if (!app.requestSingleInstanceLock()) {
 					return false;
 				}
 			});
+			imageAccess = new ImageAccess(
+				app.getPath('userData'),
+				images,
+				runtime.host,
+				() => subscriptions!,
+				() => metadata!,
+				() => library!,
+				resolveProxy,
+				(source, signal) => gate!.permit(source, signal),
+				(id, asset) => metadata!.rememberImage(id, asset),
+			);
+			ipcMain.handle(STORAGE_IPC.usage, async (event) => {
+				trusted(event);
+				await waitLocal();
+				await waitMetadata();
+				await waitLibrary();
+				await images!.setLimit(subscriptionStore!.preferences().imageCacheMiB);
+				return images!.usage();
+			});
+			ipcMain.handle(STORAGE_IPC.clear, async (event) => {
+				trusted(event);
+				await waitLocal();
+				await waitMetadata();
+				await waitLibrary();
+				await subscriptions!.clearImageQueue();
+				return images!.clear();
+			});
 			protocol.handle('nectisse-cover', async (request) => {
 				const url = new URL(request.url);
 				if (request.method !== 'GET' || !['image', 'updates', 'avatars', 'library'].includes(url.hostname) || !/^\/[a-f0-9]{64}$/.test(url.pathname)) {
@@ -555,18 +625,14 @@ if (!app.requestSingleInstanceLock()) {
 				} else {
 					await waitLocal();
 				}
-				const found =
-					url.hostname === 'image'
-						? await metadata!.image(url.pathname.slice(1))
-						: url.hostname === 'library'
-							? await library!.image(url.pathname.slice(1))
-							: await subscriptions!.image(url.pathname.slice(1));
+				const variant = url.searchParams.get('variant') === 'thumbnail' ? 'thumbnail' : 'original';
+				const found = await imageAccess!.read(url.hostname, url.pathname.slice(1), variant, request.signal);
 				if (!found) {
 					return new Response(null, { status: 404 });
 				}
 				const type = found.asset.format === 'JPEG' ? 'image/jpeg' : found.asset.format === 'PNG' ? 'image/png' : 'image/webp';
 				return new Response(new Uint8Array(found.bytes), {
-					headers: { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'private, max-age=3600' },
+					headers: { 'Content-Type': type, 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' },
 				});
 			});
 			ipcMain.handle(IPC.runtimeGet, (event) => {

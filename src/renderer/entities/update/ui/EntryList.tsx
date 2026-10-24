@@ -35,7 +35,7 @@ function entryCategory(entry: FeedEntry): string {
 				: '创作者动态';
 }
 
-function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {
+function EntryImage({ entry, variant = 'thumbnail' }: { entry: FeedEntry; variant?: 'thumbnail' | 'original' }): React.JSX.Element {
 	const { imageUrl } = useDesktopActions();
 	const state = useSubscriptions((state) => ({ preferences: state.preferences, sources: state.sources, subscriptions: state.subscriptions }));
 	const sub = state.subscriptions.find((sub) => sub.id === entry.subscriptionId);
@@ -60,7 +60,7 @@ function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {
 	return (
 		<FeedImage
 			key={`${entry.imageAsset?.sha256 ?? ''}:${status ?? ''}`}
-			src={entry.imageAsset ? imageUrl('updates', entry.imageAsset.sha256) : undefined}
+			src={entry.thumbnailUrl ? imageUrl('updates', entry.id, variant) : undefined}
 			unavailable={unavailable}
 			alt={`${entry.title || '来源内容'} · 来源封面`}
 		/>
@@ -152,7 +152,7 @@ export function EntryList({
 				source={selected ? providerName(selected.provider) : ''}
 				category={selected ? entryCategory(selected) : ''}
 				code={selected?.code}
-				image={selected && <EntryImage key={selected.id} entry={selected} />}
+				image={selected && <EntryImage key={selected.id} entry={selected} variant="original" />}
 				details={
 					selected
 						? [

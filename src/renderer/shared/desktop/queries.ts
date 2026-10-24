@@ -9,6 +9,7 @@ import { reconcile } from './snapshot';
 export const queryKeys = {
 	work: (id: string) => ['library', 'work', id] as const,
 	diagnostics: ['diagnostics', 'report'] as const,
+	storage: ['storage', 'usage'] as const,
 };
 
 function latestReport(previous: DiagnosticReport | undefined, next: DiagnosticReport): DiagnosticReport {
@@ -104,6 +105,33 @@ export function createDesktopQueries(required: () => DesktopBridge) {
 		diagnostics,
 		syncLibrary,
 		cancelReads,
+		storage: () =>
+			queryOptions({
+				queryKey: queryKeys.storage,
+				staleTime: 0,
+				queryFn: ({ signal }) =>
+					readLocal(() => {
+						const storage = required().storage;
+						if (!storage) {
+							throw new Error('STORAGE_UNAVAILABLE');
+						}
+						return storage.usage();
+					}, signal),
+			}),
+		clearImageCache: () =>
+			mutationOptions({
+				onMutate: () => client.cancelQueries({ queryKey: queryKeys.storage, exact: true }),
+				mutationFn: () => {
+					const storage = required().storage;
+					if (!storage) {
+						throw new Error('STORAGE_UNAVAILABLE');
+					}
+					return storage.clear();
+				},
+				onSuccess: (reply) => {
+					client.setQueryData(queryKeys.storage, reply.usage);
+				},
+			}),
 		saveWork: () =>
 			mutationOptions({
 				mutationFn: (input: LibrarySave) => required().library.save(input),

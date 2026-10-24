@@ -179,6 +179,30 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 	};
 
 	return {
+		storage: {
+			usage: async () => ({
+				collectionBytes: 100000,
+				protectedBytes: 0,
+				cacheBytes: 0,
+				originalBytes: 0,
+				thumbnailBytes: 0,
+				limitBytes: state.preferences.imageCacheMiB * 1024 * 1024,
+				files: 1,
+			}),
+			clear: async () => ({
+				freedBytes: 0,
+				removedFiles: 0,
+				usage: {
+					collectionBytes: 100000,
+					protectedBytes: 0,
+					cacheBytes: 0,
+					originalBytes: 0,
+					thumbnailBytes: 0,
+					limitBytes: state.preferences.imageCacheMiB * 1024 * 1024,
+					files: 1,
+				},
+			}),
+		},
 		subscriptions: { getState: subsChannel.get, retry: subsChannel.get, command, onState: subsChannel.subscribe, onSettings: () => () => {} },
 		metadata: {
 			getState: metadataChannel.get,

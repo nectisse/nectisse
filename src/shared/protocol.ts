@@ -37,6 +37,7 @@ export const runtimeStateSchema = z.object({
 export type RuntimeState = z.infer<typeof runtimeStateSchema>;
 
 export interface DesktopBridge {
+	storage?: import('@shared/storage').StorageBridge;
 	magnets: import('@shared/magnets').MagnetBridge;
 	library: import('@shared/library').LibraryBridge;
 	diagnostics: import('@shared/diagnostics').DiagnosticsBridge;

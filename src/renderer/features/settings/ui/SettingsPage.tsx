@@ -1,7 +1,7 @@
 import { usePreferences, useDesktopActions } from '@/shared/desktop';
 import type { PreferencesPatch, Preferences } from '@shared/preferences';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bell, Check, ExternalLink, FileText, Globe2, HardDrive, Magnet, Monitor, Network, Palette } from 'lucide-react';
+import { Bell, Check, ExternalLink, FileText, Globe2, Magnet, Monitor, Network, Palette } from 'lucide-react';
 import { EXTERNAL_MAGNET_SITES, MAGNET_SOURCES, magnetSourceSchema } from '@shared/magnets';
 import { Button } from '@/shared/ui/button';
 import { toast } from '@/shared/ui/sonner';
@@ -16,6 +16,7 @@ import type { FollowProvider } from '@shared/subscriptions';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { SourceCatalog } from './SourceCatalog';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
+import { StorageSection } from './StorageSection';
 
 function SettingRow({ label, description, children }: { label: string; description?: string; children: ReactNode }): React.JSX.Element {
 	return (
@@ -300,19 +301,7 @@ export function SettingsPage({
 							</div>
 						</Card>
 					</section>
-					<section className="settings-section settings-preferences">
-						<div className="settings-section-heading">
-							<h2>本机存储</h2>
-						</div>
-						<Card className="settings-card gap-0 py-0 ring-0">
-							<SettingRow label="资料与订阅" description="设置、订阅与已读状态保存在应用数据目录，重启后保留。">
-								<HardDrive size={17} className="text-muted-foreground" />
-							</SettingRow>
-							<SettingRow label="封面缓存" description="自动补齐最近 500 条更新封面，优先保留当前列表；超额清理旧缓存。">
-								<span className="settings-storage-limit">作品 128 MiB · 订阅 64 MiB</span>
-							</SettingRow>
-						</Card>
-					</section>
+					<StorageSection />
 				</TabsContent>
 				<TabsContent value="general">
 					<section className="settings-section settings-preferences">

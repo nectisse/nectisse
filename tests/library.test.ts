@@ -114,7 +114,7 @@ test('收藏列表投影迁移保留完整快照和原图，不要求重新查�
 	const work = await service.save([record()], undefined, false, readImage);
 	await service.stop();
 	const db = new DatabaseSync(join(root, 'library', 'library.sqlite'));
-	db.exec('ALTER TABLE works DROP COLUMN summary');
+	db.exec('DROP INDEX IF EXISTS works_cover_id; ALTER TABLE works DROP COLUMN summary');
 	db.close();
 	const next = new LibraryService(root);
 	await next.initialize();

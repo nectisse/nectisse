@@ -104,7 +104,7 @@ try {
  assert.equal((await page.evaluate(() => window.nectisse.library.getState())).works.length, 3);
  await page.getByRole('button', { name: '取消收藏', exact: true }).click();
  await page.getByRole('button', { name: '确认取消收藏', exact: true }).click(); await count(2);
- assert.ok(await stat(join(profile, 'library', 'covers', `${first.cover.asset.sha256}.image`)));
+ assert.ok(await stat(join(profile, 'images', 'objects', `${first.cover.asset.sha256}.image`)));
  await quit();
  metadata.tasks = []; metadata.assets = {}; await writeFile(path, JSON.stringify(metadata));
  await rm(join(profile, 'cache', 'covers'), { recursive: true, force: true });

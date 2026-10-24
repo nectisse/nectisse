@@ -7,6 +7,7 @@ import { metadataRecordSchema, type ImageAsset, type MetadataRecord } from '@sha
 import { savedWorkSchema, summarizeWork, workSummarySchema, type LibraryState, type SavedWork } from '@shared/library';
 import { allowedSourceUrl } from '@shared/source-identity';
 import { preferredCover } from '@shared/cover-selection';
+import { isImageCorruption, type ImageStore } from '../../platform/images';
 
 type ReadImage = (hash: string) => Promise<{ bytes: Buffer; asset: ImageAsset } | undefined>;
 
@@ -18,7 +19,10 @@ export class LibraryService extends EventEmitter {
 	private directory: string;
 	private covers: string;
 
-	constructor(root: string) {
+	constructor(
+		root: string,
+		private sharedImages?: ImageStore,
+	) {
 		super();
 		this.directory = join(root, 'library');
 		this.covers = join(this.directory, 'covers');
@@ -51,9 +55,43 @@ export class LibraryService extends EventEmitter {
 					throw error;
 				}
 			}
+			db.exec("CREATE INDEX IF NOT EXISTS works_cover_id ON works(json_extract(summary,'$.cover.id'))");
 			await chmod(path, 0o600);
 			this.db = db;
 			this.getState(); // Validate records before exposing the service; never reset a damaged database.
+			if (this.sharedImages) {
+				const migrated = new Set<string>();
+				const owners = new Set<string>();
+				for (const work of this.getState().works) {
+					const cover = work.cover;
+					if (!cover?.asset) {
+						continue;
+					}
+					const owner = `collection:${work.id}`;
+					const old = join(this.covers, `${cover.asset.sha256}.image`);
+					owners.add(owner);
+					if ((await this.sharedImages.read(owner, 'original'))?.asset.sha256 === cover.asset.sha256) {
+						migrated.add(old);
+						continue;
+					}
+					const bytes = await readFile(old).catch(() => undefined);
+					const image = bytes ? { bytes, asset: cover.asset } : await this.sharedImages.readHash(cover.asset.sha256, false);
+					if (image) {
+						try {
+							await this.sharedImages.put(cover.url, image, { owner });
+							migrated.add(old);
+						} catch (error) {
+							if (!isImageCorruption(error)) {
+								throw error;
+							}
+						}
+					}
+				}
+				await this.sharedImages.retainPins('collection:', owners);
+				for (const path of migrated) {
+					await rm(path, { force: true });
+				}
+			}
 		} catch (error) {
 			this.db = undefined;
 			db.close();
@@ -73,6 +111,11 @@ export class LibraryService extends EventEmitter {
 			.map((row) => workSummarySchema.parse(JSON.parse(String(row.summary))));
 
 		return { revision: this.revision, works: works.sort((a, b) => b.savedAt.localeCompare(a.savedAt)) };
+	}
+
+	picture(id: string) {
+		const row = this.db!.prepare("SELECT summary FROM works WHERE json_extract(summary,'$.cover.id')=? OR cover_sha=? LIMIT 1").get(id, id);
+		return row ? workSummarySchema.parse(JSON.parse(String(row.summary))) : undefined;
 	}
 
 	save(input: MetadataRecord[], coverId: string | undefined, replace: boolean, readImage: ReadImage): Promise<SavedWork> {
@@ -104,18 +147,23 @@ export class LibraryService extends EventEmitter {
 				throw new Error('LIBRARY_COVER_UNAVAILABLE');
 			}
 			let pinned: ImageAsset | undefined;
+			const pendingOwner = `collection:${id}:pending:${randomUUID()}`;
 			if (selected?.asset) {
 				const found = await readImage(selected.asset.sha256);
 				if (!found || found.bytes.length !== selected.asset.bytes || createHash('sha256').update(found.bytes).digest('hex') !== selected.asset.sha256) {
 					throw new Error('LIBRARY_COVER_UNAVAILABLE');
 				}
 				pinned = selected.asset;
-				const temporary = join(this.covers, `.save-${randomUUID()}.tmp`);
-				try {
-					await writeFile(temporary, found.bytes, { mode: 0o600 });
-					await rename(temporary, join(this.covers, `${pinned.sha256}.image`));
-				} finally {
-					await rm(temporary, { force: true });
+				if (this.sharedImages) {
+					await this.sharedImages.put(selected.url, found, { owner: pendingOwner });
+				} else {
+					const temporary = join(this.covers, `.save-${randomUUID()}.tmp`);
+					try {
+						await writeFile(temporary, found.bytes, { mode: 0o600 });
+						await rename(temporary, join(this.covers, `${pinned.sha256}.image`));
+					} finally {
+						await rm(temporary, { force: true });
+					}
 				}
 			}
 			for (const record of records) {
@@ -136,8 +184,13 @@ export class LibraryService extends EventEmitter {
 					'INSERT INTO works(id,cover_sha,value,summary) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET cover_sha=excluded.cover_sha,value=excluded.value,summary=excluded.summary',
 				).run(id, pinned?.sha256 ?? null, JSON.stringify(work), JSON.stringify(summarizeWork(work)));
 			} catch (error) {
+				await this.sharedImages?.unprotect(pendingOwner);
 				await this.discardUnreferenced(pinned?.sha256);
 				throw error;
+			}
+			if (this.sharedImages && pinned) {
+				await this.sharedImages.protect(`collection:${id}`, pendingOwner);
+				await this.sharedImages.unprotect(pendingOwner);
 			}
 			await this.discardUnreferenced(previous ? summarizeWork(previous).cover?.asset?.sha256 : null);
 			this.changed();
@@ -152,6 +205,7 @@ export class LibraryService extends EventEmitter {
 				return;
 			}
 			this.db!.prepare('DELETE FROM works WHERE id=?').run(id);
+			await this.sharedImages?.unprotect(`collection:${id}`);
 			await this.discardUnreferenced(summarizeWork(work).cover?.asset?.sha256);
 			this.changed();
 		});
@@ -168,6 +222,9 @@ export class LibraryService extends EventEmitter {
 		const asset = workSummarySchema.parse(JSON.parse(String(row.summary))).cover?.asset;
 		if (!asset || asset.sha256 !== hash) {
 			return;
+		}
+		if (this.sharedImages) {
+			return this.sharedImages.readHash(hash);
 		}
 		try {
 			const path = join(this.covers, `${hash}.image`);
@@ -211,6 +268,9 @@ export class LibraryService extends EventEmitter {
 	}
 
 	private async discardUnreferenced(hash?: string | null): Promise<void> {
+		if (this.sharedImages) {
+			return;
+		}
 		if (hash && !this.db!.prepare('SELECT 1 FROM works WHERE cover_sha=? LIMIT 1').get(hash)) {
 			await rm(join(this.covers, `${hash}.image`), { force: true }).catch(() => {});
 		}

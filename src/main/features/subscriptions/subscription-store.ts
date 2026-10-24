@@ -281,6 +281,35 @@ export class SubscriptionStore {
 		}
 	}
 
+	clearImageReferences(preserveCancelled: Set<string>): void {
+		const avatars = new Set(this.subscriptions().map((sub) => sub.avatarUrl));
+		const remove = this.db.prepare('DELETE FROM follow_images WHERE url=?');
+		const update = this.db.prepare('UPDATE entries SET value=? WHERE id=?');
+		this.db.exec('BEGIN IMMEDIATE');
+		try {
+			for (const { url } of this.images()) {
+				if (!avatars.has(url)) {
+					remove.run(url);
+				}
+			}
+			for (const row of this.db.prepare('SELECT id,value FROM entries').all()) {
+				const entry = JSON.parse(String(row.value)) as FeedEntry;
+				if (!entry.thumbnailUrl) {
+					continue;
+				}
+				delete entry.imageAsset;
+				if (!preserveCancelled.has(entry.id)) {
+					entry.imageCache = { status: 'evicted', attempts: 0, nextAttemptAt: 0, reason: 'cache_cleared' };
+				}
+				update.run(JSON.stringify(entry), String(row.id));
+			}
+			this.db.exec('COMMIT');
+		} catch (error) {
+			this.db.exec('ROLLBACK');
+			throw error;
+		}
+	}
+
 	dropImage(url: string, evicted = false): void {
 		const asset = this.image(url);
 		this.db.prepare('DELETE FROM follow_images WHERE url=?').run(url);

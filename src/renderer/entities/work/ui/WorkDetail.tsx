@@ -104,7 +104,7 @@ export function WorkDetail({
 			/>
 			<div className="detail-layout">
 				<section>
-					<CoverImage cover={selected} scope={scope} className="live-cover-main" />
+					<CoverImage cover={selected} scope={scope} variant="original" className="live-cover-main" />
 					<div className="cover-caption">
 						<span>
 							{selected ? SOURCE_LABELS[coverSource(selected)] : '来源封面'}
