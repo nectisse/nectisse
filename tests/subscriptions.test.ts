@@ -372,7 +372,7 @@ test('动态封面遭遇 429 后停止派发剩余图片，正文保留且来源
 	store.close();
 });
 
-test('演员候选头像随关注保存，本机缓存可读且检查复用；重启保留与淘汰回退', async (t) => {
+test('演员候选头像随关注保存，本机缓存可读且检查复用；重启保留与失效回退', async (t) => {
 	const root = await directory(t);
 	const store = new SubscriptionStore(root, cipher);
 	const actor: FollowCandidate = { ...candidate, provider: 'javdb', ref: 'A123', url: 'https://javdb.com/actors/A123', avatarUrl: 'https://c0.jdbstatic.com/avatars/a/A123.jpg' };
@@ -416,6 +416,88 @@ test('演员候选头像随关注保存，本机缓存可读且检查复用；�
 	restored.dropImage(actor.avatarUrl!);
 	assert.equal(restored.subscription(followed.id!)?.avatarAsset, undefined);
 	restored.close();
+});
+
+test('重新关注时新头像未取得，保留已有头像直到成功替换', async (t) => {
+	const store = new SubscriptionStore(await directory(t), cipher);
+	try {
+		const avatarAsset = { sha256: 'a'.repeat(64), width: 100, height: 100, bytes: 100, format: 'JPEG' as const, quality: 'small' as const };
+		const actor: FollowCandidate = {
+			...candidate,
+			provider: 'javdb',
+			ref: 'A123',
+			url: 'https://javdb.com/actors/A123',
+			avatarUrl: 'https://c0.jdbstatic.com/avatars/a/old.jpg',
+			avatarAsset,
+		};
+		const followed = store.follow(actor);
+		const refreshed = store.follow({ ...actor, avatarUrl: 'https://c0.jdbstatic.com/avatars/a/new.jpg', avatarAsset: undefined });
+		assert.equal(refreshed.id, followed.id);
+		assert.deepEqual(refreshed.avatarAsset, avatarAsset);
+		const replacement = { ...avatarAsset, sha256: 'b'.repeat(64) };
+		assert.deepEqual(store.follow({ ...actor, avatarUrl: refreshed.avatarUrl, avatarAsset: replacement }).avatarAsset, replacement);
+	} finally {
+		store.close();
+	}
+});
+
+test('演员来源头像变更但下载失败时保留旧头像，损坏图片仍失效且成功后可替换', async (t) => {
+	const root = await directory(t);
+	const store = new SubscriptionStore(root, cipher);
+	const oldUrl = 'https://c0.jdbstatic.com/avatars/a/old.jpg';
+	const newUrl = 'https://c0.jdbstatic.com/avatars/a/new.jpg';
+	const actor = store.follow({ ...candidate, provider: 'javdb', ref: 'A123', url: 'https://javdb.com/actors/A123', avatarUrl: oldUrl });
+	let nextUrl = oldUrl;
+	let fail = false;
+	let requests = 0;
+	const oldBytes = Buffer.from('old-avatar');
+	const newBytes = Buffer.from('new-avatar');
+	const oldHash = createHash('sha256').update(oldBytes).digest('hex');
+	const newHash = createHash('sha256').update(newBytes).digest('hex');
+	const run: Run = async (method, params, options) => {
+		await options?.onRequest?.({ source: 'javdb', host: method === 'follow.image' ? 'c0.jdbstatic.com' : 'javdb.com', sequence: 1 });
+		if (method !== 'follow.image') {
+			return { ...success, avatarUrl: nextUrl, coverage: '首页' };
+		}
+		requests++;
+		if (fail) {
+			return { ...success, status: 'error', reason: 'not_found', message: '头像暂不可用' };
+		}
+		const bytes = params?.url === oldUrl ? oldBytes : newBytes;
+		await writeFile(String(params?.destination), bytes);
+		return { ...success, asset: { sha256: createHash('sha256').update(bytes).digest('hex'), width: 100, height: 100, bytes: bytes.length, format: 'JPEG', quality: 'small' } };
+	};
+	const service = new SubscriptionsService(
+		store,
+		{ run },
+		async () => '',
+		async () => {},
+		0,
+	);
+	try {
+		assert.equal((await service.command({ action: 'check', id: actor.id })).ok, true);
+		await idle(service);
+		assert.equal(store.subscription(actor.id)?.avatarAsset?.sha256, oldHash);
+		nextUrl = newUrl;
+		fail = true;
+		assert.equal((await service.command({ action: 'check', id: actor.id })).ok, true);
+		await idle(service);
+		assert.equal(store.subscription(actor.id)?.avatarUrl, newUrl);
+		assert.equal(store.subscription(actor.id)?.avatarAsset?.sha256, oldHash);
+		assert.deepEqual((await service.image(oldHash))?.bytes, oldBytes);
+		await writeFile(join(root, 'cache/subscription-covers', `${oldHash}.image`), 'broken-avatar');
+		assert.equal(await service.image(oldHash), undefined);
+		assert.equal(store.subscription(actor.id)?.avatarAsset, undefined);
+		fail = false;
+		assert.equal((await service.command({ action: 'check', id: actor.id })).ok, true);
+		await idle(service);
+		assert.equal(requests, 3);
+		assert.equal(store.subscription(actor.id)?.avatarAsset?.sha256, newHash);
+		assert.deepEqual((await service.image(newHash))?.bytes, newBytes);
+	} finally {
+		await service.stop();
+		store.close();
+	}
 });
 
 test('旧订阅在检查时补头像；头像限流保留身份和正文并停止后续派发', async (t) => {

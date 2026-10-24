@@ -96,9 +96,7 @@ export class FollowRunner {
 				}
 				const avatarUrl = latest.provider === 'x' ? (outcome.status === 'error' ? undefined : outcome.profile?.avatarUrl) : outcome.avatarUrl || undefined;
 				if (avatarUrl !== undefined) {
-					if (latest.avatarUrl !== avatarUrl) {
-						delete latest.avatarAsset;
-					}
+					// 新头像下载成功后再替换，失败时保留已有图片。
 					latest.avatarUrl = avatarUrl;
 				}
 				latest.lastCheckedAt = new Date().toISOString();
