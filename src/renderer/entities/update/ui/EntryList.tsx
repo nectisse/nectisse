@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 import { EmptyState } from '@/shared/components/empty-state';
+import { Masonry } from '@/shared/ui/masonry';
 
 import { FeedImage, FeedItem } from './feed-item';
 import { UpdateDetailDialog } from './update-detail-dialog';
@@ -82,6 +83,7 @@ export function EntryList({
 	const [selection, setSelected] = useState<FeedEntry>();
 	const selected = state.entries.find((entry) => entry.id === selection?.id) ?? selection;
 	const returnFocus = useRef<HTMLElement | null>(null);
+	const Layout = presentation === 'cards' ? Masonry : 'div';
 
 	const open = (entry: FeedEntry): void => {
 		returnFocus.current = document.activeElement as HTMLElement;
@@ -92,7 +94,7 @@ export function EntryList({
 	return (
 		<>
 			{entries.length ? (
-				<div className="feed-items real-feed-list" data-presentation={presentation}>
+				<Layout className="feed-items real-feed-list" data-presentation={presentation}>
 					{entries.map((entry) => (
 						<FeedItem
 							key={entry.id}
@@ -137,7 +139,7 @@ export function EntryList({
 							onAuthor={onPerson ? () => onPerson(entry.subscriptionId) : undefined}
 						/>
 					))}
-				</div>
+				</Layout>
 			) : (
 				<EmptyState icon={Sparkles} title="还没有可显示的内容" description="关注并完成检查后，来源实际提供的动态或目录会出现在这里。" />
 			)}

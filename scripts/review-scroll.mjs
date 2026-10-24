@@ -74,5 +74,5 @@ try {
    await page.waitForFunction(()=>document.querySelector('.page-scroll').scrollTop===0);
   }
  }
- console.log(JSON.stringify({checks:['84-entry-feed-paginated-by-20','wheel-and-boundary-scroll','sidebar-wheel-does-not-scroll-window','fixed-sidebar-toolbar-and-status','dialog-focus-return','settings-scroll-and-page-reset','both-themes-and-window-sizes'],screenshots:output},null,2));
+ console.log(JSON.stringify({checks:['83-entry-feed-with-infinite-scroll','wheel-and-boundary-scroll','sidebar-wheel-does-not-scroll-window','fixed-sidebar-toolbar-and-status','dialog-focus-return','settings-scroll-and-page-reset','both-themes-and-window-sizes'],screenshots:output},null,2));
 } finally { await mkdir(output,{recursive:true}); await writeFile(join(output,'measurements.json'),JSON.stringify(reports,null,2)); await app?.close().catch(()=>{}); await rm(profile,{recursive:true,force:true}); }

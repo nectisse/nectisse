@@ -1,7 +1,7 @@
 import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,9 @@ env.PATH = '/usr/bin:/bin';
 let app;
 try {
 	execFileSync(process.execPath, ['--import', 'tsx', join(root, 'scripts/seed-workspace-fixtures.ts'), temporary], { cwd: root, stdio: 'pipe' });
+	const cachedAt = new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString();
+	await mkdir(join(temporary, 'magnet-search'), { recursive: true });
+	await writeFile(join(temporary, 'magnet-search/state.json'), JSON.stringify({ version: 1, nextRequestAt: 0, cooldownUntil: 0, results: [{ code: 'NECT-024', source: 'sukebei', status: 'ready', items: [{ id: 'b'.repeat(40), title: 'NECT-024 收藏缓存样本', magnet: `magnet:?xt=urn:btih:${'b'.repeat(40)}`, url: 'https://sukebei.nyaa.si/view/99', size: '1 GiB', uploadedAt: null, seeders: 0, leechers: 0, completed: 0 }], limit: 20, checkedAt: cachedAt, message: '' }] }));
 	app = await _electron.launch({ executablePath: appPath ? join(appPath, 'Contents/MacOS/Nectisse') : electron, args: [...(appPath ? [] : [root]), `--user-data-dir=${temporary}`], cwd: temporary, env });
 	const page = await app.firstWindow();
 	const errors = [];
@@ -35,6 +38,15 @@ try {
 	});
 	assert.equal(unauthorized, true, 'Only an existing work record can initiate the query');
 	assert.equal(await page.evaluate(() => window.nectisse.magnets.action({ code: 'NECT-024', id: 'a'.repeat(40), action: 'open' })), false);
+	const pinned = await page.evaluate(async () => {
+		const task = (await window.nectisse.metadata.getState()).tasks.find(task => task.records.some(record => record.code === 'NECT-024'));
+		const saved = await window.nectisse.library.save({ taskId: task.id, code: 'NECT-024' });
+		const result = await window.nectisse.magnets.search({ id: crypto.randomUUID(), origin: { kind: 'library', id: saved.id }, source: 'sukebei' });
+		return { workId: saved.id, result };
+	});
+	assert.equal(pinned.result.status, 'ready');
+	assert.equal(pinned.result.checkedAt, cachedAt, 'Native library IPC must retain an expired cache without dispatching a worker');
+	assert.equal((await readdir(join(temporary, 'magnet-search/saved'))).length, 1);
 	await app.evaluate(({ ipcMain, shell }) => {
 		globalThis.__magnetCalls = [];
 		globalThis.__magnetActions = [];
@@ -169,9 +181,11 @@ try {
 	assert.equal((await app.evaluate(() => globalThis.__magnetCalls)).at(-1).origin.kind, 'library');
 	await openPeople(page, 'actors', 'manage');
 	assert.equal(await page.getByRole('tab', { name: '磁链搜索', exact: true }).count(), 0);
+	assert.equal((await page.evaluate(id => window.nectisse.library.remove(id), pinned.workId)).ok, true);
+	assert.deepEqual(await readdir(join(temporary, 'magnet-search/saved')), []);
 	assert.deepEqual(errors, []);
 	assert.deepEqual(await app.evaluate(() => globalThis.__network), []);
-	await writeFile(join(output, 'verification.json'), JSON.stringify({ measurements, checks: ['detail-only-tab', 'existing-work-authorization', 'no-auto-query-before-tab', 'one-query-in-strict-mode', 'twenty-rows', 'four-columns-with-two-lines-in-name-cell', 'horizontal-row-separators-without-vertical-borders', 'horizontal-scroll-contained-in-table', 'zero-counts-and-missing-time', 'copy-toast-and-source-action', 'empty-failure-cancel-and-leave-tab', 'query-and-library-origins', 'both-themes-and-window-sizes', 'no-site-requests'] }, null, 2));
+	await writeFile(join(output, 'verification.json'), JSON.stringify({ measurements, checks: ['detail-only-tab', 'existing-work-authorization', 'native-library-cache-retention-and-removal', 'no-auto-query-before-tab', 'one-query-in-strict-mode', 'twenty-rows', 'four-columns-with-two-lines-in-name-cell', 'horizontal-row-separators-without-vertical-borders', 'horizontal-scroll-contained-in-table', 'zero-counts-and-missing-time', 'copy-toast-and-source-action', 'empty-failure-cancel-and-leave-tab', 'query-and-library-origins', 'both-themes-and-window-sizes', 'no-site-requests'] }, null, 2));
 	console.log(JSON.stringify({ application: appPath ? 'packaged' : 'development', output, checks: 'passed' }));
 } finally {
 	await app?.close().catch(() => {});

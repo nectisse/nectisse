@@ -5,7 +5,10 @@ export async function openPeople(page, scope = 'actors', tab = 'browse') {
 
 export async function openUpdates(page, scope = 'creators', all = true) {
 	await openPeople(page, scope);
-	if (all) await page.getByRole('tab', { name: '全部', exact: true }).click();
+	const unread = page.locator('.person-card').filter({ has: page.locator('.person-card-unread') }).first();
+	const person = await unread.count() ? unread : page.locator('.person-card').first();
+	await person.click();
+	await page.getByRole('tab', { name: all ? '全部' : '未读', exact: true }).click();
 }
 
 export async function openProfile(page, name, scope = 'actors') {

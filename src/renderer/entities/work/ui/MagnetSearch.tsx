@@ -114,7 +114,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 			{loading ? (
 				<div className="magnet-search-state" role="status">
 					<LoaderCircle className="spin" />
-					<span>{cancelling ? '正在停止查询…' : `正在查询 ${code}…`}</span>
+					<span>{cancelling ? '正在停止查询…' : `正在读取 ${code} 的磁链结果…`}</span>
 				</div>
 			) : error || !ready ? (
 				<p className="magnet-search-state" role={error || result?.status === 'failed' ? 'alert' : 'status'}>
@@ -198,6 +198,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 			{!loading && ready && (
 				<p className="magnet-search-note">
 					按来源页面顺序显示，最多 {result.limit} 条。{result.checkedAt && ` 查询于 ${new Date(result.checkedAt).toLocaleString('zh-CN', { hour12: false })}`}
+					{origin.kind === 'library' && '。已保存的结果仅在手动刷新时更新。'}
 				</p>
 			)}
 		</section>
