@@ -75,7 +75,7 @@ module.exports = {
 		{
 			name: 'production-does-not-import-demo',
 			severity: 'error',
-			from: { path: renderer, pathNot: '^src/renderer/(demo/|app/ui/Workspace\\.tsx$|app/styles/)' },
+			from: { path: renderer, pathNot: '^src/renderer/(demo/|app/App\\.tsx$|app/styles/)' },
 			to: { path: '^src/renderer/demo/' },
 		},
 		{

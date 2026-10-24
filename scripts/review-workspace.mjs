@@ -1,3 +1,4 @@
+import { openPeople, openUpdates, openProfile } from './people.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -26,6 +27,7 @@ try {
  await mkdir(output, { recursive: true });
  const nav = page.getByRole('navigation', { name: '主导航', exact: true });
  const check = async name => {
+	await page.locator('.page-scroll').evaluate(element => { element.scrollTop = 0; });
 	await page.waitForFunction(() => [...document.querySelectorAll('.live-detail .live-cover img')].every(image => image.complete && image.naturalWidth > 0));
 	await page.locator('.live-detail .live-cover img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
   const windowScroll = await page.evaluate(() => ({ y: scrollY, height: document.scrollingElement.scrollHeight, viewport: innerHeight }));
@@ -37,20 +39,27 @@ try {
   const layout = await page.evaluate(() => {
    const rect = selector => { const box = document.querySelector(selector).getBoundingClientRect(); return { x: box.x, y: box.y, right: box.right, width: box.width, height: box.height }; };
    const controls = [...document.querySelectorAll('.page-toolbar [data-slot="select-trigger"], .page-toolbar [data-slot="input"], .page-toolbar [data-slot="tabs-list"]')].map(node => ({ slot: node.dataset.slot, height: node.getBoundingClientRect().height }));
-   return { viewport: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-gutter')), top: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-top')), scroll: rect('.page-scroll'), page: rect('.page'), heading: rect('.workspace-page-heading'), title: rect('#page-heading'), toolbar: rect('.workspace-toolbar'), controls };
+   const creator = !!document.querySelector('.real-creator-page');
+   return { viewport: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-gutter')), top: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-top')), scroll: rect('.page-scroll'), page: rect('.page'), heading: rect(creator ? '.creator-profile-navigation' : '.workspace-page-heading'), title: rect('#page-heading'), toolbar: rect('.workspace-toolbar'), controls, creator };
   });
   layouts.push({ name, ...layout });
   const near = (a, b) => Math.abs(a - b) <= 1;
   assert.ok(near(layout.page.x, layout.scroll.x) && near(layout.page.width, layout.scroll.width), `${name}: page must fill the available width`);
   assert.ok(near(layout.heading.x, layout.scroll.x + layout.gutter) && near(layout.heading.right, layout.scroll.right - layout.gutter), `${name}: shared side gutters`);
-  assert.ok(near(layout.title.x, layout.heading.x) && near(layout.title.y, layout.scroll.y + layout.top), `${name}: shared title origin`);
+  if (layout.creator) {
+   const hero = await page.locator('.real-creator-banner').boundingBox();
+   assert.ok(near(hero.x, layout.heading.x) && near(hero.width, layout.heading.width), `${name}: creator banner shares side gutters`);
+   assert.ok(layout.title.y >= hero.y + hero.height, `${name}: creator identity appears below the banner`);
+  } else {
+   assert.ok(near(layout.title.x, layout.heading.x) && near(layout.title.y, layout.scroll.y + layout.top), `${name}: shared title origin`);
+  }
   assert.ok(layout.controls.every(control => near(control.height, 32)), `${name}: toolbar control heights ${JSON.stringify(layout.controls)}`);
   await page.screenshot({ path: join(output, `${name}.png`) });
  };
  const query = async () => { await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await page.locator('.live-result-grid').waitFor(); };
  const detail = async () => { await query(); await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click(); await page.locator('.live-detail').waitFor(); await page.waitForFunction(() => document.querySelector('.page-scroll').scrollTop === 0); };
- const creator = async () => { await nav.getByRole('button', { name: '演员与创作者', exact: true }).click(); await page.getByRole('tab', { name: '创作者动态', exact: true }).click(); await page.locator('.subscription-name').filter({ hasText: '白石 澪' }).click(); };
- const updates = async () => { await nav.getByRole('button', { name: '更新', exact: true }).click(); await page.getByRole('tab', { name: '全部', exact: true }).click(); };
+ const creator = () => openProfile(page, '白石 澪', 'creators');
+ const updates = (scope = 'creators') => openUpdates(page, scope);
  await query();
  const inputRect = await page.getByRole('textbox', { name: '作品编号、标题或原站链接' }).boundingBox();
  const submitRect = await page.getByRole('button', { name: '查询资料', exact: true }).boundingBox();
@@ -60,20 +69,22 @@ try {
  assert.equal(await page.locator('.metadata-source-picker button[aria-pressed]').count(), 22);
  await check('00-source-picker');
  await page.getByRole('button', { name: '调整资料来源', exact: true }).click();
- await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
+ await openPeople(page, 'actors', 'manage');
  const archived = page.getByRole('checkbox', { name: '显示已取消关注的订阅', exact: true });
  await archived.check(); assert.equal(await archived.isChecked(), true);
  await archived.uncheck();
  await creator();
  const frequencyName = '白石 澪 · 私人作品与创作手记（布局检查样本） 检查频率';
+ await page.getByRole('button', { name: '关注设置', exact: true }).click();
  await chooseOption(page, frequencyName, '每 3 小时');
  assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions.find(sub => sub.provider === 'fanbox').intervalMinutes), 180);
  await chooseOption(page, frequencyName, '使用默认频率');
  assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions.find(sub => sub.provider === 'fanbox').intervalMinutes), null);
+ await page.getByRole('dialog').getByRole('button', { name: '完成', exact: true }).click();
  await updates();
- assert.equal(await page.locator('.real-feed-entry').count(), 4);
- await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry .feed-image-placeholder').length === 3);
- assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail').count(), 4);
+ assert.equal(await page.locator('.real-feed-entry').count(), 3);
+ await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry .feed-image-placeholder').length === 2);
+ assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail').count(), 3);
  assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail img').count(), 1);
  const title = page.getByRole('button', { name: '十月的拍摄手记：让光再停留一会儿（布局检查样本）', exact: true });
  await title.click();
@@ -101,8 +112,9 @@ try {
    await page.locator('[data-testid="live-query"]').waitFor();
    await page.waitForFunction(() => document.activeElement?.id === 'work-query');
    await nav.getByRole('button', { name: '作品收藏', exact: true }).click(); await check(`${width}-${theme}-library`);
-   await nav.getByRole('button', { name: '演员与创作者', exact: true }).click(); await check(`${width}-${theme}-following`);
+   await openPeople(page, 'actors', 'manage'); await check(`${width}-${theme}-following`);
    await creator(); await check(`${width}-${theme}-creator`);
+   await openPeople(page, 'creators');
    await page.getByRole('button', { name: '添加关注', exact: true }).first().click();
    const lookup = page.getByRole('textbox', { name: '主页、账号或演员名', exact: true });
    const lookupRect = await lookup.boundingBox();
@@ -120,9 +132,11 @@ try {
    }));
    assert.ok(itemLayout.every(item => item.height <= 160 && item.titleHeight <= 43 && item.summaryHeight <= 20), JSON.stringify(itemLayout));
    assert.ok(itemLayout.every(item => item.x === itemLayout[0].x && item.width === itemLayout[0].width), 'Every update reserves the same image column');
+   await updates('actors');
    const actorEntry = page.locator('.real-feed-entry').filter({ has: page.getByRole('button', { name: '查询 NECT-024 资料', exact: true }) });
    assert.equal(await actorEntry.locator('.feed-item-dates > span').first().innerText(), '发行 2026/10/23');
    await check(`${width}-${theme}-updates`);
+   await updates();
    await title.click();
    const dialog = page.getByRole('dialog');
    await page.waitForFunction(() => { const image = document.querySelector('.entry-detail-image img'); return image?.complete && image.naturalWidth > 0; });
@@ -139,6 +153,7 @@ try {
    await dialog.screenshot({ path: join(output, `${width}-${theme}-update-dialog.png`) });
    await page.keyboard.press('Escape');
    await page.waitForFunction(() => document.activeElement?.textContent?.includes('十月的拍摄手记'));
+   await updates('actors');
    await actorEntry.locator('.feed-item-title').click();
    await dialog.waitFor();
    assert.deepEqual(await dialog.locator('.entry-dialog-facts dt').allTextContents(), ['发行日期', '来源页面', '发现时间']);
@@ -175,7 +190,7 @@ try {
  assert.equal(restored.subscriptions.find(sub => sub.provider === 'fanbox').intervalMinutes, null);
  // Simulate successive background IPC snapshots in this isolated fixture profile.
  // The already open dialog must follow the live entry rather than its old snapshot.
- await updates();
+ await updates('actors');
  const evolving = page.locator('.real-feed-entry').filter({ has: page.getByRole('button', { name: '查询 NECT-024 资料', exact: true }) });
  await evolving.locator('.feed-item-title').click();
  const live = await page.evaluate(() => window.nectisse.subscriptions.getState());

@@ -1,56 +1,54 @@
-import { useSubscriptions, useDesktopActions } from '@/shared/desktop';
+import { Check, RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
+import { useDesktopActions, useSubscriptions } from '@/shared/desktop';
 import { EntryList } from '@/entities/update';
-import { useEffect, useState } from 'react';
-import { Check, RefreshCw, Users } from 'lucide-react';
+import { FOLLOW_IDS, SOURCE_LABELS, isPerformerProvider } from '@shared/sources';
+import type { PeopleScope, PeopleView } from '@/shared/lib/people-navigation';
 import { Button } from '@/shared/ui/button';
 import { toast } from '@/shared/ui/sonner';
-
-import { PageHeader, PageToolbar } from '@/shared/components/page-layout';
-
+import { PageToolbar } from '@/shared/components/page-layout';
+import { ContentTabs } from '@/shared/components/content-tabs';
 import { OptionSelect } from '@/shared/ui/select';
 import { Pagination } from '@/shared/ui/pagination';
 
-import { ContentTabs } from '@/shared/components/content-tabs';
-
-import { TaskProgress } from '@/entities/subscription';
-import { FOLLOW_IDS, SOURCE_LABELS, isPerformerProvider } from '@shared/sources';
-
-export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void; onAdd: () => void }): React.JSX.Element {
-	const state = useSubscriptions((state) => ({ entries: state.entries }));
+export function UpdatesPage({
+	scope,
+	view,
+	onViewChange,
+	onWork,
+	onPerson,
+}: {
+	scope: PeopleScope;
+	view: PeopleView['feed'];
+	onViewChange: (view: PeopleView['feed']) => void;
+	onWork: (code: string) => void;
+	onPerson: (id: string) => void;
+}): React.JSX.Element {
+	const scoped = useSubscriptions((state) => state.entries.filter((entry) => isPerformerProvider(entry.provider) === (scope === 'actors')));
 	const { invoke } = useDesktopActions();
-	const [filter, setFilter] = useState<'unread' | 'all'>('unread');
-	const [kind, setKind] = useState('all');
-	const [page, setPage] = useState(1);
+	const entries = scoped.filter((entry) => (view.filter === 'all' || !entry.read) && (view.source === 'all' || entry.provider === view.source));
 	const pageSize = 20;
-	const entries = state.entries.filter(
-		(entry) =>
-			(filter === 'all' || !entry.read) &&
-			(kind === 'all' ||
-				(kind === 'creators' && !isPerformerProvider(entry.provider)) ||
-				(kind === 'actors' && isPerformerProvider(entry.provider)) ||
-				entry.provider === kind),
-	);
 	const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
-	const currentPage = Math.min(page, pageCount);
+	const currentPage = Math.min(view.page, pageCount);
 	const start = (currentPage - 1) * pageSize;
 	const pageEntries = entries.slice(start, start + pageSize);
-
-	// Reading the last unread items can remove a page while its detail dialog remains open.
+	const title = scope === 'actors' ? '最近新作' : '最新动态';
+	const headingId = `${scope}-updates-heading`;
 	useEffect(() => {
-		setPage((value) => Math.min(value, pageCount));
-	}, [pageCount]);
-
-	const changePage = (value: number, focusHeading = true): void => {
-		setPage(Math.min(Math.max(value, 1), pageCount));
-		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
-		if (focusHeading) {
-			document.getElementById('page-heading')?.focus({ preventScroll: true });
+		if (view.page > pageCount) {
+			onViewChange({ ...view, page: pageCount });
 		}
+	}, [view, pageCount, onViewChange]);
+
+	const changePage = (page: number): void => {
+		onViewChange({ ...view, page });
+		const heading = document.getElementById(headingId);
+		heading?.focus({ preventScroll: true });
+		heading?.scrollIntoView({ block: 'start', behavior: 'instant' });
 	};
 
 	const readPage = async (): Promise<void> => {
 		const ids = pageEntries.filter((entry) => !entry.read).map((entry) => entry.id);
-
 		if (!ids.length) {
 			return;
 		}
@@ -58,23 +56,18 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 		if (reply.ok) {
 			toast.success(`已将本页 ${ids.length} 条更新标为已读`, { id: 'updates-read-page' });
 		} else {
-			toast.error(reply.message || '已读状态未能保存', { id: 'updates-read-page', duration: 8000 });
+			toast.error(reply.message || '已读状态未能保存', { id: 'updates-read-page' });
 		}
 	};
 
 	return (
-		<div className="page real-updates">
-			<PageHeader
-				title="更新"
-				description={`${state.entries.filter((entry) => !entry.read).length} 条未读，来自演员新作与创作者动态。`}
-				actions={
-					<Button variant="outline" size="sm" onClick={onAdd}>
-						<Users />
-						管理关注
-					</Button>
-				}
-			/>
-			<TaskProgress />
+		<section className="real-updates people-updates" aria-labelledby={headingId}>
+			<div className="people-section-heading">
+				<h2 id={headingId} tabIndex={-1}>
+					{title}
+				</h2>
+				<span>{scoped.filter((entry) => !entry.read).length} 条未读</span>
+			</div>
 			<PageToolbar
 				label="更新工具栏"
 				className="updates-toolbar"
@@ -84,12 +77,14 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 							variant="ghost"
 							size="sm"
 							disabled={
-								!state.entries.some(
+								!scoped.some(
 									(entry) => entry.thumbnailUrl && !entry.imageAsset && ['failed', 'cancelled', 'evicted', 'retry'].includes(entry.imageCache?.status ?? ''),
 								)
 							}
 							onClick={() => {
-								void invoke({ action: 'retry-images' });
+								for (const subscriptionId of new Set(scoped.filter((entry) => entry.thumbnailUrl && !entry.imageAsset).map((entry) => entry.subscriptionId))) {
+									void invoke({ action: 'retry-images', subscriptionId });
+								}
 							}}
 						>
 							<RefreshCw />
@@ -111,11 +106,8 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 			>
 				<ContentTabs
 					segmented
-					value={filter}
-					onChange={(value) => {
-						setFilter(value);
-						changePage(1, false);
-					}}
+					value={view.filter}
+					onChange={(filter) => onViewChange({ ...view, filter, page: 1 })}
 					label="阅读状态"
 					items={[
 						{ value: 'unread', label: '未读' },
@@ -124,22 +116,17 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 				/>
 				<OptionSelect
 					className="update-type"
-					aria-label="更新类型"
-					value={kind}
-					onValueChange={(value) => {
-						setKind(value);
-						changePage(1, false);
-					}}
+					aria-label="更新来源"
+					value={view.source}
+					onValueChange={(source) => onViewChange({ ...view, source, page: 1 })}
 					options={[
-						{ value: 'all', label: '所有类型' },
-						{ value: 'actors', label: '演员新作' },
-						{ value: 'creators', label: '创作者动态' },
-						...FOLLOW_IDS.map((id) => ({ value: id, label: SOURCE_LABELS[id] })),
+						{ value: 'all', label: '所有来源' },
+						...FOLLOW_IDS.filter((id) => isPerformerProvider(id) === (scope === 'actors')).map((id) => ({ value: id, label: SOURCE_LABELS[id] })),
 					]}
 				/>
 				<span className="page-toolbar-count">{entries.length} 条更新</span>
 			</PageToolbar>
-			<EntryList entries={pageEntries} onWork={onWork} />
+			<EntryList entries={pageEntries} onWork={onWork} onPerson={onPerson} />
 			{entries.length > 0 && (
 				<footer className="updates-pagination">
 					<p role="status" aria-live="polite">
@@ -148,6 +135,6 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 					<Pagination page={currentPage} pageCount={pageCount} onPageChange={changePage} />
 				</footer>
 			)}
-		</div>
+		</section>
 	);
 }

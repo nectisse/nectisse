@@ -1,3 +1,4 @@
+import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -25,7 +26,7 @@ export async function reviewSources(page, output) {
 	await chooseOption(page, '来源用途', '演员／创作者订阅');
 	assert.equal(await page.locator('.settings-source').count(), 8);
 	await page.screenshot({ path: join(output, '03-expanded-follow.png') });
-	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '演员与创作者', exact: true }).click();
+	await openPeople(page, 'actors', 'manage');
 	await page.getByRole('button', { name: '添加关注', exact: true }).first().click();
 	const provider = page.getByRole('combobox', { name: '关注来源', exact: true });
 	await provider.waitFor();
@@ -111,7 +112,7 @@ export async function reviewSourcesLive(page, output, proxy = '') {
 	const refresh = await page.evaluate(id => window.nectisse.subscriptions.command({ action: 'check', id }), subscriptions[0].id);
 	state = await idle(refresh.id); assert.equal(state.entries.length, entries);
 	await page.evaluate(id => window.nectisse.subscriptions.command({ action: 'read', ids: [id], read: true }), state.entries[0].id);
-	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '更新', exact: true }).click();
+	await openUpdates(page);
 	await page.screenshot({ path: join(output, '05-real-expanded-updates.png') });
 	const read = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).entries.filter(row => row.read).length);
 	const report = { checkedAt: new Date().toISOString(), metadata: work.records.map(row => ({ source: row.source, code: row.code, covers: row.covers.filter(row => row.asset).length })), dated: { code: dated.records[0].code, cover: !!dated.records[0].covers[0].asset }, subscriptions, entries, read };

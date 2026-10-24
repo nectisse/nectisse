@@ -1,3 +1,4 @@
+import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
@@ -42,7 +43,7 @@ try {
   await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width===1000?700:840), width);
   for (const theme of ['cream','night']) {
    await page.evaluate(async theme=>{const state=await window.nectisse.subscriptions.getState();await window.nectisse.subscriptions.command({action:'preferences',value:{...state.preferences,theme}});},theme);
-   await nav.getByRole('button',{name:'更新',exact:true}).click(); await page.getByRole('tab',{name:'全部',exact:true}).click();
+   await openUpdates(page);
    await page.waitForFunction(()=>document.querySelectorAll('.real-feed-entry').length===20);
    const before = await measure(); const rect = await page.locator('.page-scroll').boundingBox(); await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2); await page.mouse.wheel(0,1300);
    await page.waitForFunction(()=>document.querySelector('.page-scroll').scrollTop>0);
@@ -69,7 +70,7 @@ try {
    await page.mouse.wheel(0,4000);
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    stable(settings,await measure(),`${width}-${theme}-settings-bottom-boundary`);
-   await nav.getByRole('button',{name:'更新',exact:true}).click();
+   await openPeople(page, 'creators');
    await page.waitForFunction(()=>document.querySelector('.page-scroll').scrollTop===0);
   }
  }

@@ -1,3 +1,4 @@
+import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -42,22 +43,21 @@ try {
 		assert.ok(bounds.windowY === 0 && bounds.height <= bounds.viewport + 1 && !bounds.overflow, JSON.stringify(bounds));
 		reports.push({ page: number, count: expected.length, range: await page.locator('.updates-pagination > p').innerText() });
 	};
-	await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
-	assert.equal(await page.locator('#page-heading').innerText(), '演员与创作者');
-	const tabs = page.getByRole('tablist', { name: '订阅类型', exact: true });
-	assert.deepEqual(await tabs.getByRole('tab').allTextContents(), ['演员新作', '创作者动态']);
-	assert.equal(await tabs.getByRole('tab', { name: '演员新作', exact: true }).getAttribute('aria-selected'), 'true');
-	await page.locator('.page-heading-actions').getByRole('button', { name: '添加关注', exact: true }).click();
+	await openPeople(page, 'actors');
+	assert.equal(await page.locator('#page-heading').innerText(), '演员');
+	const tabs = page.getByRole('tablist', { name: '演员页面', exact: true });
+	assert.deepEqual(await tabs.getByRole('tab').allTextContents(), ['浏览', '管理']);
+	await page.getByRole('button', { name: '添加关注', exact: true }).click();
 	assert.match(await page.getByRole('combobox', { name: '关注来源', exact: true }).innerText(), /JavDB/);
 	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
-	await tabs.getByRole('tab', { name: '创作者动态', exact: true }).click();
-	await page.locator('.page-heading-actions').getByRole('button', { name: '添加关注', exact: true }).click();
+	await openPeople(page, 'creators');
+	await page.getByRole('button', { name: '添加关注', exact: true }).click();
 	assert.equal(await page.getByRole('combobox', { name: '关注来源', exact: true }).innerText(), 'FANBOX');
 	await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
-	await nav.getByRole('button', { name: '更新', exact: true }).click();
-	await page.getByRole('tab', { name: '全部', exact: true }).click();
-	const all = (await state()).entries;
-	assert.equal(all.length, 217);
+	await openUpdates(page);
+	const every = (await state()).entries;
+	const all = every.filter(entry => entry.provider === 'fanbox');
+	assert.equal(all.length, 216);
 	const seen = [];
 	for (let number = 1; number <= 11; number++) {
 		await assertPage(number, all.slice((number - 1) * 20, number * 20).map(entry => entry.id));
@@ -67,7 +67,7 @@ try {
 		if ([1, 6, 11].includes(number)) { await pagination.scrollIntoViewIfNeeded(); await page.screenshot({ path: join(output, `page-${number}.png`) }); }
 		if (number < 11) {
 			await pagination.getByRole('button', { name: '下一页', exact: true }).click();
-			await page.waitForFunction(() => document.querySelector('.page-scroll').scrollTop === 0 && document.activeElement?.id === 'page-heading');
+			await page.waitForFunction(() => document.activeElement?.id === 'creators-updates-heading');
 		}
 	}
 	assert.deepEqual(seen, all.map(entry => entry.id));
@@ -86,20 +86,21 @@ try {
 	await page.locator('.real-feed-entry .feed-item-title').first().click();
 	await page.getByRole('dialog').waitFor();
 	await page.getByRole('dialog').getByRole('heading', { name: detailTitle, exact: true }).waitFor();
-	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 16);
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 15);
 	await page.keyboard.press('Escape');
 	await page.getByRole('button', { name: '本页全部已读', exact: true }).click();
 	const remaining = unread.slice(0, 180);
 	await assertPage(9, remaining.slice(160).map(entry => entry.id));
 	// Changing the source/category resets to page 1. A read-only actor filter is empty.
-	await chooseOption(page, '更新类型', '演员新作');
+	await page.evaluate(ids => window.nectisse.subscriptions.command({ action: 'read', ids, read: true }), every.filter(entry => entry.provider === 'javdb').map(entry => entry.id));
+	await openUpdates(page, 'actors', false);
 	await page.getByRole('heading', { name: '还没有可显示的内容', exact: true }).waitFor();
 	assert.equal(await pagination.count(), 0);
 	await page.getByRole('tab', { name: '全部', exact: true }).click();
-	await assertPage(1, all.filter(entry => entry.provider === 'javdb').map(entry => entry.id));
+	await assertPage(1, every.filter(entry => entry.provider === 'javdb').map(entry => entry.id));
 	assert.equal(await pagination.getByRole('button', { name: '上一页', exact: true }).isDisabled(), true);
 	assert.equal(await pagination.getByRole('button', { name: '下一页', exact: true }).isDisabled(), true);
-	await chooseOption(page, '更新类型', '所有类型');
+	await openUpdates(page, 'creators');
 	await assertPage(1, all.slice(0, 20).map(entry => entry.id));
 	for (const width of [1000, 1600]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 840), width);
@@ -122,7 +123,7 @@ try {
 	assert.deepEqual((await state()).entries.filter(entry => entry.read).map(entry => entry.id), beforeReload);
 	assert.equal((await app.evaluate(() => globalThis.__requests)).length, 0);
 	assert.deepEqual(errors, []);
-	console.log(JSON.stringify({ checks: ['actor-first-labels-and-add-source', '217-entries-11-pages-no-duplicates', '20-per-page-17-on-last', 'previous-next-numbered-navigation', 'filter-resets-page', 'bulk-read-only-current-page', 'last-page-read-clamps-page', 'unread-dialog-survives-list-change', 'empty-and-single-page', 'read-state-persists', '32px-controls-both-themes-1000-and-1600', 'no-window-overflow', 'zero-network-requests'], reports, screenshots: output }, null, 2));
+	console.log(JSON.stringify({ checks: ['actor-first-labels-and-add-source', '216-creator-entries-11-pages-no-duplicates', '20-per-page-16-on-last', 'previous-next-numbered-navigation', 'filter-resets-page', 'bulk-read-only-current-page', 'last-page-read-clamps-page', 'unread-dialog-survives-list-change', 'empty-and-single-page', 'read-state-persists', '32px-controls-both-themes-1000-and-1600', 'no-window-overflow', 'zero-network-requests'], reports, screenshots: output }, null, 2));
 } finally {
 	await mkdir(output, { recursive: true });
 	await writeFile(join(output, 'verification.json'), JSON.stringify({ reports, errors }, null, 2));

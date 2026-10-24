@@ -160,27 +160,6 @@
 	flex-shrink: 0;
 	font-size: 12px;
 }
-.photo-avatar,
-.art-photo {
-	background-image: url('../../demo/assets/editorial-sheet.png');
-	background-size: 300% 200%;
-	background-position: 0 0;
-}
-.art-1 {
-	background-position: 50% 0;
-}
-.art-2 {
-	background-position: 100% 0;
-}
-.art-3 {
-	background-position: 0 100%;
-}
-.art-4 {
-	background-position: 50% 100%;
-}
-.art-5 {
-	background-position: 100% 100%;
-}
 .letter-avatar.mauve {
 	background: #d8c4cb;
 	color: #6c4b5b;

@@ -1,3 +1,4 @@
+import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -251,7 +252,7 @@ export async function reviewSubscriptions(page, output) {
 			await delay(100);
 		} throw new Error('Follow task exceeded deadline');
 	};
-	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '演员与创作者', exact: true }).click();
+	await openPeople(page, 'actors', 'manage');
 	await page.getByRole('button', { name: '添加关注', exact: true }).first().click();
 	await chooseOption(page, '关注来源', 'FANBOX');
 	await page.getByRole('textbox', { name: '主页、账号或演员名', exact: true }).fill('https://ffxivinitiala.fanbox.cc/');
@@ -264,7 +265,7 @@ export async function reviewSubscriptions(page, output) {
 	const count = state.entries.length; const images = state.entries.filter(entry => entry.imageAsset).length; const subId = state.subscriptions[0].id; const oldTask = state.tasks[0].id;
 	await page.getByRole('button', { name: '检查更新', exact: true }).click();
 	state = await idle(oldTask); assert.equal(state.entries.length, count);
-	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '更新', exact: true }).click();
+	await openUpdates(page);
 	await page.getByRole('button', { name: '标为已读', exact: true }).first().click();
 	await page.screenshot({ path: join(output, '06-real-updates.png') });
 	state = await page.evaluate(() => window.nectisse.subscriptions.getState()); assert.equal(state.entries.filter(entry => entry.read).length, 1);

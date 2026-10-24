@@ -1,3 +1,4 @@
+import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -166,7 +167,7 @@ try {
 	await page.getByRole('tab', { name: '磁链搜索', exact: true }).click();
 	await page.getByRole('table', { name: 'Sukebei 磁链结果' }).waitFor();
 	assert.equal((await app.evaluate(() => globalThis.__magnetCalls)).at(-1).origin.kind, 'library');
-	await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
+	await openPeople(page, 'actors', 'manage');
 	assert.equal(await page.getByRole('tab', { name: '磁链搜索', exact: true }).count(), 0);
 	assert.deepEqual(errors, []);
 	assert.deepEqual(await app.evaluate(() => globalThis.__network), []);

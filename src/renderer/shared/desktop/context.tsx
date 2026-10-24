@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { DesktopBridge } from '@shared/protocol';
-import { createDesktopState, type DesktopState } from './desktop';
+import { createDesktopState, type DesktopState, type ImageUrl } from './desktop';
 
 const Context = createContext<DesktopState | null>(null);
 
-export function DesktopProvider({ bridge, children }: { bridge: DesktopBridge | undefined; children: ReactNode }): React.JSX.Element {
-	const [desktop] = useState(() => createDesktopState(bridge));
+export function DesktopProvider({ bridge, imageUrl, children }: { bridge: DesktopBridge | undefined; imageUrl?: ImageUrl; children: ReactNode }): React.JSX.Element {
+	const [desktop] = useState(() => createDesktopState(bridge, imageUrl));
 	useEffect(() => desktop.connect(), [desktop]);
 	return (
 		<Context.Provider value={desktop}>
