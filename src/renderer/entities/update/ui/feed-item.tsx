@@ -35,6 +35,7 @@ export function FeedItem({
 	onCode,
 	className,
 	itemId,
+	presentation = 'list',
 }: {
 	title: string;
 	accessibleTitle?: string;
@@ -45,7 +46,7 @@ export function FeedItem({
 	code?: string;
 	flags?: { label: string; warning?: boolean }[];
 	read: boolean;
-	image: ReactNode;
+	image?: ReactNode;
 	published: ReactNode;
 	discovered?: ReactNode;
 	onOpen: () => void;
@@ -54,12 +55,17 @@ export function FeedItem({
 	onCode?: () => void;
 	className?: string;
 	itemId?: string;
+	presentation?: 'list' | 'cards';
 }): React.JSX.Element {
+	const thumbnail = image && (
+		<Button variant="media" size="media" className="feed-item-thumbnail" onClick={onOpen} aria-label={`查看封面与内容：${accessibleTitle}`}>
+			{image}
+		</Button>
+	);
+
 	return (
 		<article className={cn('feed-item', read && 'is-read', className)} data-post-id={itemId} data-read={read}>
-			<Button variant="media" size="media" className="feed-item-thumbnail" onClick={onOpen} aria-label={`查看封面与内容：${accessibleTitle}`}>
-				{image}
-			</Button>
+			{presentation === 'list' && thumbnail}
 			<div className="feed-item-content">
 				<div className="feed-item-meta">
 					<span className="sr-only">{read ? '已读' : '未读'}</span>
@@ -91,6 +97,7 @@ export function FeedItem({
 					</Button>
 				</h2>
 				<p className="feed-item-summary">{summary}</p>
+				{presentation === 'cards' && thumbnail}
 				<div className="feed-item-footer">
 					<div className="feed-item-dates">
 						{code && (

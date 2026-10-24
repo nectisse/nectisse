@@ -25,6 +25,7 @@
 		"test:scroll": "node scripts/review-scroll.mjs",
 		"test:pagination": "node scripts/review-pagination.mjs",
 		"test:profile-pagination": "node scripts/review-profile-pagination.mjs",
+		"test:creator-profile": "node scripts/review-creator-profile.mjs",
 		"test:startup": "node scripts/review-startup.mjs",
 		"test:recovery": "node scripts/review-recovery.mjs",
 		"test:lifecycle": "node scripts/review-lifecycle.mjs",

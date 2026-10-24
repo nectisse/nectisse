@@ -1,6 +1,6 @@
 import { useMetadata, useLibrary, useSubscriptions, useDesktopActions, useSubscriptionStatus } from '@/shared/desktop';
 import { useEffect, useRef, useState } from 'react';
-import { Bookmark, Check, Database, LoaderCircle, Search, Settings2, Sparkles, Users, WifiOff } from 'lucide-react';
+import { Bookmark, Check, Database, LoaderCircle, Search, Settings2, UserRound, Users, WifiOff } from 'lucide-react';
 import type { RuntimeState } from '@shared/protocol';
 import type { FollowProvider } from '@shared/subscriptions';
 import { isPerformerProvider } from '@shared/sources';
@@ -8,32 +8,53 @@ import { Button } from '@/shared/ui/button';
 import { WorkspaceToolbar } from '@/app/ui/WorkspaceToolbar';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { MetadataWorkspace } from '@/features/work-query';
-import { VisualPrototype } from '@/demo';
-import { SettingsPage, type SettingsSection } from '@/features/settings';
+import { SettingsPage } from '@/features/settings';
 import { SubscriptionsPage, AddFollowDialog, type FollowDialogSeed } from '@/features/subscriptions';
 import { UpdatesPage } from '@/features/updates';
 import { IdentityAvatar } from '@/entities/subscription';
 import { LibraryPage, SaveWorkButton } from '@/features/library';
 
-type Page = 'query' | 'library' | 'creators' | 'updates' | 'settings';
+import type { PeopleScope, PeopleView } from '@/shared/lib/people-navigation';
+import type { Page, WorkspaceNavigation } from './workspace-navigation';
+
 const nav = [
 	{ page: 'query', label: '资料查询', icon: Search },
 	{ page: 'library', label: '作品收藏', icon: Bookmark },
-	{ page: 'creators', label: '演员与创作者', icon: Users },
-	{ page: 'updates', label: '更新', icon: Sparkles },
+	{ page: 'actors', label: '演员', icon: UserRound },
+	{ page: 'creators', label: '创作者', icon: Users },
 ] as const;
 
-export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeState; bridgeError: boolean; onRetry: () => void }): React.JSX.Element {
+export function Workspace({
+	runtime,
+	bridgeError,
+	onRetry,
+	navigation,
+	onNavigate,
+	onDemo,
+	onExitDemo,
+}: {
+	runtime: RuntimeState;
+	bridgeError: boolean;
+	onRetry: () => void;
+	navigation: WorkspaceNavigation;
+	onNavigate: (patch: Partial<WorkspaceNavigation>) => void;
+	onDemo: () => void;
+	onExitDemo?: () => void;
+}): React.JSX.Element {
 	const actions = useDesktopActions();
 	const { invoke, reloadSubscriptions: reload } = actions;
 	const libraryCount = useLibrary((state) => state.works.length);
 	const [librarySeed, setLibrarySeed] = useState<{ id: string; token: number }>();
-	const state = useSubscriptions((state) => ({ unread: state.entries.filter((entry) => !entry.read).length, notice: state.notice, theme: state.preferences.theme }));
+	const state = useSubscriptions((state) => ({ entries: state.entries, notice: state.notice, theme: state.preferences.theme }));
 	const { error, reading } = useSubscriptionStatus();
-	const [page, setPage] = useState<Page>('query');
-	const [demo, setDemo] = useState(false);
-	const [settingsSection, setSettingsSection] = useState<SettingsSection>('sources');
-	const [seed, setSeed] = useState<{ provider: FollowProvider; query: string; token: number; subscriptionId?: string }>();
+	const { page, settingsSection } = navigation;
+	const setPage = (page: Page): void => onNavigate({ page, scrollTop: 0 });
+	const setSettingsSection = (settingsSection: WorkspaceNavigation['settingsSection']): void => onNavigate({ settingsSection });
+	const updatePeople = (scope: PeopleScope, patch: Partial<PeopleView>): void => onNavigate({ [scope]: { ...navigation[scope], ...patch } });
+	const openPerson = (id: string, provider: FollowProvider): void => {
+		const scope = isPerformerProvider(provider) ? 'actors' : 'creators';
+		onNavigate({ page: scope, [scope]: { ...navigation[scope], selectedId: id, scrollTop: document.querySelector('.page-scroll')?.scrollTop ?? 0 } });
+	};
 	const [followSeed, setFollowSeed] = useState<FollowDialogSeed>();
 	const followTrigger = useRef<HTMLElement | null>(null);
 	const followSequence = useRef(0);
@@ -42,17 +63,15 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 
 	useEffect(() => {
 		const open = (): void => {
-			setDemo(false);
+			onExitDemo?.();
 			setPage('settings');
 		};
-
-		const unsubscribe = actions.onSettings(open);
 
 		const key = (event: KeyboardEvent): void => {
 			if ((event.metaKey || event.ctrlKey) && event.key === ',') {
 				event.preventDefault();
 				open();
-			} else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && !demo) {
+			} else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 				event.preventDefault();
 				setPage('query');
 				setWorkSeed({ query: '', token: Date.now() });
@@ -61,20 +80,19 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 
 		window.addEventListener('keydown', key);
 		return () => {
-			unsubscribe?.();
 			window.removeEventListener('keydown', key);
 		};
-	}, [demo, actions]);
+	}, [actions, onExitDemo, onNavigate]);
 
 	useEffect(() => {
-		if (!demo) {
-			document.documentElement.dataset.theme = state.theme;
-			document.documentElement.classList.toggle('dark', state.theme === 'night');
-		}
-	}, [state.theme, demo]);
+		document.documentElement.dataset.theme = state.theme;
+		document.documentElement.classList.toggle('dark', state.theme === 'night');
+	}, [state.theme]);
 
+	const previousPage = useRef(page);
 	useEffect(() => {
-		document.querySelector('.page-scroll')?.scrollTo(0, 0);
+		document.querySelector('.page-scroll')?.scrollTo(0, previousPage.current === page ? navigation.scrollTop : 0);
+		previousPage.current = page;
 	}, [page]);
 
 	const add = (provider: FollowProvider = 'javdb', query = ''): void => {
@@ -93,8 +111,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 	};
 
 	const openSourceSettings = (): void => {
-		setSettingsSection('sources');
-		setPage('settings');
+		onNavigate({ page: 'settings', settingsSection: 'sources', scrollTop: 0 });
 	};
 
 	const retryServices = (): void => {
@@ -104,23 +121,9 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 		}
 	};
 
-	const followed = useSubscriptions((state) => state.subscriptions.filter((sub) => sub.following));
+	const subscriptions = useSubscriptions((state) => state.subscriptions);
+	const followed = subscriptions.filter((sub) => sub.following);
 	const active = useSubscriptions((state) => state.tasks.find((task) => ['running', 'cancelling'].includes(task.status)));
-	const exitDemo = (): void => {
-		setDemo(false);
-		requestAnimationFrame(() => document.getElementById('open-visual-demo')?.focus());
-	};
-
-	if (demo) {
-		return (
-			<>
-				<VisualPrototype runtime={runtime} bridgeError={bridgeError} onRetry={onRetry} />
-				<Button className="exit-visual-demo" onClick={exitDemo}>
-					返回真实工作区
-				</Button>
-			</>
-		);
-	}
 	return (
 		<div className="app-shell workspace-shell">
 			<aside className="sidebar">
@@ -144,24 +147,29 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 								if (item.page === 'library') {
 									setLibrarySeed(undefined);
 								}
-								setPage(item.page);
+								onNavigate({
+									page: item.page,
+									scrollTop: 0,
+									...(['actors', 'creators'].includes(item.page) ? { [item.page]: { ...navigation[item.page as PeopleScope], selectedId: '' } } : {}),
+								});
 							}}
 						>
 							<item.icon />
 							<span>{item.label}</span>
 							{item.page === 'query' ? (
 								<kbd>⌘ K</kbd>
-							) : item.page === 'updates' && state.unread > 0 ? (
+							) : (item.page === 'actors' || item.page === 'creators') &&
+							  state.entries.some((entry) => !entry.read && isPerformerProvider(entry.provider) === (item.page === 'actors')) ? (
 								<span className="unread-count" aria-hidden="true">
-									{state.unread}
+									{state.entries.filter((entry) => !entry.read && isPerformerProvider(entry.provider) === (item.page === 'actors')).length}
 								</span>
 							) : item.page === 'library' ? (
 								<span className="nav-count" aria-hidden="true">
 									{libraryCount}
 								</span>
-							) : item.page === 'creators' ? (
+							) : item.page === 'creators' || item.page === 'actors' ? (
 								<span className="nav-count" aria-hidden="true">
-									{followed.length}
+									{followed.filter((sub) => isPerformerProvider(sub.provider) === (item.page === 'actors')).length}
 								</span>
 							) : null}
 						</Button>
@@ -177,8 +185,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 							className="sidebar-author"
 							key={sub.id}
 							onClick={() => {
-								setPage('creators');
-								setSeed({ provider: sub.provider, query: '', token: Date.now(), subscriptionId: sub.id });
+								openPerson(sub.id, sub.provider);
 							}}
 						>
 							<IdentityAvatar identity={sub} small />
@@ -212,7 +219,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 			</aside>
 			<section className="app-main">
 				<WorkspaceToolbar
-					page={page === 'query' ? '资料查询' : page === 'library' ? '作品收藏' : page === 'creators' ? '演员与创作者' : page === 'updates' ? '更新' : '设置'}
+					page={page === 'query' ? '资料查询' : page === 'library' ? '作品收藏' : page === 'actors' ? '演员' : page === 'creators' ? '创作者' : '设置'}
 					theme={state.theme}
 					onQuery={() => {
 						setPage('query');
@@ -222,6 +229,14 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 						void actions.updatePreferences({ theme: state.theme === 'cream' ? 'night' : 'cream' });
 					}}
 				/>
+				{onExitDemo && (
+					<div className="demo-mode-bar" role="region" aria-label="示例数据模式">
+						<span>示例数据 · 本次操作不保存到资料库</span>
+						<Button variant="outline" size="sm" className="exit-visual-demo" onClick={onExitDemo}>
+							返回真实工作区
+						</Button>
+					</div>
+				)}
 				<main className="page-scroll">
 					{(runtime.phase === 'error' || bridgeError || error || state.notice) && (
 						<Alert className="environment-alert">
@@ -243,19 +258,48 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 						/>
 					) : page === 'library' ? (
 						<LibraryPage seed={librarySeed} onQuery={work} />
-					) : page === 'creators' ? (
-						<SubscriptionsPage seed={seed} onAdd={(provider) => add(provider)} onSettings={openSourceSettings} onWork={work} />
-					) : page === 'updates' ? (
-						<UpdatesPage onWork={work} onAdd={() => setPage('creators')} />
+					) : page === 'actors' || page === 'creators' ? (
+						<SubscriptionsPage
+							key={page}
+							scope={page}
+							view={navigation[page]}
+							onViewChange={(patch) => updatePeople(page, patch)}
+							onAdd={(provider) => add(provider)}
+							onSettings={openSourceSettings}
+							onWork={work}
+							updates={
+								<UpdatesPage
+									scope={page}
+									view={navigation[page].feed}
+									onViewChange={(feed) => updatePeople(page, { feed })}
+									onWork={work}
+									onPerson={(id) => {
+										const sub = subscriptions.find((sub) => sub.id === id);
+										if (sub) {
+											openPerson(id, sub.provider);
+										}
+									}}
+								/>
+							}
+						/>
 					) : (
-						<SettingsPage onAdd={(provider) => add(provider)} onDemo={() => setDemo(true)} section={settingsSection} onSectionChange={setSettingsSection} />
+						<SettingsPage
+							onAdd={(provider) => add(provider)}
+							onDemo={() => {
+								onNavigate({ scrollTop: document.querySelector('.page-scroll')?.scrollTop ?? 0 });
+								onDemo();
+							}}
+							section={settingsSection}
+							onSectionChange={setSettingsSection}
+							demo={!!onExitDemo}
+						/>
 					)}
 				</main>
 				<footer className="preview-footer">
-					<span>{active?.phase ?? (reading ? '正在读取设置与订阅' : '私人空间 · SQLite 本机存储')}</span>
+					<span>{active?.phase ?? (reading ? '正在读取设置与订阅' : onExitDemo ? '示例数据 · 仅保留在本次会话' : '私人空间 · SQLite 本机存储')}</span>
 					<div className="runtime-indicator" role="status" data-testid="runtime-status" data-phase={bridgeError ? 'error' : runtime.phase}>
 						{active || metadataTask || runtime.phase === 'starting' ? <LoaderCircle className="spin" /> : runtime.phase === 'ready' ? <Check /> : <WifiOff />}
-						<span>{metadataTask?.phase || (runtime.phase === 'ready' ? '采集环境就绪' : runtime.message)}</span>
+						<span>{metadataTask?.phase || (runtime.phase === 'ready' ? (onExitDemo ? '示例数据就绪' : '采集环境就绪') : runtime.message)}</span>
 						{active && (
 							<button
 								disabled={active.status === 'cancelling'}
@@ -285,8 +329,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 				onSettings={openSourceSettings}
 				onFollow={(id, provider) => {
 					setFollowSeed(undefined);
-					setPage('creators');
-					setSeed({ provider, query: '', token: Date.now(), subscriptionId: id });
+					openPerson(id, provider);
 				}}
 			/>
 		</div>

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Image } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import type { CoverCandidate } from '@shared/metadata';
+import { useDesktopActions } from '@/shared/desktop';
 
 export function CoverImage({ cover, className, scope = 'image' }: { cover?: CoverCandidate; className?: string; scope?: 'image' | 'library' }): React.JSX.Element {
+	const { imageUrl } = useDesktopActions();
 	const [broken, setBroken] = useState(false);
 
 	useEffect(() => setBroken(false), [cover?.asset?.sha256]);
@@ -11,7 +13,7 @@ export function CoverImage({ cover, className, scope = 'image' }: { cover?: Cove
 	return (
 		<div className={cn('live-cover', className)}>
 			{cover?.asset && !broken ? (
-				<img src={`nectisse-cover://${scope}/${cover.asset.sha256}`} alt="来源作品封面" loading="lazy" decoding="async" onError={() => setBroken(true)} />
+				<img src={imageUrl(scope, cover.asset.sha256)} alt="来源作品封面" loading="lazy" decoding="async" onError={() => setBroken(true)} />
 			) : (
 				<div className="live-cover-placeholder">
 					<Image strokeWidth={1.2} />

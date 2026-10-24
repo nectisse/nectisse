@@ -1,3 +1,4 @@
+import { openPeople } from './people.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -37,8 +38,8 @@ try {
 	const actor = initial.subscriptions.find(sub => sub.ref === 'nectisse-actor-fixture');
 	const entries = initial.entries.filter(entry => entry.subscriptionId === actor.id);
 	assert.equal(entries.length, 45);
-	await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
-	const openActor = async name => { await page.locator('.subscription-name').filter({ hasText: name }).click(); await page.getByRole('heading', { name: '演员主页', exact: true }).waitFor(); };
+	await openPeople(page, 'actors', 'manage');
+	const openActor = async name => { await page.locator('.subscription-name').filter({ hasText: name }).click(); await page.locator('.person-profile[data-kind="actors"]').waitFor(); };
 	await openActor('三宫 椿');
 	const pager = page.getByRole('navigation', { name: '已收录内容分页', exact: true });
 	const ids = () => page.locator('.collected-entries .real-feed-entry').evaluateAll(items => items.map(item => item.dataset.postId));
@@ -69,9 +70,9 @@ try {
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click(); await openActor('无作品演员');
 	await page.getByRole('heading', { name: '还没有可显示的内容', exact: true }).waitFor(); assert.equal(await pager.count(), 0);
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
-	await page.getByRole('tab', { name: '创作者动态', exact: true }).click(); await page.locator('.subscription-name').filter({ hasText: '白石 澪' }).click();
+	await openPeople(page, 'creators', 'manage'); await page.locator('.subscription-name').filter({ hasText: '白石 澪' }).click();
 	assert.equal(await page.locator('.real-feed-entry').count(), 3); assert.equal(await pager.getByRole('button', { name: '下一页', exact: true }).isDisabled(), true);
-	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await nav.getByRole('button', { name: '演员与创作者', exact: true }).click(); await openActor('三宫 椿');
+	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await openPeople(page, 'actors', 'manage'); await openActor('三宫 椿');
 	for (const width of [1000, 1600]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 840), width);
 		for (const theme of ['cream', 'night']) {

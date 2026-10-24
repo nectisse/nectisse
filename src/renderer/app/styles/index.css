@@ -20,6 +20,8 @@
 @import '../../features/library/ui/styles.css';
 @import '../../shared/components/empty-state.css';
 @import '../../shared/components/page-layout.css';
+@import '../../features/subscriptions/ui/creator-profile.css';
+@import '../../features/subscriptions/ui/people.css';
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {

@@ -35,6 +35,7 @@ function entryCategory(entry: FeedEntry): string {
 }
 
 function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {
+	const { imageUrl } = useDesktopActions();
 	const state = useSubscriptions((state) => ({ preferences: state.preferences, sources: state.sources, subscriptions: state.subscriptions }));
 	const sub = state.subscriptions.find((sub) => sub.id === entry.subscriptionId);
 	const status = entry.imageCache?.status;
@@ -58,14 +59,24 @@ function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {
 	return (
 		<FeedImage
 			key={`${entry.imageAsset?.sha256 ?? ''}:${status ?? ''}`}
-			src={entry.imageAsset ? `nectisse-cover://updates/${entry.imageAsset.sha256}` : undefined}
+			src={entry.imageAsset ? imageUrl('updates', entry.imageAsset.sha256) : undefined}
 			unavailable={unavailable}
 			alt={`${entry.title || '来源内容'} · 来源封面`}
 		/>
 	);
 }
 
-export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (code: string) => void }): React.JSX.Element {
+export function EntryList({
+	entries,
+	onWork,
+	presentation = 'list',
+	onPerson,
+}: {
+	entries: FeedEntry[];
+	onWork: (code: string) => void;
+	presentation?: 'list' | 'cards';
+	onPerson?: (id: string) => void;
+}): React.JSX.Element {
 	const state = useSubscriptions((state) => ({ entries: state.entries, subscriptions: state.subscriptions }));
 	const { invoke } = useDesktopActions();
 	const [selection, setSelected] = useState<FeedEntry>();
@@ -81,10 +92,11 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 	return (
 		<>
 			{entries.length ? (
-				<div className="feed-items real-feed-list">
+				<div className="feed-items real-feed-list" data-presentation={presentation}>
 					{entries.map((entry) => (
 						<FeedItem
 							key={entry.id}
+							presentation={presentation}
 							itemId={entry.id}
 							className="real-feed-entry"
 							title={feedTitle(entry)}
@@ -96,7 +108,7 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 							code={entry.code}
 							flags={[...(entry.initial ? [{ label: '初次收录' }] : []), ...(entry.restricted ? [{ label: '正文受限', warning: true }] : [])]}
 							read={entry.read}
-							image={<EntryImage entry={entry} />}
+							image={presentation === 'cards' && !entry.thumbnailUrl && !entry.imageAsset ? undefined : <EntryImage entry={entry} />}
 							published={
 								<span
 									title={
@@ -122,6 +134,7 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 								void invoke({ action: 'read', ids: [entry.id], read: !entry.read });
 							}}
 							onCode={() => onWork(entry.code)}
+							onAuthor={onPerson ? () => onPerson(entry.subscriptionId) : undefined}
 						/>
 					))}
 				</div>

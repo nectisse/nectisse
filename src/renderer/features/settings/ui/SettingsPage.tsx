@@ -44,11 +44,13 @@ export function SettingsPage({
 	onDemo,
 	section,
 	onSectionChange,
+	demo = false,
 }: {
 	onAdd: (provider?: FollowProvider) => void;
 	onDemo: () => void;
 	section: SettingsSection;
 	onSectionChange: (section: SettingsSection) => void;
+	demo?: boolean;
 }): React.JSX.Element {
 	const preferences = usePreferences((state) => state);
 	const { updatePreferences, magnets } = useDesktopActions();
@@ -336,13 +338,13 @@ export function SettingsPage({
 					</section>
 					<section className="settings-section settings-preferences" aria-labelledby="visual-demo-heading">
 						<div className="settings-section-heading">
-							<h2 id="visual-demo-heading">视觉演示</h2>
+							<h2 id="visual-demo-heading">示例数据</h2>
 						</div>
 						<Card className="settings-card gap-0 py-0 ring-0">
-							<SettingRow label="示例资料预览" description="浏览示例作品、创作者与更新，演示操作不保存到资料库。">
+							<SettingRow label="示例资料预览" description="使用同一套界面浏览示例作品、演员与创作者，演示操作仅保留在本次会话。">
 								<Button id="open-visual-demo" variant="outline" size="sm" onClick={onDemo}>
 									<Monitor aria-hidden="true" />
-									打开演示
+									{demo ? '重置演示' : '打开演示'}
 								</Button>
 							</SettingRow>
 						</Card>

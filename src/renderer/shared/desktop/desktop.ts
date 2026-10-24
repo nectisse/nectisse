@@ -7,7 +7,10 @@ import { createSnapshot, connectSnapshot } from './snapshot';
 import { SubscriptionStateReader } from './subscription-reader';
 import { createDesktopQueries } from './queries';
 
-export function createDesktopState(bridge: DesktopBridge | undefined) {
+export type ImageScope = 'image' | 'library' | 'updates' | 'avatars';
+export type ImageUrl = (scope: ImageScope, hash: string) => string;
+
+export function createDesktopState(bridge: DesktopBridge | undefined, imageUrl: ImageUrl = (scope, hash) => `nectisse-cover://${scope}/${hash}`) {
 	const subscriptions = createSnapshot<SubscriptionsState>({
 		revision: 0,
 		preferences: structuredClone(DEFAULT_PREFERENCES),
@@ -48,6 +51,7 @@ export function createDesktopState(bridge: DesktopBridge | undefined) {
 
 	const actions = {
 		invoke,
+		imageUrl,
 		updatePreferences: (patch: PreferencesPatch) => invoke({ action: 'preferences-patch', patch }),
 
 		reloadSubscriptions: async (): Promise<void> => {

@@ -30,7 +30,8 @@ async function inspect(fixtures: Record<string, string>) {
 
 test('架构检查允许应用组合、功能内部实现及通过公开入口共享实体和平台能力', async () => {
 	const report = await inspect({
-		'src/renderer/app/ui/Workspace.tsx': "import '../../features/library'; import '../../demo';",
+		'src/renderer/app/App.tsx': "import './ui/Workspace'; import '../demo';",
+		'src/renderer/app/ui/Workspace.tsx': "import '../../features/library';",
 		'src/renderer/demo/index.ts': "import '../entities/work'; export const demo = true;",
 		'src/renderer/features/library/index.ts': "export { page } from './ui/Page';",
 		'src/renderer/features/library/ui/Page.tsx': "import '../../../entities/work'; import '../../../shared/desktop'; export const page = true;",
