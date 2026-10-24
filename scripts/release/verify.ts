@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { command, unsignedMode } from './command';
 import { archiveNames, readReleaseMetadata, verifyReleaseFiles } from './metadata';
-import { verifyMacApp, verifyNotarizedApp } from './app';
+import { stapler, verifyMacApp, verifyNotarizedApp } from './app';
 
 if (process.platform !== 'darwin' || process.arch !== 'arm64') {
 	throw new Error('安装包验收需要 macOS arm64');
@@ -20,7 +20,7 @@ const [dmg, zip] = archiveNames(metadata.version).map((name) => join(metadata.di
 await command('hdiutil', ['verify', dmg]);
 if (!unsigned) {
 	await command('codesign', ['--verify', '--strict', dmg]);
-	await command('xcrun', ['stapler', 'validate', dmg]);
+	await stapler('validate', dmg);
 	await command('spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', dmg]);
 }
 const acceptance = join(root, '.build/release-acceptance');

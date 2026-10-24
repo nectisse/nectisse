@@ -1,6 +1,7 @@
 import { lstat, open, readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
-import { command } from './command';
+import { basename, join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import { command, ReleaseCommandError } from './command';
 
 const machMagic = new Set([0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe, 0xcafebabe, 0xbebafeca, 0xcafebabf, 0xbfbafeca]);
 
@@ -94,13 +95,37 @@ export async function verifyMacApp(app: string, root: string, version: string, t
 }
 
 export async function notarize(path: string, keychain: string): Promise<void> {
+	console.log(`正在提交并等待 Apple 公证：${basename(path)}`);
 	const { stdout } = await command('xcrun', ['notarytool', 'submit', path, '--keychain-profile', 'nectisse-notary', '--keychain', keychain, '--wait', '--output-format', 'json']);
-	if (JSON.parse(stdout).status !== 'Accepted') {
+	const result = JSON.parse(stdout);
+	if (result.status !== 'Accepted') {
 		throw new Error('Apple 公证未通过');
+	}
+	const id = typeof result.id === 'string' && /^[a-f\d-]{36}$/i.test(result.id) ? `，提交 ID：${result.id}` : '';
+	console.log(`Apple 公证通过：${basename(path)}${id}`);
+}
+
+export async function stapler(operation: 'staple' | 'validate', path: string, run: typeof command = command, wait: (ms: number) => Promise<unknown> = delay): Promise<void> {
+	const label = `${basename(path)} ${operation === 'staple' ? '附加公证票据' : '校验公证票据'}`;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		console.log(`${label}（第 ${attempt + 1} 次）`);
+		try {
+			await run('xcrun', ['stapler', operation, path], process.env, true);
+			console.log(`${label}通过`);
+			return;
+		} catch (error) {
+			// 仅重试票据服务/临时通信错误；无效、缺失或撤销的票据立即失败。
+			if (!(error instanceof ReleaseCommandError) || ![68, 69, 75].includes(error.exitCode ?? -1) || attempt === 2) {
+				throw error;
+			}
+			const backoff = (attempt + 1) * 10_000;
+			console.log(`票据服务暂未响应，${backoff / 1000} 秒后重试`);
+			await wait(backoff);
+		}
 	}
 }
 
 export async function verifyNotarizedApp(app: string): Promise<void> {
-	await command('xcrun', ['stapler', 'validate', app]);
+	await stapler('validate', app);
 	await command('spctl', ['--assess', '--verbose=2', '--type', 'execute', app]);
 }

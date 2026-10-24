@@ -6,8 +6,8 @@ import { basename, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { archiveNames, fileChecksum, readReleaseMetadata, verifyReleaseFiles } from '../scripts/release/metadata';
 import { GitHubReleases, publishRelease } from '../scripts/release/github';
-import { command, unsignedMode } from '../scripts/release/command';
-import { signingIdentity } from '../scripts/release/app';
+import { command, ReleaseCommandError, unsignedMode } from '../scripts/release/command';
+import { signingIdentity, stapler } from '../scripts/release/app';
 
 async function fixture(t: { after: (fn: () => Promise<void>) => void }) {
 	const root = await mkdtemp(join(tmpdir(), 'nectisse-release-test-'));
@@ -54,6 +54,63 @@ test('敏感命令失败不回显参数、环境和子进程输出', async () =>
 		assert.ok(!error.message.includes(secret) && !error.message.includes('console.error'));
 		return true;
 	});
+});
+
+test('发布命令保留退出码，便于区分票据服务暂时故障与无效票据', async () => {
+	await assert.rejects(command(process.execPath, ['-e', 'process.exit(68)']), (error: unknown) => {
+		assert.ok(error instanceof Error);
+		assert.equal((error as Error & { exitCode?: number }).exitCode, 68);
+		return true;
+	});
+});
+
+test('票据操作只重试临时服务错误，并保留附加和校验失败', async (t) => {
+	t.mock.method(console, 'log', () => {});
+	for (const operation of ['staple', 'validate'] as const) {
+		for (const exitCode of [68, 69, 75]) {
+			let calls = 0;
+			const waits: number[] = [];
+			await stapler(
+				operation,
+				'/release/Nectisse.dmg',
+				async (tool, args, _env, diagnostics) => {
+					assert.equal(tool, 'xcrun');
+					assert.deepEqual(args, ['stapler', operation, '/release/Nectisse.dmg']);
+					assert.equal(diagnostics, true);
+					if (++calls === 1) {
+						throw new ReleaseCommandError(tool, exitCode);
+					}
+					return { stdout: '', stderr: '' };
+				},
+				async (ms) => {
+					waits.push(ms);
+				},
+			);
+			assert.equal(calls, 2);
+			assert.deepEqual(waits, [10_000]);
+		}
+		for (const exitCode of [64, 65, 66, 68, 77]) {
+			let calls = 0;
+			const waits: number[] = [];
+			const failure = new ReleaseCommandError('xcrun', exitCode);
+			await assert.rejects(
+				stapler(
+					operation,
+					'/release/Nectisse.dmg',
+					async () => {
+						calls++;
+						throw failure;
+					},
+					async (ms) => {
+						waits.push(ms);
+					},
+				),
+				(error) => error === failure,
+			);
+			assert.equal(calls, exitCode === 68 ? 3 : 1);
+			assert.deepEqual(waits, exitCode === 68 ? [10_000, 20_000] : []);
+		}
+	}
 });
 
 test('发布标签、锁文件和说明必须对应同一版本；预览不能冒充标签发布', async (t) => {
