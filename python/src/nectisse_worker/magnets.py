@@ -20,7 +20,9 @@ def number(text):
     return int(value) if re.fullmatch(r'\d{1,12}', value) else None
 
 
-def parse_search(body: str, code: str) -> list[dict]:
+def parse_search(body: str, code: str, limit: int = 20) -> list[dict]:
+    if type(limit) is not int or limit not in {5, 10, 20}:
+        raise ValueError('invalid result limit')
     soup = BeautifulSoup(body, 'html.parser')
     table = soup.select_one('table.torrent-list')
     if table is None:
@@ -73,7 +75,7 @@ def parse_search(body: str, code: str) -> list[dict]:
             break
         seen.add(info_hash)
         items.append(item)
-        if len(items) == 20:
+        if len(items) == limit:
             break
     if malformed and not items:
         raise SourceFailure(FailureReason.PARSE_ERROR, '磁链结果表格结构不匹配，请稍后重试')
@@ -84,10 +86,13 @@ def job(params, cancelled, permit):
     code = str(params.get('code') or '').strip().upper()
     if not re.fullmatch(r'[A-Z0-9]+(?:[-_][A-Z0-9]+)*', code) or not 3 <= len(code) <= 64 or normalise_code_key(code).upper() != code:
         raise ValueError('invalid code')
-    session = NetworkSession('sukebei', CONFIG.domains, cancelled, permit, proxy=str(params.get('proxy') or ''), deadline_seconds=25)
+    limit = params.get('maxResults', 20)
+    if type(limit) is not int or limit not in {5, 10, 20} or params.get('transport', 'httpx') not in {'httpx', 'fingerprint'}:
+        raise ValueError('invalid magnet settings')
+    session = NetworkSession('sukebei', CONFIG.domains, cancelled, permit, proxy=str(params.get('proxy') or ''), deadline_seconds=25, fingerprint=params.get('transport') == 'fingerprint')
     try:
         page = session.get(ROOT + '/?' + urlencode({'f': '0', 'c': '0_0', 'q': code}), config=CONFIG)
-        items = parse_search(page.text, code)
+        items = parse_search(page.text, code, limit)
         if cancelled.is_set():
             raise Cancelled()
         return {'status': 'ready', 'items': items, 'message': '', 'reason': '', 'requests': session.count, 'retryAfter': 0}

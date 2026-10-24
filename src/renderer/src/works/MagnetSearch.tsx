@@ -1,14 +1,16 @@
+import { useDesktopActions } from '@/state';
 import { useEffect, useRef, useState } from 'react';
 import { Copy, ExternalLink, LoaderCircle, Magnet, RefreshCw, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/sonner';
-import type { MagnetOrigin, MagnetResult, MagnetRow } from '../../../shared/magnets';
+import type { MagnetOrigin, MagnetResult, MagnetRow } from '@shared/magnets';
 import './magnets.css';
 
 const count = (value: number | null): string => (value === null ? '—' : value.toLocaleString('zh-CN'));
 
 export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: string }): React.JSX.Element {
+	const actions = useDesktopActions();
 	const [result, setResult] = useState<MagnetResult>();
 	const [loading, setLoading] = useState(false);
 	const [cancelling, setCancelling] = useState(false);
@@ -24,7 +26,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 		setCancelling(false);
 		setError('');
 		try {
-			const next = await window.nectisse.magnets.search({ id, origin: originRef.current, force });
+			const next = await actions.magnets.search({ id, origin: originRef.current, force });
 			if (current.current === id) {
 				setResult(next);
 			}
@@ -53,7 +55,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 			const id = current.current;
 			current.current = '';
 			if (id) {
-				void window.nectisse.magnets.cancel(id).catch(() => {});
+				void actions.magnets.cancel(id).catch(() => {});
 			}
 		};
 	}, []);
@@ -65,7 +67,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 		}
 		setCancelling(true);
 		try {
-			await window.nectisse.magnets.cancel(id);
+			await actions.magnets.cancel(id);
 		} catch {
 			toast.error('取消请求未能送达，请重试。');
 			if (current.current === id) {
@@ -76,7 +78,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 
 	const action = async (row: MagnetRow, kind: 'copy' | 'open'): Promise<void> => {
 		try {
-			if (!(await window.nectisse.magnets.action({ code, id: row.id, action: kind }))) {
+			if (!(await actions.magnets.action({ code, id: row.id, action: kind }))) {
 				throw new Error('UNAVAILABLE');
 			}
 			if (kind === 'copy') {
@@ -201,7 +203,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 			)}
 			{!loading && ready && (
 				<p className="magnet-search-note">
-					按站点默认顺序显示首页，最多 20 条。{result.checkedAt && ` 查询于 ${new Date(result.checkedAt).toLocaleString('zh-CN', { hour12: false })}`}
+					按站点默认顺序显示首页，最多 {result.limit} 条。{result.checkedAt && ` 查询于 ${new Date(result.checkedAt).toLocaleString('zh-CN', { hour12: false })}`}
 				</p>
 			)}
 		</section>

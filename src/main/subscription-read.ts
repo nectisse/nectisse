@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { subscriptionsStateSchema, type SubscriptionsState } from '../shared/subscriptions';
-import { SUBSCRIPTION_READ, type SubscriptionReadCode } from '../shared/subscription-read';
+import { subscriptionsStateSchema, type SubscriptionsState } from '@shared/subscriptions';
+import { SUBSCRIPTION_READ, type SubscriptionReadCode } from '@shared/subscription-read';
 import { DiagnosticLog } from './diagnostics';
-import { subscriptionFailureContext, type SubscriptionFailureContext, type SubscriptionStage } from '../shared/subscription-failure';
+import { subscriptionFailureContext, type SubscriptionFailureContext, type SubscriptionStage } from '@shared/subscription-failure';
 
 class SnapshotPartError extends Error {
 	constructor(

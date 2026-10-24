@@ -1,9 +1,9 @@
 import { EventEmitter } from 'node:events';
 import { readFile } from 'node:fs/promises';
-import { healthSchema, type RuntimeState } from '../shared/protocol';
+import { healthSchema, type RuntimeState } from '@shared/protocol';
 import { PythonTaskHost, PythonWorkerError, TaskCancelledError } from './python-host';
 import type { PythonLayout } from './python-layout';
-import { runtimeDiagnosticCode } from '../shared/diagnostics';
+import { runtimeDiagnosticCode } from '@shared/diagnostics';
 
 export class RuntimeService extends EventEmitter {
 	private state: RuntimeState = { phase: 'starting', revision: 0, message: '正在准备采集环境' };
@@ -11,9 +11,12 @@ export class RuntimeService extends EventEmitter {
 	private disposed = false;
 	readonly host: PythonTaskHost;
 
-	constructor(private layout: PythonLayout) {
+	constructor(
+		private layout: PythonLayout,
+		browserProfile?: string,
+	) {
 		super();
-		this.host = new PythonTaskHost(layout);
+		this.host = new PythonTaskHost(layout, { browserProfile });
 	}
 
 	getState(): RuntimeState {

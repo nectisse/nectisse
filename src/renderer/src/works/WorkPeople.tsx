@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { MetadataRecord } from '../../../shared/metadata';
+import type { MetadataRecord } from '@shared/metadata';
 
 export function WorkPeople({ people, onPerformer }: { people: MetadataRecord['people']; onPerformer?: (name: string) => void }): React.JSX.Element {
 	return (

@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { SubscriptionStore, type Cipher } from '../src/main/subscription-store';
 import { SubscriptionsService } from '../src/main/subscriptions-service';
 import { TaskCancelledError, type PythonTaskHost } from '../src/main/python-host';
-import type { EntryInput, FollowCandidate, Subscription } from '../src/shared/subscriptions';
+import type { EntryInput, FollowCandidate, Subscription } from '@shared/subscriptions';
 
 const cipher: Cipher = {
 	available: () => false,

@@ -5,8 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { StatusBadge } from '../prototype/components';
-import { SOURCE_LABELS, type MetadataRecord } from '../../../shared/metadata';
+import { StatusBadge } from '@/components/status-badge';
+import { SOURCE_LABELS, type MetadataRecord } from '@shared/metadata';
 
 interface SnapshotField {
 	key: string;

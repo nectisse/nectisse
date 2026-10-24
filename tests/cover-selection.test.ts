@@ -7,9 +7,9 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { MetadataService } from '../src/main/metadata-service';
 import { PythonTaskHost } from '../src/main/python-host';
-import { coverSource, preferredCover, type CoverSource } from '../src/shared/cover-selection';
-import { metadataRecordSchema, type ImageAsset, type SourceId } from '../src/shared/metadata';
-import { DEFAULT_PREFERENCES, preferencesSchema } from '../src/shared/subscriptions';
+import { coverSource, preferredCover, type CoverSource } from '@shared/cover-selection';
+import { metadataRecordSchema, type ImageAsset, type SourceId } from '@shared/metadata';
+import { DEFAULT_PREFERENCES, preferencesSchema } from '@shared/subscriptions';
 import { SubscriptionStore } from '../src/main/subscription-store';
 
 const hash = (text: string): string => createHash('sha256').update(text).digest('hex');

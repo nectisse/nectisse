@@ -75,7 +75,7 @@
 		"domains": ["fc2ppv-db.com"],
 		"images": [],
 		"credential": "cookie",
-		"note": "FC2 资料与人物，不提供封面；浏览器验证流程尚未移植"
+		"note": "FC2 资料与人物，不提供封面；使用本机 Chrome / Edge 完成验证并复用独立会话"
 	},
 	"javten": {
 		"name": "JAVten",

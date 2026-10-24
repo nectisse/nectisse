@@ -8,8 +8,8 @@ import {
 	type DiagnosticEntry,
 	type DiagnosticEnvironment,
 	type DiagnosticReport,
-} from '../shared/diagnostics';
-import type { SubscriptionFailureContext } from '../shared/subscription-failure';
+} from '@shared/diagnostics';
+import type { SubscriptionFailureContext } from '@shared/subscription-failure';
 
 const MAX_FILE_BYTES = 8192;
 

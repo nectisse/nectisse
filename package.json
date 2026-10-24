@@ -16,7 +16,7 @@
 		"icons:build": "npm run python:prepare && node scripts/build-icons.mjs",
 		"python:lock": "uv pip compile python/pyproject.toml --python-version 3.14.9 --generate-hashes --only-binary :all: --output-file python/requirements.lock",
 		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-		"build": "npm run typecheck && electron-vite build",
+		"build": "npm run check:architecture && npm run typecheck && electron-vite build",
 		"test": "node --import tsx --test tests/*.test.ts",
 		"test:python": "node scripts/test-python.mjs",
 		"test:desktop": "node scripts/smoke-desktop.mjs",
@@ -31,7 +31,9 @@
 		"test:native-quit": "node scripts/review-native-quit.mjs",
 		"test:library": "node scripts/review-library.mjs",
 		"test:diagnostics": "node scripts/review-diagnostics.mjs",
-		"package:mac": "npm run icons:build && npm run build && node scripts/package-mac.mjs"
+		"package:mac": "npm run icons:build && npm run build && node scripts/package-mac.mjs",
+		"check:architecture": "node scripts/check-architecture.mjs",
+		"check": "npm run check:architecture && npm run typecheck && npm test"
 	},
 	"dependencies": {
 		"@base-ui/react": "1.9.0",
@@ -42,14 +44,17 @@
 		"react": "19.3.1",
 		"react-dom": "19.3.1",
 		"sonner": "2.0.8",
-		"zod": "4.6.7"
+		"zod": "4.6.7",
+		"zustand": "5.0.16"
 	},
 	"devDependencies": {
+		"@swc/core": "1.16.20",
 		"@tailwindcss/vite": "4.3.3",
 		"@types/node": "26.6.5",
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",
 		"@vitejs/plugin-react": "6.1.2",
+		"dependency-cruiser": "18.7.0",
 		"electron": "45.0.0",
 		"electron-builder": "26.15.3",
 		"electron-vite": "6.0.0",

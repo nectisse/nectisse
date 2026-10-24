@@ -1,12 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC, runtimeStateSchema, type DesktopBridge, type RuntimeState } from '../shared/protocol';
-import { METADATA_IPC, metadataStateSchema, queryReplySchema, queryRequestSchema } from '../shared/metadata';
-import { SUBS_IPC, subscriptionsStateSchema, followCommandSchema, commandReplySchema } from '../shared/subscriptions';
-import { SUBSCRIPTION_READ, subscriptionReadCode } from '../shared/subscription-read';
-import { DIAGNOSTICS_IPC, diagnosticCopyReplySchema, diagnosticReportSchema, diagnosticCodeSchema } from '../shared/diagnostics';
-import { subscriptionFailureContext, subscriptionFailureContextSchema } from '../shared/subscription-failure';
-import { LIBRARY_IPC, libraryStateSchema, savedWorkSchema, libraryIdSchema, librarySaveSchema, libraryReplySchema } from '../shared/library';
-import { MAGNET_IPC, magnetRequestSchema, magnetResultSchema, magnetActionSchema } from '../shared/magnets';
+import { IPC, runtimeStateSchema, type DesktopBridge, type RuntimeState } from '@shared/protocol';
+import { METADATA_IPC, metadataStateSchema, queryReplySchema, queryRequestSchema } from '@shared/metadata';
+import { SUBS_IPC, subscriptionsStateSchema, followCommandSchema, commandReplySchema } from '@shared/subscriptions';
+import { SUBSCRIPTION_READ, subscriptionReadCode } from '@shared/subscription-read';
+import { DIAGNOSTICS_IPC, diagnosticCopyReplySchema, diagnosticReportSchema, diagnosticCodeSchema } from '@shared/diagnostics';
+import { subscriptionFailureContext, subscriptionFailureContextSchema } from '@shared/subscription-failure';
+import { LIBRARY_IPC, libraryStateSchema, savedWorkSchema, libraryIdSchema, librarySaveSchema, libraryReplySchema } from '@shared/library';
+import { MAGNET_IPC, magnetRequestSchema, magnetResultSchema, magnetActionSchema } from '@shared/magnets';
 import { z } from 'zod';
 
 const bridge: DesktopBridge = {

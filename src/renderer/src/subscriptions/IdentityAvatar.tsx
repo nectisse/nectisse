@@ -1,5 +1,5 @@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import type { FollowCandidate } from '../../../shared/subscriptions';
+import type { FollowCandidate } from '@shared/subscriptions';
 
 export function IdentityAvatar({ identity, small = false }: { identity: Pick<FollowCandidate, 'name' | 'avatarAsset'>; small?: boolean }): React.JSX.Element {
 	return (

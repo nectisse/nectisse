@@ -8,7 +8,7 @@ import { MetadataService } from '../src/main/metadata-service';
 import { planQuery, codeFromCid } from '../src/main/metadata-input';
 import { proxyFromRules } from '../src/main/network-route';
 import { PythonTaskHost, TaskCancelledError } from '../src/main/python-host';
-import type { MetadataRecord, QueryTask, SourceId } from '../src/shared/metadata';
+import type { MetadataRecord, QueryTask, SourceId } from '@shared/metadata';
 
 type Run = PythonTaskHost['run'];
 const success = { status: 'success', reason: '', message: '完成', retryAfter: 0, requests: 1, warnings: [] };
@@ -86,7 +86,7 @@ test('系统代理解析支持 HTTP、HTTPS 与 SOCKS；不把带密码或无法
 });
 
 test('正式来源设置约束资料查询，关闭来源不能由查询请求重新启用', async (t) => {
-	const { DEFAULT_PREFERENCES } = await import('../src/shared/subscriptions');
+	const { DEFAULT_PREFERENCES } = await import('@shared/subscriptions');
 	let calls = 0;
 	const root = await directory(t);
 	const service = new MetadataService(

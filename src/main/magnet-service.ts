@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
-import { MAGNET_ROOT, magnetCodeSchema, magnetResultSchema, type MagnetResult, type MagnetRow } from '../shared/magnets';
+import { DEFAULT_MAGNET_SETTINGS, MAGNET_ROOT, magnetCodeSchema, magnetResultSchema, type MagnetResult, type MagnetRow, type MagnetSettings } from '@shared/magnets';
 import { PythonTaskHost, TaskCancelledError } from './python-host';
 import { sourceCooldownSeconds } from './source-policy';
 
@@ -18,7 +18,7 @@ export class MagnetService {
 	private state: Stored = { version: 1, results: [], nextRequestAt: 0, cooldownUntil: 0 };
 	private loading: Promise<void> | undefined;
 	private writes: Promise<void> = Promise.resolve();
-	private active: { id: string; controller: AbortController; completion?: Promise<MagnetResult> } | undefined;
+	private active: { id: string; controller: AbortController; settings: MagnetSettings; completion?: Promise<MagnetResult> } | undefined;
 	private cancelled = new Set<string>();
 	private disposed = false;
 	private directory: string;
@@ -28,6 +28,7 @@ export class MagnetService {
 		private host: Pick<PythonTaskHost, 'run'>,
 		private resolveProxy: (url: string) => Promise<string>,
 		private intervalMs = 2000,
+		private settings: () => MagnetSettings = () => DEFAULT_MAGNET_SETTINGS,
 	) {
 		this.directory = join(root, 'magnet-search');
 	}
@@ -37,12 +38,16 @@ export class MagnetService {
 		if (this.disposed || this.cancelled.has(id)) {
 			return this.result(code, 'cancelled', '查询已取消');
 		}
+		const settings = structuredClone(this.settings());
+		if (!settings.enabled) {
+			return this.result(code, 'failed', '磁链搜索已关闭，可在设置中启用', 'disabled');
+		}
 		if (this.active) {
 			return this.result(code, 'failed', '已有磁链查询正在进行，请稍后重试', 'busy');
 		}
-		const active = { id, controller: new AbortController(), completion: undefined as Promise<MagnetResult> | undefined };
+		const active = { id, controller: new AbortController(), settings, completion: undefined as Promise<MagnetResult> | undefined };
 		this.active = active;
-		active.completion = this.execute(code, force, active.controller.signal).finally(() => {
+		active.completion = this.execute(code, force, active.controller.signal, settings).finally(() => {
 			if (this.active === active) {
 				this.active = undefined;
 			}
@@ -62,8 +67,18 @@ export class MagnetService {
 	}
 
 	async row(code: string, id: string): Promise<MagnetRow | undefined> {
+		if (!this.settings().enabled) {
+			return undefined;
+		}
 		await this.load();
 		return this.state.results.find((result) => result.code === code && result.status === 'ready')?.items.find((item) => item.id === id);
+	}
+
+	async settingsChanged(): Promise<void> {
+		if (this.active && JSON.stringify(this.active.settings) !== JSON.stringify(this.settings())) {
+			this.active.controller.abort();
+			await this.active.completion?.catch(() => {});
+		}
 	}
 
 	async stop(): Promise<void> {
@@ -102,7 +117,7 @@ export class MagnetService {
 		await this.loading;
 	}
 
-	private async execute(code: string, force: boolean, signal: AbortSignal): Promise<MagnetResult> {
+	private async execute(code: string, force: boolean, signal: AbortSignal, settings: MagnetSettings): Promise<MagnetResult> {
 		let loaded = false;
 		let result = this.result(code, 'running', '正在查询 Sukebei');
 		try {
@@ -114,9 +129,9 @@ export class MagnetService {
 				!force &&
 				cached &&
 				(['cancelled', 'interrupted', 'failed'].includes(cached.status) ||
-					(cached.status === 'ready' && Date.now() - Date.parse(cached.checkedAt) < (cached.items.length ? 30 : 5) * 60_000))
+					(cached.status === 'ready' && cached.limit >= settings.maxResults && Date.now() - Date.parse(cached.checkedAt) < (cached.items.length ? 30 : 5) * 60_000))
 			) {
-				return structuredClone(cached);
+				return this.present(cached, settings);
 			}
 			if (this.state.cooldownUntil > Date.now()) {
 				return { ...this.result(code, 'failed', 'Sukebei 正在冷却，请稍后重试', 'cooldown'), retryAfter: Math.ceil((this.state.cooldownUntil - Date.now()) / 1000) };
@@ -127,7 +142,7 @@ export class MagnetService {
 			let requests = 0;
 			const payload = await this.host.run(
 				'magnet.search',
-				{ code, proxy },
+				{ code, proxy, maxResults: settings.maxResults, transport: settings.transport },
 				{
 					signal,
 					timeoutMs: 35_000,
@@ -147,7 +162,8 @@ export class MagnetService {
 				},
 			);
 			signal.throwIfAborted();
-			result = magnetResultSchema.parse({ ...(payload as object), code, checkedAt: new Date().toISOString() });
+			result = magnetResultSchema.parse({ ...(payload as object), code, limit: settings.maxResults, checkedAt: new Date().toISOString() });
+			result.items = result.items.slice(0, settings.maxResults);
 			if (!['ready', 'failed'].includes(result.status)) {
 				throw new Error('INVALID_MAGNET_RESULT');
 			}
@@ -173,11 +189,18 @@ export class MagnetService {
 				await this.save(result);
 			}
 		}
-		return structuredClone(result);
+		return this.present(result, settings);
+	}
+
+	private present(result: MagnetResult, settings: MagnetSettings): MagnetResult {
+		const copy = structuredClone(result);
+		copy.items = copy.items.slice(0, settings.maxResults);
+		copy.limit = settings.maxResults;
+		return copy;
 	}
 
 	private result(code: string, status: MagnetResult['status'], message: string, reason = ''): MagnetResult {
-		return { code, status, items: [], checkedAt: new Date().toISOString(), message, reason, requests: 0, retryAfter: 0 };
+		return { code, status, items: [], limit: this.settings().maxResults, checkedAt: new Date().toISOString(), message, reason, requests: 0, retryAfter: 0 };
 	}
 
 	private async route(signal: AbortSignal): Promise<string> {

@@ -1,0 +1,8 @@
+{
+  "peachVersion": "0.46.1",
+  "path": "src/peach/browser_transport.py",
+  "upstreamSha256": "1b46c5d56b4096fdd68442ac92f1b82134d18080f1b44efe39916d65b9e53530",
+  "extractedPath": "peach_core/browser_transport.py",
+  "extractedSha256": "a1a0d80883484c6fd7b574f7a2b08e47fff89fbd0df122263b7ed7290f5908d6",
+  "adaptation": "Add an optional CDP event handler; all site policy and lifecycle adaptation lives in nectisse_worker/browser_session.py. Reference browser transport tests imported with peach_core namespace."
+}

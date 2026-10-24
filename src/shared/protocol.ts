@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { MetadataBridge } from './metadata';
-import { runtimeDiagnosticCodeSchema } from './diagnostics';
+import type { MetadataBridge } from '@shared/metadata';
+import { runtimeDiagnosticCodeSchema } from '@shared/diagnostics';
 
 export const PROTOCOL_VERSION = 1 as const;
 export const MAX_PROTOCOL_BYTES = 64 * 1024;
@@ -37,10 +37,10 @@ export const runtimeStateSchema = z.object({
 export type RuntimeState = z.infer<typeof runtimeStateSchema>;
 
 export interface DesktopBridge {
-	magnets: import('./magnets').MagnetBridge;
-	library: import('./library').LibraryBridge;
-	diagnostics: import('./diagnostics').DiagnosticsBridge;
-	subscriptions: import('./subscriptions').SubscriptionsBridge;
+	magnets: import('@shared/magnets').MagnetBridge;
+	library: import('@shared/library').LibraryBridge;
+	diagnostics: import('@shared/diagnostics').DiagnosticsBridge;
+	subscriptions: import('@shared/subscriptions').SubscriptionsBridge;
 	metadata: MetadataBridge;
 	runtime: {
 		getState: () => Promise<RuntimeState>;

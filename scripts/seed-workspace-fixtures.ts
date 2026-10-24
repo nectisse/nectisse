@@ -2,8 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { SubscriptionStore } from '../src/main/subscription-store';
-import { DEFAULT_PREFERENCES } from '../src/shared/subscriptions';
-import { metadataRecordSchema, type ImageAsset, type QueryTask } from '../src/shared/metadata';
+import { DEFAULT_PREFERENCES } from '@shared/subscriptions';
+import { metadataRecordSchema, type ImageAsset, type QueryTask } from '@shared/metadata';
 
 const root = process.argv[2];
 if (!root || !basename(root).startsWith('nectisse-workspace-review-')) {

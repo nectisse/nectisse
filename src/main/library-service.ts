@@ -3,10 +3,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { metadataRecordSchema, type ImageAsset, type MetadataRecord } from '../shared/metadata';
-import { savedWorkSchema, summarizeWork, workSummarySchema, type LibraryState, type SavedWork } from '../shared/library';
-import { allowedSourceUrl } from '../shared/source-identity';
-import { preferredCover } from '../shared/cover-selection';
+import { metadataRecordSchema, type ImageAsset, type MetadataRecord } from '@shared/metadata';
+import { savedWorkSchema, summarizeWork, workSummarySchema, type LibraryState, type SavedWork } from '@shared/library';
+import { allowedSourceUrl } from '@shared/source-identity';
+import { preferredCover } from '@shared/cover-selection';
 
 type ReadImage = (hash: string) => Promise<{ bytes: Buffer; asset: ImageAsset } | undefined>;
 

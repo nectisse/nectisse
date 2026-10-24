@@ -19,7 +19,7 @@ export async function reviewSettings(page, application, output) {
 	const coverDialog = page.getByRole('dialog', { name: '封面选择', exact: true });
 	const metadataDialog = page.getByRole('dialog', { name: '资料采用顺序', exact: true });
 	assert.equal(await page.getByRole('textbox', { name: '搜索来源', exact: true }).count(), 0);
-	assert.equal(await page.locator('.settings-tabs > [data-slot="tabs-list"] > [data-slot="tabs-trigger"] > svg').count(), 4);
+	assert.equal(await page.locator('.settings-tabs > [data-slot="tabs-list"] > [data-slot="tabs-trigger"] > svg').count(), 5);
 	for (const trigger of [coverTrigger, metadataTrigger]) {
 		assert.equal(await trigger.locator('svg[aria-hidden="true"]').count(), 1);
 		assert.equal((await trigger.boundingBox()).height, 32);
@@ -105,7 +105,7 @@ export async function reviewSettings(page, application, output) {
 			}
 		}
 	}
-	await writeFile(join(output, 'source-preferences-verification.json'), JSON.stringify({ modalLayouts, icons: 4, noSearch: true, independentPriorities: true }, null, 2));
+	await writeFile(join(output, 'source-preferences-verification.json'), JSON.stringify({ modalLayouts, icons: 5, noSearch: true, independentPriorities: true }, null, 2));
 	await page.getByRole('button', { name: '切换到奶油档案', exact: true }).click();
 	await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1280, 840));
 	await page.reload();

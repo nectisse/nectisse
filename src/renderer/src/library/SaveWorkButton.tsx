@@ -1,7 +1,7 @@
+import { useDesktopActions, useLibrary, useLibraryStatus } from '@/state';
 import { useState } from 'react';
 import { BookmarkPlus, Check, LoaderCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLibrary } from './context';
 import { toast } from '@/components/ui/sonner';
 
 export function SaveWorkButton({
@@ -19,15 +19,16 @@ export function SaveWorkButton({
 	allowUpdate?: boolean;
 	onOpen?: (id: string) => void;
 }): React.JSX.Element {
-	const { state, loading, error } = useLibrary();
-	const existing = state.works.find((work) => work.code === code);
+	const actions = useDesktopActions();
+	const existing = useLibrary((state) => state.works.find((work) => work.code === code));
+	const { loading, error } = useLibraryStatus();
 	const [pending, setPending] = useState(false);
 
 	const save = async (replace = false): Promise<void> => {
 		setPending(true);
 		const id = `library-save:${code}`;
 		try {
-			const reply = await window.nectisse.library.save({ taskId, code, coverId, replace });
+			const reply = await actions.library.save({ taskId, code, coverId, replace });
 			if (reply.ok) {
 				toast.success(replace ? '收藏资料已更新' : '作品资料已收藏', { id, description: code });
 			} else {

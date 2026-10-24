@@ -29,6 +29,7 @@ export const METADATA_IDS = [
 ] as const;
 export const FOLLOW_IDS = ['fanbox', 'javdb', 'patreon', 'subscribestar', 'kemono', 'pawchive', 'coomer', 'rule34video'] as const;
 export type SourceId = (typeof METADATA_IDS)[number];
+export const DEFAULT_QUERY_SOURCES: SourceId[] = ['dmm', 'r18dev', 'fc2'];
 export type FollowProvider = (typeof FOLLOW_IDS)[number];
 export const ALL_IDS = Object.keys(catalog) as [AllSource, ...AllSource[]];
 export interface SourceSpec {

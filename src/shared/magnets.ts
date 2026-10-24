@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
 export const MAGNET_ROOT = 'https://sukebei.nyaa.si';
+export const magnetSettingsSchema = z.object({
+	enabled: z.boolean(),
+	maxResults: z.union([z.literal(5), z.literal(10), z.literal(20)]),
+	transport: z.enum(['httpx', 'fingerprint']),
+});
+export type MagnetSettings = z.infer<typeof magnetSettingsSchema>;
+export const DEFAULT_MAGNET_SETTINGS: MagnetSettings = { enabled: true, maxResults: 20, transport: 'httpx' };
 export const magnetCodeSchema = z
 	.string()
 	.trim()
@@ -32,6 +39,7 @@ export const magnetResultSchema = z.object({
 	code: magnetCodeSchema,
 	status: z.enum(['running', 'ready', 'failed', 'cancelled', 'interrupted']),
 	items: z.array(magnetRowSchema).max(20),
+	limit: z.union([z.literal(5), z.literal(10), z.literal(20)]).default(20),
 	checkedAt: z.string().datetime(),
 	message: z.string().max(300),
 	reason: z.string().max(64).default(''),

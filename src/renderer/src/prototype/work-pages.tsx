@@ -6,7 +6,7 @@ import { OptionSelect } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { ArrowLink, Avatar, CoverChoice, EmptyState, Poster, QuietButton, ReviewTabs, StatusBadge, WorkCard } from './components';
 import { creatorFor, dateLabel, sourceUrl, works, type Site, type Work } from './data';
-import { SourceProvenance, type SourceSnapshot } from '../metadata/SourceProvenance';
+import { SourceProvenance, type SourceSnapshot } from '@/works/SourceProvenance';
 
 export function QueryPage({
 	query,

@@ -16,7 +16,7 @@ export default {
 			to: 'python/app',
 			filter: ['bootstrap.py', 'src/**/*', 'vendor/**/*', '!**/__pycache__/**'],
 		},
-		{ from: 'THIRD_PARTY_NOTICES.md', to: 'THIRD_PARTY_NOTICES.md' },
+		{ from: 'docs/THIRD_PARTY_NOTICES.md', to: 'THIRD_PARTY_NOTICES.md' },
 	],
 	mac: {
 		icon: 'resources/icons/icon.icns',

@@ -1,33 +1,13 @@
+import type { RunOptions } from './worker-contracts';
+export type { RunOptions } from './worker-contracts';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { StringDecoder } from 'node:string_decoder';
-import { MAX_PROTOCOL_BYTES, PROTOCOL_VERSION, workerEventSchema } from '../shared/protocol';
+import { MAX_PROTOCOL_BYTES, PROTOCOL_VERSION, workerEventSchema } from '@shared/protocol';
 import type { PythonLayout } from './python-layout';
-
-export class TaskCancelledError extends Error {
-	constructor() {
-		super('任务已取消');
-		this.name = 'TaskCancelledError';
-	}
-}
-
-export class PythonWorkerError extends Error {
-	constructor(
-		readonly code: string,
-		message: string,
-	) {
-		super(message);
-		this.name = 'PythonWorkerError';
-	}
-}
-
-interface RunOptions {
-	signal?: AbortSignal;
-	timeoutMs?: number;
-	onReady?: (pid: number) => void;
-	onProgress?: (payload: Record<string, unknown>) => void;
-	onRequest?: (request: { source: string; host: string; sequence: number }) => Promise<void>;
-}
+import { BrowserSessionHost } from './browser-session-host';
+import { PythonWorkerError, TaskCancelledError } from './python-errors';
+export { PythonWorkerError, TaskCancelledError } from './python-errors';
 
 interface ActiveWorker {
 	child: ChildProcessWithoutNullStreams;
@@ -38,14 +18,15 @@ interface ActiveWorker {
 export class PythonTaskHost {
 	private active = new Map<string, ActiveWorker>();
 	private stopping = false;
+	private browser?: BrowserSessionHost;
 
 	constructor(
 		private layout: PythonLayout,
-		private options: { diagnostics?: boolean; graceMs?: number } = {},
+		private options: { diagnostics?: boolean; graceMs?: number; browserProfile?: string } = {},
 	) {}
 
 	get activePids(): number[] {
-		return [...this.active.values()].flatMap(({ child }) => (child.pid ? [child.pid] : []));
+		return [...this.active.values()].flatMap(({ child }) => (child.pid ? [child.pid] : [])).concat(this.browser?.activePids ?? []);
 	}
 
 	run(
@@ -65,6 +46,13 @@ export class PythonTaskHost {
 	): Promise<unknown> {
 		if (this.stopping || options.signal?.aborted) {
 			return Promise.reject(new TaskCancelledError());
+		}
+		if (method === 'metadata.query' && params.source === 'fc2ppvdb' && params.transport === 'browser') {
+			if (!this.options.browserProfile) {
+				return Promise.reject(new PythonWorkerError('BROWSER_PROFILE_MISSING', '浏览器会话目录未配置'));
+			}
+			this.browser ??= new BrowserSessionHost(this.layout, this.options.browserProfile, this.options.diagnostics);
+			return this.browser.run(params, options);
 		}
 		const id = randomUUID();
 		const args = ['-I', '-S', '-B', '-u', this.layout.bootstrap, '--dependencies', this.layout.dependencies];
@@ -250,5 +238,6 @@ export class PythonTaskHost {
 		const workers = [...this.active.values()];
 		workers.forEach((worker) => worker.cancel());
 		await Promise.allSettled(workers.map((worker) => worker.completion));
+		await this.browser?.shutdown();
 	}
 }

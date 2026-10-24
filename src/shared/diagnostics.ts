@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { SUBSCRIPTION_READ } from './subscription-read';
-import { describeSubscriptionFailure, subscriptionFailureContextSchema, type SubscriptionFailureContext } from './subscription-failure';
+import { SUBSCRIPTION_READ } from '@shared/subscription-read';
+import { describeSubscriptionFailure, subscriptionFailureContextSchema, type SubscriptionFailureContext } from '@shared/subscription-failure';
 
 export const DIAGNOSTIC_DESCRIPTIONS = {
 	[SUBSCRIPTION_READ.unavailable]: { title: '设置与订阅服务未响应', message: '读取本地状态时，应用通信或服务暂时未能响应。' },

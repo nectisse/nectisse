@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { PythonTaskHost, PythonWorkerError, TaskCancelledError } from '../src/main/python-host';
 import { pythonLayout } from '../src/main/python-layout';
 import { RuntimeService } from '../src/main/runtime';
-import { healthSchema } from '../src/shared/protocol';
+import { healthSchema } from '@shared/protocol';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const layout = pythonLayout(root, false);

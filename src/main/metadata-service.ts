@@ -19,13 +19,13 @@ import {
 	type MetadataRecord,
 	type ImageAsset,
 	type CoverCandidate,
-} from '../shared/metadata';
-import { coverRank, DEFAULT_COVER_PRIORITY, preferredCover } from '../shared/cover-selection';
+} from '@shared/metadata';
+import { coverRank, DEFAULT_COVER_PRIORITY, preferredCover } from '@shared/cover-selection';
 import { planQuery } from './metadata-input';
 import { PythonTaskHost, TaskCancelledError, PythonWorkerError } from './python-host';
-import type { Preferences } from '../shared/subscriptions';
-import { METADATA_IDS, SOURCE_BY_ID, type AllSource } from '../shared/sources';
-import { allowedSourceUrl } from '../shared/source-identity';
+import type { Preferences } from '@shared/preferences';
+import { METADATA_IDS, SOURCE_BY_ID, type AllSource } from '@shared/sources';
+import { allowedSourceUrl } from '@shared/source-identity';
 import { sourceCooldownSeconds, sourceTransport } from './source-policy';
 
 const policySchema = z.object({ nextRequestAt: z.number().nonnegative(), cooldownUntil: z.number().nonnegative() });
@@ -328,11 +328,16 @@ export class MetadataService extends EventEmitter {
 	private options(task: QueryTask, source: SourceId, signal: AbortSignal, ceiling = 24) {
 		return {
 			signal,
-			timeoutMs: 60_000,
+			timeoutMs: source === 'fc2ppvdb' && sourceTransport(source, this.preferences?.()) === 'browser' ? 240_000 : 60_000,
 
 			onRequest: (request: { source: string; host: string; sequence: number }) => this.permit(task, source, signal, request, ceiling),
 
 			onProgress: (payload: Record<string, unknown>) => {
+				if (payload.event === 'browser' && typeof payload.message === 'string' && this.running(task, signal)) {
+					task.phase = payload.message.slice(0, 250);
+					void this.commit().catch(() => {});
+					return;
+				}
 				if (payload.event !== 'record' || !this.running(task, signal)) {
 					return;
 				}
@@ -390,7 +395,11 @@ export class MetadataService extends EventEmitter {
 					}
 					const transport = sourceTransport(source, this.preferences?.());
 					const outcome = workerOutcomeSchema.parse(
-						await this.host.run('metadata.query', { ...task.plan, source, proxy, cookie: this.credential(source), transport }, this.options(task, source, signal)),
+						await this.host.run(
+							'metadata.query',
+							{ ...task.plan, source, proxy, cookie: transport === 'browser' ? '' : this.credential(source), transport },
+							this.options(task, source, signal),
+						),
 					);
 					if (!this.running(task, signal)) {
 						break;

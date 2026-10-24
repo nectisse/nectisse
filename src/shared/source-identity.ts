@@ -1,4 +1,4 @@
-import { SOURCE_BY_ID, type AllSource, type FollowProvider } from './sources';
+import { SOURCE_BY_ID, type AllSource, type FollowProvider } from '@shared/sources';
 
 /** 按用途使用登记的域名清单，查询与收藏共享同一套来源外链校验。 */
 export function allowedSourceUrl(source: AllSource, value: string, kind: 'page' | 'image' = 'page'): string | undefined {
