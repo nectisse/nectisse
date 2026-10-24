@@ -73,6 +73,12 @@ export function planQuery(value: QueryRequest): QueryPlan {
 			}
 			const sourceUrl = `https://javdb.com${url.pathname.replace(/\/$/, '')}`;
 			return { kind: 'url', query: sourceUrl, code: '', contentId: '', sourceUrl, sources: ['javdb'] };
+		} else if (host === 'javtao.com' && /^\/[a-z0-9][a-z0-9_-]{1,95}\/?$/.test(url.pathname) && /\d/.test(url.pathname)) {
+			if (!request.sources.includes('javtao')) {
+				throw new Error('请先选择 JavTao 来源');
+			}
+			const sourceUrl = `https://javtao.com${url.pathname.replace(/\/$/, '')}`;
+			return { kind: 'url', query: sourceUrl, code: '', contentId: '', sourceUrl, sources: ['javtao'] };
 		} else {
 			specific = METADATA_IDS.find((id) => SOURCE_BY_ID[id].domains.some((domain) => host === domain || host.endsWith(`.${domain}`)));
 			if (!specific) {

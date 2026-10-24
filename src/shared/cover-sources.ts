@@ -9,7 +9,7 @@ export const COVER_SOURCE_IDS = [
 	'duga',
 	'javbus',
 	'avbase',
-	'fc2cmadb',
+	'javtao',
 	'fc2ppvdb',
 	'javten',
 	'javarchive',

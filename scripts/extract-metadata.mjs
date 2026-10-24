@@ -10,7 +10,7 @@ const destination = join(root, 'python/vendor/peach_core');
 await mkdir(join(destination, 'sources'), { recursive: true });
 await writeFile(join(destination, 'sources/__init__.py'), '"""Peach 0.46.1 的独立资料来源；来源和修改见上级 UPSTREAM.md。"""\n');
 const records = [];
-for (const name of ['r18dev', 'dmm', 'fc2', 'onepondo', 'fc2cmadb', 'fc2ppvdb', 'javten', 'javarchive', 'avbase', 'javbus', 'javdb', 'seesaa']) {
+for (const name of ['r18dev', 'dmm', 'fc2', 'onepondo', 'fc2ppvdb', 'javten', 'javarchive', 'avbase', 'javbus', 'javdb', 'seesaa']) {
 	const relative = `sources/${name}.py`;
 	const original = await readFile(join(upstream, relative), 'utf8');
 	let adapted = original.replace('from ..metadata import identifies_code', 'from ..identity import identifies_code')

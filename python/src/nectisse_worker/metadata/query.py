@@ -12,10 +12,10 @@ from peach_core.cover_identity import is_cross_product_cover
 from peach_core.identity import identifies_code
 from peach_core.sources.dmm import SEARCH_QUERY
 from .dmm import VerifiedDmmSource
+from ..javtao import JavTaoSource
 from peach_core.sources.r18dev import R18DevSource
 from peach_core.sources.fc2 import Fc2Source, video_id
 from peach_core.sources.onepondo import OnePondoSource
-from peach_core.sources.fc2cmadb import Fc2cmadbSource
 from peach_core.sources.fc2ppvdb import Fc2ppvdbSource
 from peach_core.sources.javten import JavtenSource
 from peach_core.sources.javarchive import JavArchiveSource
@@ -29,7 +29,7 @@ from .base import FailureReason, Page, SourceFailure
 from .network import allowed_url
 from .cover_candidates import cover_urls
 
-SOURCES = {"r18dev": R18DevSource, "dmm": VerifiedDmmSource, "fc2": Fc2Source, '1pondo': OnePondoSource, 'fc2cmadb': Fc2cmadbSource, 'fc2ppvdb': Fc2ppvdbSource, 'javten': JavtenSource, 'javarchive': JavArchiveSource, 'avbase': AVBaseSource, 'javbus': JavBusSource, 'javdb': JavDBSource, **WIKI_SOURCES, **{key: (lambda key=key: AmaneSource(key)) for key in CLASSES}}
+SOURCES = {"r18dev": R18DevSource, "dmm": VerifiedDmmSource, "fc2": Fc2Source, '1pondo': OnePondoSource, 'fc2ppvdb': Fc2ppvdbSource, 'javten': JavtenSource, 'javarchive': JavArchiveSource, 'avbase': AVBaseSource, 'javbus': JavBusSource, 'javdb': JavDBSource, 'javtao': JavTaoSource, **WIKI_SOURCES, **{key: (lambda key=key: AmaneSource(key)) for key in CLASSES}}
 SAFE_CODE = re.compile(r"^(?:FC2-PPV-\d{5,}|(?:\d{1,3})?[A-Z]{2,8}-\d{2,5}|\d{6}[-_]\d{2,4})$")
 
 
@@ -62,10 +62,10 @@ def normalize(record) -> dict:
     if len(str(extra.get("description") or "")) > 4000:
         warnings.append("简介超过显示预算，已截取前 4000 个字符")
     content_id = text(extra.get("content_id"), 100)
-    people = [{"name": text(person.get("japanese_name"), 100), "role": "performer", "sourceIdentity": text(person.get("external_id") or person.get("dmm_id"), 100)} for person in record.performers if person.get("japanese_name")][:40]
+    people = [{"name": text(person.get("japanese_name"), 100), "role": "performer", "sourceIdentity": text(person.get("external_id") or person.get("dmm_id"), 1000 if record.source == 'javtao' else 100)} for person in record.performers if person.get("japanese_name")][:40]
     if record.director:
         people.append({"name": text(record.director, 100), "role": "director", "sourceIdentity": ""})
-    seller_source = record.source in {'fc2', 'fc2cmadb', 'fc2ppvdb', 'javten', 'javarchive'} and record.code.startswith('FC2')
+    seller_source = record.source in {'fc2', 'fc2ppvdb', 'javten', 'javarchive'} and record.code.startswith('FC2')
     seller = text(record.label, 200) if seller_source else ""
     if seller:
         people.append({"name": seller, "role": "seller", "sourceIdentity": text(extra.get("seller_url"), 1000)})
@@ -83,7 +83,7 @@ def normalize(record) -> dict:
     # 厂牌、平台、卖家与人物分别保留；FC2 不把平台名填成创作者或厂牌。
     result = {
         "id": hashlib.sha256(f"{record.source}:{content_id or record.code}".encode()).hexdigest(),
-        "source": record.source, "parser": record.provenance, "parserVersion": "peach-0.46.1/nectisse-1",
+        "source": record.source, "parser": record.provenance, "parserVersion": "nectisse-javtao-1" if record.source == 'javtao' else "peach-0.46.1/nectisse-1",
         "code": canonical_code, "contentId": content_id, "sourceUrl": record.source_url,
         "fetchedAt": datetime.now(timezone.utc).isoformat(), "title": title, "titleLanguage": language,
         "people": people, "studio": "" if seller_source else text(record.studio),
@@ -173,6 +173,10 @@ def query_url(params, adapter, session, on_record):
         if not SAFE_CODE.fullmatch(shown):
             raise SourceFailure(FailureReason.PARSE_ERROR, '作品链接未返回可核对的编号')
         record = adapter.parse(page, shown)
+    elif source == 'javtao':
+        record = adapter.parse(page, '')
+        if not SAFE_CODE.fullmatch(record.code):
+            raise SourceFailure(FailureReason.UNSUPPORTED, 'JavTao 作品编号类型尚未支持')
     else:
         raise SourceFailure(FailureReason.UNSUPPORTED, '此来源请使用作品编号查询')
     result = normalize(record)

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { MagnetOrigin } from '@shared/magnets';
+import type { MagnetOrigin, MagnetSource } from '@shared/magnets';
 import { useDesktop } from './context';
 
-export function useMagnetSearch(origin: MagnetOrigin) {
+export function useMagnetSearch(origin: MagnetOrigin, source: MagnetSource = 'sukebei') {
 	const { queries, actions } = useDesktop();
 	const mutation = useMutation(queries.searchMagnets());
 	const { mutateAsync } = mutation;
@@ -21,7 +21,7 @@ export function useMagnetSearch(origin: MagnetOrigin) {
 			current.current = id;
 			setCancelling(false);
 			try {
-				await mutateAsync({ id, origin: originRef.current, force });
+				await mutateAsync({ id, origin: originRef.current, source, force });
 			} catch {
 				// 读取错误由 mutation 提供；不自动重试采集任务。
 			} finally {
@@ -31,7 +31,7 @@ export function useMagnetSearch(origin: MagnetOrigin) {
 				}
 			}
 		},
-		[mutateAsync],
+		[mutateAsync, source],
 	);
 
 	useEffect(() => {
@@ -68,5 +68,5 @@ export function useMagnetSearch(origin: MagnetOrigin) {
 		}
 	};
 
-	return { result: mutation.data, loading: mutation.isPending, error: mutation.isError, cancelling, search, cancel };
+	return { result: mutation.data?.source === source ? mutation.data : undefined, loading: mutation.isPending, error: mutation.isError, cancelling, search, cancel };
 }

@@ -18,7 +18,7 @@ import { InitializationStep } from './platform/lifecycle';
 import { LibraryService } from './features/library';
 import { LIBRARY_IPC, libraryIdSchema, librarySaveSchema } from '@shared/library';
 import { MagnetService } from './features/magnets';
-import { DEFAULT_MAGNET_SETTINGS, MAGNET_IPC, magnetRequestSchema, magnetActionSchema } from '@shared/magnets';
+import { DEFAULT_MAGNET_SETTINGS, EXTERNAL_MAGNET_SITES, MAGNET_IPC, externalMagnetSiteSchema, magnetRequestSchema, magnetActionSchema } from '@shared/magnets';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const iconPath = app.isPackaged ? join(process.resourcesPath, 'icons/icon-macos.png') : join(app.getAppPath(), 'resources/icons/icon-macos.png');
@@ -199,7 +199,20 @@ if (!app.requestSingleInstanceLock()) {
 						? preferences.proxyUrl
 						: proxyFromRules(await session.defaultSession.resolveProxy(url));
 			};
-			magnets = new MagnetService(app.getPath('userData'), runtime.host, resolveProxy, 2000, () => subscriptionStore?.preferences().magnetSearch ?? DEFAULT_MAGNET_SETTINGS);
+			magnets = new MagnetService(app.getPath('userData'), runtime.host, resolveProxy, 2000, () => subscriptionStore?.preferences().magnetSearch ?? DEFAULT_MAGNET_SETTINGS, {
+				permit: async (source, signal) => {
+					if (source === 'javtao') {
+						await gate!.permit('javtao', signal);
+					}
+				},
+
+				cooldown: (source, seconds) => {
+					if (source === 'javtao' && subscriptionStore) {
+						const previous = subscriptionStore.source('javtao');
+						subscriptionStore.saveSource('javtao', { ...previous, cooldownUntil: Math.max(previous.cooldownUntil, Date.now() + seconds * 1000) });
+					}
+				},
+			});
 
 			let gate: SiteGate | undefined;
 			localReady = new InitializationStep(async () => {
@@ -466,6 +479,19 @@ if (!app.requestSingleInstanceLock()) {
 					await shell.openExternal(url);
 				}
 			});
+			ipcMain.handle(MAGNET_IPC.openSite, async (event, input: unknown) => {
+				trusted(event);
+				const site = EXTERNAL_MAGNET_SITES[externalMagnetSiteSchema.parse(input)];
+				if (quitting) {
+					return false;
+				}
+				try {
+					await shell.openExternal(site.url);
+					return true;
+				} catch {
+					return false;
+				}
+			});
 			ipcMain.handle(MAGNET_IPC.search, async (event, input: unknown) => {
 				trusted(event);
 				const request = magnetRequestSchema.parse(input);
@@ -485,7 +511,7 @@ if (!app.requestSingleInstanceLock()) {
 					throw new Error('WORK_NOT_FOUND');
 				}
 				await waitLocal();
-				return magnets!.search(request.id, code, request.force);
+				return magnets!.search(request.id, code, request.force, request.source);
 			});
 			ipcMain.handle(MAGNET_IPC.cancel, async (event, input: unknown) => {
 				trusted(event);
@@ -495,7 +521,7 @@ if (!app.requestSingleInstanceLock()) {
 				trusted(event);
 				await waitLocal();
 				const command = magnetActionSchema.parse(input);
-				const row = await magnets!.row(command.code, command.id);
+				const row = await magnets!.row(command.code, command.id, command.source);
 				if (!row || quitting) {
 					return false;
 				}

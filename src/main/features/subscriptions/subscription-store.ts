@@ -1,3 +1,4 @@
+import { isPerformerProvider } from '@shared/sources';
 import { DEFAULT_PREFERENCES, preferencesSchema, storedPreferencesSchema, type Preferences } from '@shared/preferences';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
@@ -153,7 +154,7 @@ export class SubscriptionStore {
 			: {
 					...candidate,
 					id: randomUUID(),
-					kind: candidate.provider === 'javdb' ? 'performer_releases' : 'creator_posts',
+					kind: isPerformerProvider(candidate.provider) ? 'performer_releases' : 'creator_posts',
 					following: true,
 					enabled: true,
 					autoPaused: false,

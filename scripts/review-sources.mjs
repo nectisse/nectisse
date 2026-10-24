@@ -11,6 +11,7 @@ export async function reviewSources(page, output) {
 	await page.getByRole('heading', { level: 1, name: '设置', exact: true }).waitFor();
 	await page.getByRole('tab', { name: '来源与账号', exact: true }).click();
 	assert.equal(await page.locator('.settings-source').count(), 31);
+	assert.equal(await page.getByRole('switch', { name: '启用 FC2CMADB', exact: true }).count(), 0);
 	await chooseOption(page, '来源用途', '作品资料与封面');
 	assert.equal(await page.locator('.settings-source').count(), 22);
 	const avbase = page.getByRole('switch', { name: '启用 AVBase', exact: true });
@@ -22,7 +23,7 @@ export async function reviewSources(page, output) {
 	for (const label of ['F95zone', 'SimpCity', 'DUGA']) assert.equal(await page.getByRole('switch', { name: `启用 ${label}`, exact: true }).isDisabled(), true);
 	await page.screenshot({ path: join(output, '02-explicit-boundaries.png') });
 	await chooseOption(page, '来源用途', '演员／创作者订阅');
-	assert.equal(await page.locator('.settings-source').count(), 7);
+	assert.equal(await page.locator('.settings-source').count(), 8);
 	await page.screenshot({ path: join(output, '03-expanded-follow.png') });
 	await page.getByRole('navigation', { name: '主导航', exact: true }).getByRole('button', { name: '演员与创作者', exact: true }).click();
 	await page.getByRole('button', { name: '添加关注', exact: true }).first().click();
@@ -30,7 +31,7 @@ export async function reviewSources(page, output) {
 	await provider.waitFor();
 	await provider.click();
 	await page.getByRole('option').first().waitFor();
-	assert.equal(await page.getByRole('option').count(), 7);
+	assert.equal(await page.getByRole('option').count(), 8);
 	assert.equal(await page.locator('[data-slot="select-content"] input').count(), 0);
 	await page.keyboard.press('Escape');
 	await chooseOption(page, '关注来源', 'Coomer');

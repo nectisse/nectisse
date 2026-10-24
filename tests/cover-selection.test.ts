@@ -152,6 +152,35 @@ test('默认 DMM 优先且同源选最大图；r18 重复 URL 不重复探测，
 	assert.equal(task.records.flatMap((record) => record.covers).filter((cover) => cover.probe).length, 2);
 });
 
+test('JavTao 保留为候补，DMM 可用时不多缓存；用户可明确改用 JavTao', async (t) => {
+	const pictures: Picture[] = [
+		{ source: 'dmm', url: dmm, width: 2184, height: 1468 },
+		{ source: 'javtao', url: 'https://javtao.com/upload-img/cover.webp', width: 3000, height: 2000 },
+	];
+	const { calls, preferences, query } = await fixture(t, pictures);
+	const first = await query();
+	assert.deepEqual(
+		first.records
+			.flatMap((record) => record.covers)
+			.filter((cover) => cover.asset)
+			.map((cover) => cover.source),
+		['dmm'],
+	);
+	assert.equal(
+		calls.some((call) => call.method !== 'metadata.query' && call.url?.includes('javtao.com')),
+		false,
+	);
+	preferences.coverPriority = ['javtao', 'dmm'];
+	const next = await query(false);
+	assert.deepEqual(
+		next.records
+			.flatMap((record) => record.covers)
+			.filter((cover) => cover.asset)
+			.map((cover) => cover.source),
+		['javtao'],
+	);
+});
+
 test('单个 CDN 网络失败仍尝试其他候选，限流则停止同来源的后续请求', async (t) => {
 	for (const reason of ['network', 'rate_limited']) {
 		const { query, calls } = await fixture(t, [

@@ -28,12 +28,39 @@ try {
 	const errors = [];
 	page.on('pageerror', (error) => errors.push(error.message));
 	await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor();
+	await app.evaluate(({ shell }) => {
+		globalThis.__externalMagnetSites = [];
+		globalThis.__externalMagnetSiteFails = false;
+		shell.openExternal = async (url) => {
+			if (globalThis.__externalMagnetSiteFails) {
+				throw new Error('Simulated browser failure');
+			}
+			globalThis.__externalMagnetSites.push(url);
+		};
+	});
 	await mkdir(output, { recursive: true });
 	const open = async () => {
 		await page.getByRole('button', { name: '设置', exact: true }).click();
 		await page.getByRole('tab', { name: '磁链搜索', exact: true }).click();
 	};
 	await open();
+	await page.getByRole('button', { name: '打开黑马磁力', exact: true }).click();
+	assert.deepEqual(await app.evaluate(() => globalThis.__externalMagnetSites), ['https://heimacili.org/']);
+	assert.equal(
+		await page.evaluate(async () => {
+			try {
+				await window.nectisse.magnets.openSite('https://example.com/');
+				return false;
+			} catch {
+				return true;
+			}
+		}),
+		true,
+	);
+	await app.evaluate(() => { globalThis.__externalMagnetSiteFails = true; });
+	await page.getByRole('button', { name: '打开黑马磁力', exact: true }).click();
+	await page.getByText('黑马磁力未能打开，请稍后重试。', { exact: true }).waitFor();
+	await app.evaluate(() => { globalThis.__externalMagnetSiteFails = false; });
 	assert.equal(await page.getByRole('tablist', { name: '设置分区' }).getByRole('tab').count(), 5);
 	for (const width of [1000, 1280]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, 840), width);
@@ -83,10 +110,14 @@ try {
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.magnetSearch.maxResults === 5);
 	await chooseOption(page, '磁链连接方式', '浏览器指纹');
 	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.magnetSearch.transport === 'fingerprint');
+	await chooseOption(page, '默认磁链来源', 'JavTao');
+	await page.waitForFunction(async () => (await window.nectisse.subscriptions.getState()).preferences.magnetSearch.source === 'javtao');
+	assert.equal(await page.getByRole('combobox', { name: '磁链连接方式', exact: true }).isDisabled(), true);
 	await page.reload();
 	await open();
 	assert.match(await page.getByRole('combobox', { name: '磁链结果上限', exact: true }).innerText(), /5 条/);
 	assert.match(await page.getByRole('combobox', { name: '磁链连接方式', exact: true }).innerText(), /浏览器指纹/);
+	assert.match(await page.getByRole('combobox', { name: '默认磁链来源', exact: true }).innerText(), /JavTao/);
 	await page.getByRole('switch', { name: '启用磁链搜索', exact: true }).click();
 	await page.waitForFunction(async () => !(await window.nectisse.subscriptions.getState()).preferences.magnetSearch.enabled);
 	assert.equal(await page.getByRole('combobox', { name: '磁链结果上限', exact: true }).isDisabled(), true);
@@ -109,7 +140,7 @@ try {
 	assert.deepEqual(errors, []);
 	await writeFile(
 		join(output, 'result.json'),
-		JSON.stringify({ layouts, persisted: true, disabledRejectsIpc: true, detailEntryFollowsSwitch: true, noRealNetworkRequests: true }, null, 2),
+		JSON.stringify({ layouts, persisted: true, disabledRejectsIpc: true, detailEntryFollowsSwitch: true, externalSiteOpensHomepageOnly: true, externalSiteRejectsUnknownUrls: true, browserFailureToast: true, noRealNetworkRequests: true }, null, 2),
 	);
 	console.log(JSON.stringify({ passed: true, output }));
 } finally {

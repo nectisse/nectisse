@@ -39,7 +39,7 @@ try {
 				if (data.mode === 'start-failure') return { ok: false, message: '查询未开始（隔离验证）' };
 				const state = await get(event), known = state.subscriptions.find(sub => sub.provider === value.provider);
 				const mode = data.mode, now = new Date().toISOString();
-				const candidates = Array.from({ length: 8 }, (_, index) => index === 0 && known ? { provider: known.provider, ref: known.ref, name: known.name, url: known.url, aliases: known.aliases, recordType: known.recordType, bio: known.bio, evidence: '本地候选' } : { provider: value.provider, ref: `Actor${index}`, name: index === 2 ? '長い名前／超长别名（布局检查）'.repeat(10) : `候选人物 ${index}`, url: `https://example.invalid/${value.provider}/Actor${index}`, aliases: ['别名一', 'Another identity name'], recordType: value.provider === 'javdb' ? '演员记录' : '创作者主页', bio: index === 2 ? '用于检查多行文字的简介。'.repeat(20) : '', evidence: '本地候选' });
+				const candidates = Array.from({ length: 8 }, (_, index) => index === 0 && known ? { provider: known.provider, ref: known.ref, name: known.name, url: known.url, aliases: known.aliases, recordType: known.recordType, bio: known.bio, evidence: '本地候选' } : { provider: value.provider, ref: value.provider === 'javtao' ? `actor-${index}` : `Actor${index}`, name: index === 2 ? '長い名前／超长别名（布局检查）'.repeat(10) : `候选人物 ${index}`, url: value.provider === 'javtao' ? `https://javtao.com/actress/actor-${index}` : `https://example.invalid/${value.provider}/Actor${index}`, aliases: ['别名一', 'Another identity name'], recordType: ['javdb', 'javtao'].includes(value.provider) ? '演员记录' : '创作者主页', bio: index === 2 ? '用于检查多行文字的简介。'.repeat(20) : '', evidence: '本地候选' });
 				const task = { id: randomUUID(), kind: 'lookup', provider: value.provider, status: 'running', phase: '正在查询身份（隔离验证）', startedAt: now, finishedAt: '', requests: 0, candidates: [], added: 0, reason: '', cancelRequestedAt: '' };
 				data.tasks.unshift(task); await publish(event);
 				if (mode !== 'slow' && mode !== 'late') data.timers.push(setTimeout(async () => { task.status = mode === 'failure' ? 'failed' : 'succeeded'; task.phase = mode === 'failure' ? '来源暂未响应（隔离验证）' : '已取得候选'; task.finishedAt = new Date().toISOString(); task.candidates = ['failure', 'empty'].includes(mode) ? [] : candidates; await publish(event); }, 60));
@@ -50,8 +50,14 @@ try {
 			if (value.action === 'follow' && data.tasks.some(task => task.id === value.taskId)) {
 				if (data.failFollow) return { ok: false, message: '关注未保存（隔离验证）' };
 				const candidate = data.tasks.find(task => task.id === value.taskId).candidates.find(candidate => candidate.ref === value.ref);
-				const sub = { ...candidate, id: randomUUID(), kind: candidate.provider === 'javdb' ? 'performer_releases' : 'creator_posts', following: true, enabled: true, autoPaused: false, intervalMinutes: null, createdAt: new Date().toISOString(), initialized: true, lastCheckedAt: '', nextCheckAt: '', lastError: '', coverage: '本地确认验证', failureCount: 0, unread: 0 };
-				data.db.prepare('INSERT INTO subscriptions VALUES(?,?,?,?)').run(sub.id, sub.provider, sub.ref, JSON.stringify(sub)); data.confirmed.push(sub.id); await publish(event); return { ok: true, id: sub.id };
+				const sub = { ...candidate, id: randomUUID(), kind: ['javdb', 'javtao'].includes(candidate.provider) ? 'performer_releases' : 'creator_posts', following: true, enabled: true, autoPaused: false, intervalMinutes: null, createdAt: new Date().toISOString(), initialized: true, lastCheckedAt: '', nextCheckAt: '', lastError: '', coverage: '本地确认验证', failureCount: 0, unread: 0 };
+				data.db.prepare('INSERT INTO subscriptions VALUES(?,?,?,?)').run(sub.id, sub.provider, sub.ref, JSON.stringify(sub));
+				if (sub.provider === 'javtao') {
+					const previous = JSON.parse(data.db.prepare("SELECT value FROM entries WHERE json_extract(value,'$.provider')='javdb' LIMIT 1").get().value);
+					const entry = { ...previous, id: randomUUID(), subscriptionId: sub.id, provider: sub.provider, name: sub.name, author: sub.name, externalId: '/nect-025', code: 'NECT-025', title: 'NECT-025 JavTao 隔离查询样本', summary: '', url: 'https://javtao.com/nect-025', read: false, firstSeenAt: sub.createdAt };
+					data.db.prepare('INSERT INTO entries VALUES(?,?,?,?,?)').run(entry.id, sub.id, entry.externalId, JSON.stringify(entry), entry.firstSeenAt);
+				}
+				data.confirmed.push(sub.id); await publish(event); return { ok: true, id: sub.id };
 			}
 			const reply = await command(event, value); await publish(event); return reply;
 		});
@@ -121,8 +127,34 @@ try {
 	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
 	await page.getByRole('button', { name: /订阅.*新作/ }).click(); await dialog.waitFor();
 	assert.equal(await page.locator('#page-heading').innerText(), '作品详情'); assert.match(await input.inputValue(), /白石/); await close();
+	await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'source-enabled', source: 'javtao', enabled: true }));
+	await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
+	await open(); await chooseOption(page, '关注来源', 'JavTao 演员');
+	assert.equal(await input.getAttribute('placeholder'), '输入演员名或 JavTao 演员主页');
+	await lookup('演员甲'); await dialog.locator('[data-follow-ref="actor-1"]').waitFor();
+	await dialog.locator('[data-follow-ref="actor-1"]').getByRole('button', { name: '确认关注', exact: true }).click();
+	await dialog.waitFor({ state: 'hidden' }); await page.getByRole('heading', { name: '演员主页', exact: true }).waitFor();
+	await page.getByRole('combobox', { name: '候选人物 1 检查频率', exact: true }).click();
+	await page.getByRole('option').first().waitFor();
+	assert.deepEqual(await page.getByRole('option').allTextContents(), ['使用默认频率', '每 6 小时', '每 12 小时', '每 1 天', '每 7 天']);
+	await page.keyboard.press('Escape');
 	await page.reload(); await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor();
-	assert.equal(await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions.length), 4);
+	const persisted = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions);
+	assert.equal(persisted.length, 5);
+	assert.equal(persisted.find(sub => sub.provider === 'javtao').kind, 'performer_releases');
+	assert.equal((await page.locator('.sidebar-author small').allTextContents()).filter(text => text === '演员新作').length, 3);
+	await nav.getByRole('button', { name: '更新', exact: true }).click();
+	await page.getByRole('tab', { name: '全部', exact: true }).click();
+	await chooseOption(page, '更新类型', '演员新作');
+	const javtaoEntry = page.locator('.real-feed-entry').filter({ hasText: 'JavTao 隔离查询样本' });
+	await javtaoEntry.waitFor();
+	assert.equal(await page.locator('.real-feed-entry').count(), 2);
+	await chooseOption(page, '更新类型', '创作者动态');
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 3);
+	assert.equal(await javtaoEntry.count(), 0);
+	await chooseOption(page, '更新类型', 'JavTao');
+	await javtaoEntry.waitFor();
+	assert.equal(await page.locator('.real-feed-entry').count(), 1);
 	assert.deepEqual(errors, []); assert.deepEqual(await app.evaluate(() => globalThis.__requests), []);
 	console.log(JSON.stringify({ checks: ['no-sidebar-add-or-quit-note', 'no-inline-form-or-background-layout-shift', 'dialog-initial-focus-escape-return', 'query-and-confirm-contained-in-modal', 'lookup-does-not-follow', 'known-identity-disabled', 'long-names-eight-candidates-scroll-in-dialog', 'both-themes-two-sizes-36px-form-controls', 'follow-failure-keeps-modal', 'success-opens-profile-and-persists', 'close-cancels-query-and-late-reply', 'empty-and-failure-states', 'settings-and-work-origin-preserved', 'zero-site-requests'], layouts, screenshots: output }, null, 2));
 } finally {

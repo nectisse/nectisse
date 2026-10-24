@@ -5,6 +5,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	flex-wrap: wrap;
 	gap: 12px;
 	margin-bottom: 12px;
 }
@@ -21,6 +22,15 @@
 .magnet-search-toolbar small {
 	color: var(--muted-foreground);
 	font-size: 10px;
+}
+.magnet-search-toolbar .magnet-search-actions {
+	gap: 8px;
+	margin-left: auto;
+}
+.magnet-search-toolbar .magnet-source-select {
+	width: 112px;
+	height: 32px;
+	font-size: 12px;
 }
 .magnet-table-frame {
 	width: 100%;

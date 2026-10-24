@@ -95,6 +95,7 @@ test('已移除来源的查询历史仍能读取，旧计划不再包含可派�
 	const path = join(root, 'metadata', 'state.json');
 	const saved = JSON.parse(await readFile(path, 'utf8'));
 	const legacy = { ...record(), source: 'kmib', sourceUrl: 'https://www.k-mib.com/video/video-view.php?idx=7' };
+	const retiredFc2 = { ...record(), id: 'b'.repeat(64), source: 'fc2cmadb', code: 'FC2-PPV-1234567', sourceUrl: 'https://fc2cmadb.com/article/1234567' };
 	const taskId = '00000000-0000-4000-8000-000000000001';
 	saved.activeId = taskId;
 	saved.tasks = [
@@ -102,11 +103,14 @@ test('已移除来源的查询历史仍能读取，旧计划不再包含可派�
 			id: taskId,
 			status: 'running',
 			phase: '',
-			plan: { kind: 'url', query: legacy.sourceUrl, code: '', contentId: '7', sourceUrl: legacy.sourceUrl, sources: ['kmib', 'fc2club'] },
-			coverPriority: ['kmib', 'dmm', 'fc2club'],
+			plan: { kind: 'url', query: legacy.sourceUrl, code: '', contentId: '7', sourceUrl: legacy.sourceUrl, sources: ['kmib', 'fc2club', 'fc2cmadb'] },
+			coverPriority: ['kmib', 'dmm', 'fc2club', 'fc2cmadb'],
 			startedAt: '',
-			records: [legacy],
-			outcomes: [{ ...success, source: 'kmib' }],
+			records: [legacy, retiredFc2],
+			outcomes: [
+				{ ...success, source: 'kmib' },
+				{ ...success, source: 'fc2cmadb' },
+			],
 			requests: 1,
 		},
 	];
@@ -131,7 +135,10 @@ test('已移除来源的查询历史仍能读取，旧计划不再包含可派�
 	assert.deepEqual(task.coverPriority, ['dmm']);
 	assert.equal(task.records[0]?.source, 'kmib');
 	assert.equal(task.outcomes[0]?.source, 'kmib');
+	assert.equal(task.records[1]?.source, 'fc2cmadb');
+	assert.equal(task.outcomes[1]?.source, 'fc2cmadb');
 	assert.equal(restored.sourceUrl(task.id, legacy.id), legacy.sourceUrl);
+	assert.equal(restored.sourceUrl(task.id, retiredFc2.id), retiredFc2.sourceUrl);
 	assert.equal(calls, 0);
 });
 

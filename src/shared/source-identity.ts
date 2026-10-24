@@ -1,6 +1,6 @@
 import { SOURCE_BY_ID, type AllSource, type FollowProvider, type LegacyMetadataSource } from '@shared/sources';
 
-const legacyPageDomains = { fc2club: ['fc2club.top'], kmib: ['k-mib.com'] };
+const legacyPageDomains: Record<LegacyMetadataSource, string[]> = { fc2club: ['fc2club.top'], kmib: ['k-mib.com'], fc2cmadb: ['fc2cmadb.com'] };
 
 /** 按用途使用登记的域名清单，查询与收藏共享同一套来源外链校验。 */
 export function allowedSourceUrl(source: AllSource | LegacyMetadataSource, value: string, kind: 'page' | 'image' = 'page'): string | undefined {
@@ -28,6 +28,9 @@ export function canonicalFollow(provider: FollowProvider, ref: string, handle?: 
 	}
 	if (provider === 'javdb') {
 		return /^[A-Za-z0-9]{1,16}$/.test(ref) ? `https://javdb.com/actors/${ref}` : invalid();
+	}
+	if (provider === 'javtao') {
+		return ref.length <= 128 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(ref) ? `https://javtao.com/actress/${ref}` : invalid();
 	}
 	if (provider === 'x') {
 		return /^[1-9]\d{0,24}$/.test(ref) && handle && /^[A-Za-z0-9_]{1,15}$/.test(handle) ? `https://x.com/${handle}` : invalid();
@@ -62,6 +65,10 @@ export function validFollowEntry(
 		}
 		if (provider === 'javdb') {
 			return url.hostname === 'javdb.com' && url.pathname === entry.externalId && /^\/v\/[A-Za-z0-9]+$/.test(entry.externalId);
+		}
+		if (provider === 'javtao') {
+			canonicalFollow(provider, ref);
+			return url.hostname === 'javtao.com' && url.pathname === entry.externalId && /^\/[a-z0-9][a-z0-9_-]{1,95}$/.test(entry.externalId) && /\d/.test(entry.externalId);
 		}
 		if (provider === 'x') {
 			return (

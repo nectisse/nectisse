@@ -6,7 +6,7 @@ import { SUBSCRIPTION_READ, subscriptionReadCode } from '@shared/subscription-re
 import { DIAGNOSTICS_IPC, diagnosticCopyReplySchema, diagnosticReportSchema, diagnosticCodeSchema } from '@shared/diagnostics';
 import { subscriptionFailureContext, subscriptionFailureContextSchema } from '@shared/subscription-failure';
 import { LIBRARY_IPC, libraryStateSchema, savedWorkSchema, libraryIdSchema, librarySaveSchema, libraryReplySchema } from '@shared/library';
-import { MAGNET_IPC, magnetRequestSchema, magnetResultSchema, magnetActionSchema } from '@shared/magnets';
+import { MAGNET_IPC, magnetRequestSchema, magnetResultSchema, magnetActionSchema, externalMagnetSiteSchema } from '@shared/magnets';
 import { z } from 'zod';
 
 const bridge: DesktopBridge = {
@@ -18,6 +18,8 @@ const bridge: DesktopBridge = {
 		},
 
 		action: async (input) => z.boolean().parse(await ipcRenderer.invoke(MAGNET_IPC.action, magnetActionSchema.parse(input))),
+
+		openSite: async (site) => z.boolean().parse(await ipcRenderer.invoke(MAGNET_IPC.openSite, externalMagnetSiteSchema.parse(site))),
 	},
 	library: {
 		getState: async () => libraryStateSchema.parse(await ipcRenderer.invoke(LIBRARY_IPC.get)),

@@ -15,6 +15,31 @@ Image.MAX_IMAGE_PIXELS = 40_000_000
 PROBE_BYTES = 64 * 1024
 
 
+def webp_size(body):
+    """Pillow 的 WebP 插件需要完整文件；尺寸比较只读 RIFF 图像头。"""
+    if body[:4] != b'RIFF' or body[8:12] != b'WEBP':
+        raise ValueError('not WebP')
+    offset = 12
+    while offset + 8 <= len(body):
+        kind = body[offset:offset + 4]
+        size = int.from_bytes(body[offset + 4:offset + 8], 'little')
+        start = offset + 8
+        header = body[start:start + min(size, 10)]
+        if kind == b'VP8X' and len(header) >= 10:
+            if header[0] & 2:
+                raise ValueError('animated WebP')
+            return int.from_bytes(header[4:7], 'little') + 1, int.from_bytes(header[7:10], 'little') + 1
+        if kind == b'VP8 ' and len(header) >= 10 and header[3:6] == b'\x9d\x01\x2a':
+            return int.from_bytes(header[6:8], 'little') & 0x3fff, int.from_bytes(header[8:10], 'little') & 0x3fff
+        if kind == b'VP8L' and len(header) >= 5 and header[0] == 0x2f:
+            bits = int.from_bytes(header[1:5], 'little')
+            if bits >> 29:
+                raise ValueError('unsupported WebP version')
+            return (bits & 0x3fff) + 1, ((bits >> 14) & 0x3fff) + 1
+        offset = start + size + (size & 1)
+    raise ValueError('incomplete WebP header')
+
+
 def probe_cover(params: dict, session) -> dict:
     source, code, url = params.get('source'), str(params.get('code') or ''), str(params.get('url') or '')
     if source not in SOURCES or is_cross_product_cover(code, url):
@@ -25,11 +50,16 @@ def probe_cover(params: dict, session) -> dict:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter('error', Image.DecompressionBombWarning)
-            with Image.open(io.BytesIO(response.body)) as image:
-                width, height = image.size
-                if image.format not in {'JPEG', 'PNG', 'WEBP'} or width < SMALL_MIN_WIDTH or height < 200 or width * height > Image.MAX_IMAGE_PIXELS:
-                    raise SourceFailure(FailureReason.PARSE_ERROR, '来源图片格式或尺寸不适合作为封面')
-                return {'width': width, 'height': height, 'format': image.format}
+            if response.body[:4] == b'RIFF' and response.body[8:12] == b'WEBP':
+                width, height = webp_size(response.body)
+                format = 'WEBP'
+            else:
+                with Image.open(io.BytesIO(response.body)) as image:
+                    width, height = image.size
+                    format = image.format
+            if format not in {'JPEG', 'PNG', 'WEBP'} or width < SMALL_MIN_WIDTH or height < 200 or width * height > Image.MAX_IMAGE_PIXELS:
+                raise SourceFailure(FailureReason.PARSE_ERROR, '来源图片格式或尺寸不适合作为封面')
+            return {'width': width, 'height': height, 'format': format}
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning):
         raise SourceFailure(FailureReason.PARSE_ERROR, '封面头部未提供可用尺寸') from None
 
