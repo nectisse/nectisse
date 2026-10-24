@@ -1,0 +1,34 @@
+{
+	"application": "Nectisse",
+	"pathBase": "Contents/Resources",
+	"components": [
+		{
+			"name": "Peach",
+			"version": "0.46.1",
+			"source": "https://github.com/peach-mitao/peach",
+			"license": "AGPL-3.0-or-later",
+			"licenseFile": "python/app/vendor/PEACH-LICENSE",
+			"provenance": "python/app/vendor/UPSTREAM.md"
+		},
+		{
+			"name": "amane",
+			"version": "0.20.0",
+			"source": "https://github.com/sqzw-x/amane",
+			"license": "GPL-3.0",
+			"licenseFile": "python/app/vendor/amane/LICENSE",
+			"provenance": "python/app/vendor/amane-extraction.json"
+		},
+		{
+			"name": "Folia",
+			"source": "https://github.com/chthollyphile/folia-major",
+			"license": "AGPL-3.0",
+			"licenseFile": "python/app/vendor/PEACH-LICENSE",
+			"provenance": "third-party/folia-wall.json"
+		},
+		{
+			"name": "Python runtime and native dependencies",
+			"provenance": "python/manifest.json",
+			"licenseDirectories": ["python/runtime", "python/dependencies"]
+		}
+	]
+}
