@@ -44,6 +44,7 @@ export async function reviewVisual(page, application, output) {
 	assert.equal(await page.locator('.person-profile').getAttribute('data-kind'), 'actors');
 	await page.getByRole('heading', { name: '最近新作', exact: true }).waitFor();
 	await page.getByRole('tab', { name: '未读', exact: true }).click();
+	await page.waitForFunction(() => document.querySelectorAll('.collected-entries .real-feed-entry').length === 2);
 	assert.equal(await page.locator('.collected-entries .real-feed-entry').count(), 2);
 	assert.equal(await page.getByRole('region', { name: '更新工具栏', exact: true }).getByRole('button', { name: '检查更新', exact: true }).count(), 1);
 	assert.equal(await page.locator('.creator-aside, .creator-banner').count(), 0);
@@ -61,6 +62,7 @@ export async function reviewVisual(page, application, output) {
 	await chooseOption(page, '灯里工作室 检查频率', '每 3 小时');
 	await settings.getByRole('button', { name: '完成', exact: true }).click();
 	await page.getByRole('tab', { name: '未读', exact: true }).click();
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 2);
 	assert.equal(await page.locator('.real-feed-entry').count(), 2);
 	await page.locator('.real-feed-entry').first().getByRole('button', { name: '标为已读', exact: true }).click();
 	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 1);

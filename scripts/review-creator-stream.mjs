@@ -109,6 +109,7 @@ try {
 	assert.deepEqual((await state()).entries.filter((entry) => entry.read).map((entry) => entry.id), readIds);
 	await verifyLayout();
 	await page.getByRole('tab', { name: '未读', exact: true }).click();
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 20);
 	const unread = all.filter((entry) => !readIds.includes(entry.id));
 	assert.deepEqual(await ids(), unread.slice(0, 20).map((entry) => entry.id));
 	const title = await page.locator('.feed-item-title').first().getAttribute('aria-label');
@@ -118,6 +119,7 @@ try {
 	await page.keyboard.press('Escape');
 	await verifyLayout();
 	await page.getByRole('tab', { name: '全部', exact: true }).click();
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 20);
 	assert.deepEqual(await ids(), all.slice(0, 20).map((entry) => entry.id));
 	while ((await ids()).length < all.length) {
 		const previous = (await ids()).length;
@@ -136,6 +138,7 @@ try {
 	await page.getByRole('heading', { name: '还没有可显示的内容', exact: true }).waitFor();
 	assert.equal(await page.locator('.creator-load-more').count(), 0);
 	await page.getByRole('tab', { name: '全部', exact: true }).click();
+	await page.waitForFunction((count) => document.querySelectorAll('.real-feed-entry').length === count, actorEntries.length);
 	assert.equal(await pager.count(), 1);
 	assert.deepEqual(await ids(), actorEntries.map((entry) => entry.id));
 

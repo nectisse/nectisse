@@ -83,7 +83,7 @@ def normalize(record) -> dict:
     # 厂牌、平台、卖家与人物分别保留；FC2 不把平台名填成创作者或厂牌。
     result = {
         "id": hashlib.sha256(f"{record.source}:{content_id or record.code}".encode()).hexdigest(),
-        "source": record.source, "parser": record.provenance, "parserVersion": "nectisse-javtao-1" if record.source == 'javtao' else "peach-0.46.1/nectisse-1",
+        "source": record.source, "parser": record.provenance, "parserVersion": 'nectisse-dmm-dvd-1' if record.provenance == 'dmm-dvd' else "nectisse-javtao-1" if record.source == 'javtao' else "peach-0.46.1/nectisse-1",
         "code": canonical_code, "contentId": content_id, "sourceUrl": record.source_url,
         "fetchedAt": datetime.now(timezone.utc).isoformat(), "title": title, "titleLanguage": language,
         "people": people, "studio": "" if seller_source else text(record.studio),
@@ -148,10 +148,7 @@ def query(params: dict, session, on_record=lambda record: None) -> list[dict]:
     if cid and not re.fullmatch(r"[a-zA-Z0-9_]{2,100}", cid):
         raise SourceFailure(FailureReason.UNSUPPORTED, "来源商品身份不正确")
     if source == "dmm" and cid:
-        item = adapter.identified(code, cid, session=session)
-        if item is None:
-            raise SourceFailure(FailureReason.NOT_FOUND, "未取得与请求身份一致的 DMM 商品")
-        record = adapter.parse(Page(adapter.content_url(cid), json.dumps(item).encode()), code)
+        record = adapter.query_content(code, cid, session=session)
     else:
         record = adapter.query(code, session=session)
     if not same_release_code(code, record.code):

@@ -9,10 +9,12 @@ export async function openUpdates(page, scope = 'creators', all = true) {
 	const person = await unread.count() ? unread : page.locator('.person-card').first();
 	await person.click();
 	await page.getByRole('tab', { name: all ? '全部' : '未读', exact: true }).click();
+	await page.waitForFunction(() => !!document.querySelector('.collected-entries') && !document.querySelector('.collection-read-status'));
 }
 
 export async function openProfile(page, name, scope = 'actors') {
 	await openPeople(page, scope, 'manage');
 	await page.locator('.subscription-name').filter({ hasText: name }).click();
 	await page.locator('.person-profile').waitFor();
+	await page.waitForFunction(() => !document.querySelector('.collection-read-status'));
 }

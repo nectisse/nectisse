@@ -66,12 +66,12 @@ try {
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click(); await openActor('另一位演员');
 	const other = initial.subscriptions.find(sub => sub.ref === 'second-actor');
 	await verify(1, initial.entries.filter(entry => entry.subscriptionId === other.id).slice(0, 20).map(entry => entry.id));
-	await pager.getByRole('button', { name: '下一页', exact: true }).click(); assert.equal(await ids().then(items => items.length), 1);
+	await pager.getByRole('button', { name: '下一页', exact: true }).click(); await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 1); assert.equal(await ids().then(items => items.length), 1);
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click(); await openActor('无作品演员');
 	await page.getByRole('heading', { name: '还没有可显示的内容', exact: true }).waitFor(); assert.equal(await pager.count(), 0);
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
 	await openPeople(page, 'creators', 'manage'); await page.locator('.subscription-name').filter({ hasText: '白石 澪' }).click();
-	assert.equal(await page.locator('.real-feed-entry').count(), 3); assert.equal(await pager.count(), 0); await page.getByText('已显示全部 3 条动态', { exact: true }).waitFor();
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 3); assert.equal(await page.locator('.real-feed-entry').count(), 3); assert.equal(await pager.count(), 0); await page.getByText('已显示全部 3 条动态', { exact: true }).waitFor();
 	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await openPeople(page, 'actors', 'manage'); await openActor('三宫 椿');
 	for (const width of [1000, 1600]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 840), width);

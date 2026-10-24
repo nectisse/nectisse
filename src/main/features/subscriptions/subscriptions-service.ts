@@ -3,7 +3,7 @@ import { mergePreferences } from '@shared/preferences';
 import { EventEmitter } from 'node:events';
 import { z } from 'zod';
 import type { PythonTaskHost } from '../../platform/python';
-import { SOURCES, followCommandSchema, type SubscriptionsState, type FollowCommand, type FollowProvider, type CommandReply } from '@shared/subscriptions';
+import { SOURCES, followCommandSchema, type SubscriptionsState, type FollowCommand, type FollowProvider, type CommandReply, type EntryPageRequest } from '@shared/subscriptions';
 import type { ImageAsset } from '@shared/metadata';
 import { ALL_IDS, SOURCE_BY_ID } from '@shared/sources';
 import { canonicalFollow as canonical, validFollowEntry } from '@shared/source-identity';
@@ -83,6 +83,10 @@ export class SubscriptionsService extends EventEmitter {
 
 	refresh(): void {
 		this.publish();
+	}
+
+	getEntries(request: EntryPageRequest) {
+		return this.store.entryPage(request);
 	}
 
 	async clearImageQueue(): Promise<void> {

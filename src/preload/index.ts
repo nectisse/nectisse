@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC, runtimeStateSchema, type DesktopBridge, type RuntimeState } from '@shared/protocol';
 import { METADATA_IPC, metadataStateSchema, queryReplySchema, queryRequestSchema } from '@shared/metadata';
-import { SUBS_IPC, subscriptionsStateSchema, followCommandSchema, commandReplySchema } from '@shared/subscriptions';
+import { SUBS_IPC, subscriptionsStateSchema, followCommandSchema, commandReplySchema, entryPageRequestSchema, entryPageSchema } from '@shared/subscriptions';
 import { SUBSCRIPTION_READ, subscriptionReadCode } from '@shared/subscription-read';
 import { DIAGNOSTICS_IPC, diagnosticCopyReplySchema, diagnosticReportSchema, diagnosticCodeSchema } from '@shared/diagnostics';
 import { subscriptionFailureContext, subscriptionFailureContextSchema } from '@shared/subscription-failure';
@@ -68,6 +68,7 @@ const bridge: DesktopBridge = {
 		},
 	},
 	subscriptions: {
+		getEntries: async (request) => entryPageSchema.parse(await ipcRenderer.invoke(SUBS_IPC.entries, entryPageRequestSchema.parse(request))),
 		retry: async () => {
 			try {
 				return subscriptionsStateSchema.parse(await ipcRenderer.invoke(SUBS_IPC.retry));

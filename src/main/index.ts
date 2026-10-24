@@ -14,7 +14,7 @@ import { METADATA_IPC, queryRequestSchema } from '@shared/metadata';
 import { isMetadataSource, LEGACY_METADATA_IDS } from '@shared/sources';
 import { z } from 'zod';
 import { SubscriptionStore, SubscriptionsService, readSubscriptionState } from './features/subscriptions';
-import { SUBS_IPC, followCommandSchema } from '@shared/subscriptions';
+import { SUBS_IPC, entryPageRequestSchema, followCommandSchema } from '@shared/subscriptions';
 import { DiagnosticLog } from './platform/diagnostics';
 import { DIAGNOSTICS_IPC, diagnosticCodeSchema, formatDiagnosticReport } from '@shared/diagnostics';
 import { SUBSCRIPTION_READ } from '@shared/subscription-read';
@@ -300,6 +300,12 @@ if (!app.requestSingleInstanceLock()) {
 				await waitLocal();
 				return readLocal();
 			});
+			ipcMain.handle(SUBS_IPC.entries, async (event, request: unknown) => {
+				trusted(event);
+				await waitLocal();
+				return subscriptions!.getEntries(entryPageRequestSchema.parse(request));
+			});
+
 			ipcMain.handle(SUBS_IPC.retry, async (event) => {
 				trusted(event);
 				const pending = waitLocal(true);

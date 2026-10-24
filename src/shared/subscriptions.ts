@@ -68,6 +68,8 @@ export const subscriptionSchema = candidateSchema.extend({
 	coverage: z.string(),
 	failureCount: z.number(),
 	unread: z.number().int(),
+	collected: z.number().int().nonnegative().optional(),
+	latestEntry: z.lazy(() => entrySchema).optional(),
 	xSyncState: xSyncStateSchema.optional(),
 });
 export type Subscription = z.infer<typeof subscriptionSchema>;
@@ -128,6 +130,21 @@ export const subscriptionsStateSchema = z.object({
 	notice: z.string(),
 });
 export type SubscriptionsState = z.infer<typeof subscriptionsStateSchema>;
+export const entryPageRequestSchema = z.object({
+	subscriptionId: z.string().uuid(),
+	page: z.number().int().min(1).max(1_000_000),
+	pageSize: z.number().int().min(1).max(100),
+	unread: z.boolean(),
+});
+export type EntryPageRequest = z.infer<typeof entryPageRequestSchema>;
+export const entryPageSchema = z.object({
+	entries: z.array(entrySchema).max(100),
+	total: z.number().int().nonnegative(),
+	page: z.number().int().positive(),
+	pageSize: z.number().int().positive(),
+	retryable: z.boolean().optional(),
+});
+export type EntryPage = z.infer<typeof entryPageSchema>;
 export const followCommandSchema = z.discriminatedUnion('action', [
 	z.object({ action: z.literal('query-sources'), sources: querySourcesSchema }),
 	z.object({ action: z.literal('preferences'), value: preferencesSchema }),
@@ -153,6 +170,7 @@ export type FollowCommand = z.infer<typeof followCommandSchema>;
 export const commandReplySchema = z.object({ ok: z.boolean(), message: z.string().optional(), id: z.string().optional() });
 export type CommandReply = z.infer<typeof commandReplySchema>;
 export interface SubscriptionsBridge {
+	getEntries?: (request: EntryPageRequest) => Promise<EntryPage>;
 	getState: () => Promise<SubscriptionsState>;
 	retry: () => Promise<SubscriptionsState>;
 	command: (command: FollowCommand) => Promise<CommandReply>;
@@ -160,6 +178,7 @@ export interface SubscriptionsBridge {
 	onSettings: (callback: () => void) => () => void;
 }
 export const SUBS_IPC = {
+	entries: 'nectisse:subscription-entries',
 	get: 'nectisse:subscriptions-get',
 	retry: 'nectisse:subscriptions-retry',
 	command: 'nectisse:subscriptions-command',

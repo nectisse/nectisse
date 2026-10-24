@@ -33,7 +33,6 @@ export function SubscriptionsPage({
 	onWork: (code: string) => void;
 }): React.JSX.Element {
 	const subscriptions = useSubscriptions((state) => state.subscriptions.filter((sub) => isPerformerProvider(sub.provider) === (scope === 'actors')));
-	const entries = useSubscriptions((state) => state.entries);
 	const sub = subscriptions.find((sub) => sub.id === view.selectedId);
 	const name = scope === 'actors' ? '演员' : '创作者';
 	const defaultProvider = scope === 'actors' ? 'javdb' : 'fanbox';
@@ -116,7 +115,7 @@ export function SubscriptionsPage({
 				view.tab === 'browse' ? (
 					<div className="people-grid">
 						{list.map((sub) => (
-							<PersonCard key={sub.id} subscription={sub} latest={entries.find((entry) => entry.subscriptionId === sub.id)} onOpen={() => open(sub.id)} />
+							<PersonCard key={sub.id} subscription={sub} onOpen={() => open(sub.id)} />
 						))}
 					</div>
 				) : (

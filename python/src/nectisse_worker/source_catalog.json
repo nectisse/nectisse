@@ -10,7 +10,7 @@
 		"domains": ["dmm.co.jp", "dmm.com"],
 		"images": ["dmm.co.jp", "dmm.com"],
 		"credential": "none",
-		"note": "编号、标题与资料封面；已有在线成功样本"
+		"note": "配信资料与封面；编号未命中时查询 DVD 通贩普通版，标题仅查配信目录"
 	},
 	"r18dev": {
 		"name": "r18.dev",
