@@ -22,14 +22,14 @@ test('设置合并保留嵌套字段和空选择，并校验合并后的代理�
 		...structuredClone(DEFAULT_PREFERENCES),
 		querySources: [],
 		sourceTransports: { javdb: 'fingerprint' as const },
-		magnetSearch: { enabled: false, maxResults: 5 as const, transport: 'fingerprint' as const },
+		magnetSearch: { enabled: false, source: 'javtao' as const, maxResults: 5 as const, transport: 'fingerprint' as const },
 	};
 	const next = mergePreferences(previous, { theme: 'night', sourceTransports: { dmm: 'httpx' }, magnetSearch: { maxResults: 10 } });
 	assert.equal(next.theme, 'night');
 	assert.deepEqual(next.querySources, []);
 	assert.deepEqual(next.sourceTransports, { javdb: 'fingerprint', dmm: 'httpx' });
-	assert.deepEqual(next.magnetSearch, { enabled: false, maxResults: 10, transport: 'fingerprint' });
-	assert.deepEqual(previous.magnetSearch, { enabled: false, maxResults: 5, transport: 'fingerprint' });
+	assert.deepEqual(next.magnetSearch, { enabled: false, source: 'javtao', maxResults: 10, transport: 'fingerprint' });
+	assert.deepEqual(previous.magnetSearch, { enabled: false, source: 'javtao', maxResults: 5, transport: 'fingerprint' });
 	assert.throws(() => mergePreferences(previous, { proxyMode: 'custom', proxyUrl: 'http://user:secret@localhost:7890' }));
 });
 
@@ -67,7 +67,7 @@ test('并发设置与来源开关在主进程合并最新值，退出重开后�
 		const saved = store.preferences();
 		assert.equal(saved.theme, 'night');
 		assert.deepEqual(saved.querySources, []);
-		assert.deepEqual(saved.magnetSearch, { enabled: true, maxResults: 5, transport: 'fingerprint' });
+		assert.deepEqual(saved.magnetSearch, { enabled: true, source: 'sukebei', maxResults: 5, transport: 'fingerprint' });
 		assert.equal(saved.sourceTransports.fc2ppvdb, 'browser');
 		assert.equal(saved.sourceTransports.javdb, 'fingerprint');
 		assert.ok(saved.enabledSources.includes('fanbox'));

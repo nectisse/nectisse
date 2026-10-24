@@ -2,6 +2,7 @@ import { useMetadata, useMetadataStatus, useSubscriptions, useDesktopActions, us
 import { firstAvailableField, WorkDetail, CoverImage } from '@/entities/work';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { preferredCover } from '@shared/cover-selection';
+import type { FollowProvider } from '@shared/subscriptions';
 import { Check, ChevronRight, Clock3, Info, LoaderCircle, RefreshCw, Search, Square, X } from 'lucide-react';
 import { MetadataSourcePicker } from './MetadataSourcePicker';
 import { Button } from '@/shared/ui/button';
@@ -70,7 +71,11 @@ export default function MetadataWorkspace({
 	seed,
 	onPerformer,
 	renderSaveAction,
-}: { seed?: { query: string; token: number }; onPerformer?: (name: string) => void; renderSaveAction?: (input: SaveActionInput) => ReactNode } = {}): React.JSX.Element {
+}: {
+	seed?: { query: string; token: number };
+	onPerformer?: (query: string, provider?: FollowProvider) => void;
+	renderSaveAction?: (input: SaveActionInput) => ReactNode;
+} = {}): React.JSX.Element {
 	const actions = useDesktopActions();
 	const subscriptionState = useSubscriptions((state) => ({ preferences: state.preferences }));
 	const { invoke } = useDesktopActions();

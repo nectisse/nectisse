@@ -55,7 +55,7 @@ test('来源目录只将已接入能力暴露为可派发，不把历史、标�
 test('资料路由尊重 FC2 家族与日期式编号的发行方证据，原生链接不保存额外 token', () => {
 	const base = { sources: [...METADATA_IDS], force: false };
 	const fc2 = planQuery({ ...base, query: 'FC2-PPV-1234567' });
-	assert.ok(fc2.sources.includes('fc2cmadb'));
+	assert.ok(fc2.sources.includes('javten'));
 	assert.equal(fc2.sources.includes('dmm'), false);
 	assert.throws(() => planQuery({ ...base, query: '092415_001' }), /发行方/);
 	assert.deepEqual(planQuery({ ...base, query: 'https://www.1pondo.tv/movies/092415_001/' }).sources, ['1pondo']);

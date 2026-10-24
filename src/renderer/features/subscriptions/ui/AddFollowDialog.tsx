@@ -10,7 +10,7 @@ import { toast } from '@/shared/ui/sonner';
 import { EmptyState } from '@/shared/components/empty-state';
 import { StatusBadge } from '@/shared/components/status-badge';
 import type { FollowProvider } from '@shared/subscriptions';
-import { FOLLOW_IDS, SOURCE_BY_ID, SOURCE_LABELS } from '@shared/sources';
+import { FOLLOW_IDS, SOURCE_BY_ID, SOURCE_LABELS, isPerformerProvider } from '@shared/sources';
 import { IdentityAvatar } from '@/entities/subscription';
 
 export interface FollowDialogSeed {
@@ -163,14 +163,14 @@ export function AddFollowDialog({
 									setTaskId('');
 									generation.current++;
 								}}
-								options={(['javdb', ...FOLLOW_IDS.filter((id) => id !== 'javdb')] as FollowProvider[]).map((id) => ({
+								options={([...FOLLOW_IDS.filter(isPerformerProvider), ...FOLLOW_IDS.filter((id) => !isPerformerProvider(id))] as FollowProvider[]).map((id) => ({
 									value: id,
-									label: `${SOURCE_LABELS[id]}${id === 'javdb' ? ' 演员' : ''}`,
+									label: `${SOURCE_LABELS[id]}${isPerformerProvider(id) ? ' 演员' : ''}`,
 								}))}
 							/>
 						</div>
 						<div className="follow-dialog-query">
-							<Label htmlFor="follow-query">{provider === 'javdb' ? '演员名或主页' : '创作者主页或账号'}</Label>
+							<Label htmlFor="follow-query">{isPerformerProvider(provider) ? '演员名或主页' : '创作者主页或账号'}</Label>
 							<Input
 								id="follow-query"
 								ref={input}
@@ -183,8 +183,8 @@ export function AddFollowDialog({
 									generation.current++;
 								}}
 								placeholder={
-									provider === 'javdb'
-										? '输入演员名或 JavDB 演员主页'
+									isPerformerProvider(provider)
+										? `输入演员名或 ${SOURCE_LABELS[provider]} 演员主页`
 										: provider === 'fanbox'
 											? '粘贴 FANBOX 主页或输入账号 id'
 											: provider === 'x'
@@ -280,7 +280,7 @@ export function AddFollowDialog({
 							description={
 								otherBusy
 									? '其他订阅任务正在进行，完成后可以查询。'
-									: provider === 'javdb'
+									: isPerformerProvider(provider)
 										? '输入演员名，核对站点身份后关注新作。'
 										: '填写创作者主页或站点账号，确认后收录动态。'
 							}

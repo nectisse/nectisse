@@ -22,11 +22,6 @@
       "extractedSha256": "da2824341174154b787d1036390c3081e2401c93f6a20d982db309d4ef24b9f1"
     },
     {
-      "path": "sources/fc2cmadb.py",
-      "upstreamSha256": "3967634ba1f769adfe489ecb2253a2a8049eaeca13c092871b55beb978a28cc4",
-      "extractedSha256": "cc9d983c8bb742efd39e55c954c5e0840fc68a14731611095e3ddd1688021108"
-    },
-    {
       "path": "sources/fc2ppvdb.py",
       "upstreamSha256": "de60b64e371c5fe852deb57926b5d92078f8717430a7aeaa4e08eac2f5b85223",
       "extractedSha256": "1174a1967f9b048461d1cd2170959b88bb98ac81e847f2de8ec536fbf43c5ed3"

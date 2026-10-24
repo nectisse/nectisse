@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bookmark, Check, Database, LoaderCircle, Search, Settings2, Sparkles, Users, WifiOff } from 'lucide-react';
 import type { RuntimeState } from '@shared/protocol';
 import type { FollowProvider } from '@shared/subscriptions';
+import { isPerformerProvider } from '@shared/sources';
 import { Button } from '@/shared/ui/button';
 import { WorkspaceToolbar } from '@/app/ui/WorkspaceToolbar';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
@@ -183,7 +184,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 							<IdentityAvatar identity={sub} small />
 							<span>
 								{sub.name}
-								<small>{sub.provider === 'javdb' ? '演员新作' : '创作者动态'}</small>
+								<small>{isPerformerProvider(sub.provider) ? '演员新作' : '创作者动态'}</small>
 							</span>
 							{sub.unread > 0 && <i className="new-dot" />}
 						</button>
@@ -237,7 +238,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 					{page === 'query' ? (
 						<MetadataWorkspace
 							seed={workSeed}
-							onPerformer={(name) => add('javdb', name)}
+							onPerformer={(query, provider = 'javdb') => add(provider, query)}
 							renderSaveAction={(props) => <SaveWorkButton {...props} onOpen={openLibrary} />}
 						/>
 					) : page === 'library' ? (

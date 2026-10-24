@@ -6,13 +6,13 @@ export const METADATA_IDS = [
 	'r18dev',
 	'1pondo',
 	'fc2',
-	'fc2cmadb',
 	'fc2ppvdb',
 	'javten',
 	'javarchive',
 	'avbase',
 	'javbus',
 	'javdb',
+	'javtao',
 	'sougouwiki',
 	'av_neme',
 	'av_name',
@@ -25,10 +25,11 @@ export const METADATA_IDS = [
 	'freejavbt',
 	'airav',
 ] as const;
-export const FOLLOW_IDS = ['fanbox', 'javdb', 'x', 'patreon', 'kemono', 'pawchive', 'coomer'] as const;
-export const RETIRED_SOURCE_IDS = ['rule34video', 'subscribestar', 'rule34xxx', 'rule34paheal', 'fc2club', 'kmib'] as const;
+export const FOLLOW_IDS = ['fanbox', 'javdb', 'javtao', 'x', 'patreon', 'kemono', 'pawchive', 'coomer'] as const;
+export const PERFORMER_PROVIDERS = ['javdb', 'javtao'] as const;
+export const RETIRED_SOURCE_IDS = ['rule34video', 'subscribestar', 'rule34xxx', 'rule34paheal', 'fc2club', 'kmib', 'fc2cmadb'] as const;
 // 仅用于读取既有资料与收藏，不参与新查询。
-export const LEGACY_METADATA_IDS = ['fc2club', 'kmib'] as const;
+export const LEGACY_METADATA_IDS = ['fc2club', 'kmib', 'fc2cmadb'] as const;
 export type LegacyMetadataSource = (typeof LEGACY_METADATA_IDS)[number];
 export type SourceId = (typeof METADATA_IDS)[number];
 export const DEFAULT_QUERY_SOURCES: SourceId[] = ['dmm', 'r18dev', 'fc2'];
@@ -66,6 +67,7 @@ export const SOURCE_LABELS = {
 	...(Object.fromEntries(SOURCES.map((source) => [source.id, source.name])) as Record<AllSource, string>),
 	fc2club: 'FC2Club（已移除）',
 	kmib: 'K-MIB（已移除）',
+	fc2cmadb: 'FC2CMADB（已移除）',
 };
 export const DEFAULT_METADATA_ORDER: SourceId[] = [
 	'dmm',
@@ -77,11 +79,11 @@ export const DEFAULT_METADATA_ORDER: SourceId[] = [
 	'mgstage',
 	'1pondo',
 	'fc2',
-	'fc2cmadb',
 	'fc2ppvdb',
 	'javten',
 	'avbase',
 	'javdb',
+	'javtao',
 	'javarchive',
 	'avsox',
 	'freejavbt',
@@ -94,6 +96,8 @@ export const DEFAULT_METADATA_ORDER: SourceId[] = [
 export const DEFAULT_ENABLED: AllSource[] = ['dmm', 'r18dev', 'fc2', 'fanbox', 'javdb'];
 
 export const isFollowProvider = (value: string): value is FollowProvider => (FOLLOW_IDS as readonly string[]).includes(value);
+
+export const isPerformerProvider = (value: string | undefined): boolean => value !== undefined && (PERFORMER_PROVIDERS as readonly string[]).includes(value);
 
 export const isMetadataSource = (value: string): value is SourceId => (METADATA_IDS as readonly string[]).includes(value);
 

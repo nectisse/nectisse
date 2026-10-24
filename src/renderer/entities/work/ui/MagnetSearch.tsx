@@ -1,16 +1,20 @@
-import { useDesktopActions, useMagnetSearch } from '@/shared/desktop';
+import { useDesktopActions, useMagnetSearch, usePreferences } from '@/shared/desktop';
+import { useState } from 'react';
 import { Copy, ExternalLink, LoaderCircle, Magnet, RefreshCw, Square } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { OptionSelect } from '@/shared/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { toast } from '@/shared/ui/sonner';
-import type { MagnetOrigin, MagnetRow } from '@shared/magnets';
+import { EXTERNAL_MAGNET_SITES, MAGNET_SOURCES, magnetSourceSchema, type MagnetOrigin, type MagnetRow, type MagnetSource } from '@shared/magnets';
 import './magnets.css';
 
 const count = (value: number | null): string => (value === null ? '—' : value.toLocaleString('zh-CN'));
 
 export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: string }): React.JSX.Element {
 	const actions = useDesktopActions();
-	const { result, loading, cancelling, error: failed, search, cancel: cancelSearch } = useMagnetSearch(origin);
+	const defaultSource = usePreferences((state) => state.magnetSearch.source);
+	const [source, setSource] = useState<MagnetSource>(defaultSource);
+	const { result, loading, cancelling, error: failed, search, cancel: cancelSearch } = useMagnetSearch(origin, source);
 	const error = failed ? '磁链查询暂未响应，请重试；作品记录已失效时需重新查询资料。' : '';
 
 	const cancel = async (): Promise<void> => {
@@ -21,7 +25,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 
 	const action = async (row: MagnetRow, kind: 'copy' | 'open'): Promise<void> => {
 		try {
-			if (!(await actions.magnets.action({ code, id: row.id, action: kind }))) {
+			if (!(await actions.magnets.action({ code, source, id: row.id, action: kind }))) {
 				throw new Error('UNAVAILABLE');
 			}
 			if (kind === 'copy') {
@@ -32,39 +36,80 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 		}
 	};
 
+	const openSite = async (): Promise<void> => {
+		try {
+			if (!(await actions.magnets.openSite('heimacili'))) {
+				throw new Error('UNAVAILABLE');
+			}
+		} catch {
+			toast.error('黑马磁力未能打开，请稍后重试。');
+		}
+	};
+
 	const ready = result?.status === 'ready';
+	const changeSource = async (next: MagnetSource): Promise<void> => {
+		if (!(await cancelSearch())) {
+			toast.error('当前查询未能停止，请重试后切换来源。');
+			return;
+		}
+		setSource(next);
+	};
+
 	return (
 		<section className="magnet-search" aria-label={`${code} 磁链搜索`}>
 			<div className="magnet-search-toolbar">
 				<div>
 					<Magnet />
-					<span>Sukebei</span>
+					<OptionSelect
+						aria-label="磁链搜索来源"
+						className="magnet-source-select"
+						value={source}
+						disabled={cancelling}
+						options={magnetSourceSchema.options.map((value) => ({ value, label: MAGNET_SOURCES[value].name }))}
+						onValueChange={(value) => {
+							void changeSource(value);
+						}}
+					/>
 					{ready && <small>{result.items.length} 条结果</small>}
 				</div>
-				{loading ? (
+				<div className="magnet-search-actions">
 					<Button
 						variant="outline"
 						size="sm"
-						disabled={cancelling}
+						aria-label="打开黑马磁力"
+						title="在默认浏览器中打开首页，自行搜索"
 						onClick={() => {
-							void cancel();
+							void openSite();
 						}}
 					>
-						<Square />
-						{cancelling ? '正在取消' : '取消'}
+						<ExternalLink />
+						{EXTERNAL_MAGNET_SITES.heimacili.name}
 					</Button>
-				) : (
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => {
-							void search(true);
-						}}
-					>
-						<RefreshCw />
-						{ready ? '刷新' : '重新查询'}
-					</Button>
-				)}
+					{loading ? (
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={cancelling}
+							onClick={() => {
+								void cancel();
+							}}
+						>
+							<Square />
+							{cancelling ? '正在取消' : '取消'}
+						</Button>
+					) : (
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => {
+								void search(true);
+							}}
+						>
+							<RefreshCw />
+							{ready ? '刷新' : '重新查询'}
+						</Button>
+					)}
+				</div>
 			</div>
 			{loading ? (
 				<div className="magnet-search-state" role="status">
@@ -77,7 +122,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 				</p>
 			) : result.items.length ? (
 				<div className="magnet-table-frame" role="region" aria-label="磁链结果表格，可横向滚动" tabIndex={0}>
-					<Table className="magnet-table" aria-label="Sukebei 磁链结果">
+					<Table className="magnet-table" aria-label={`${MAGNET_SOURCES[source].name} 磁链结果`}>
 						<TableHeader>
 							<TableRow>
 								<TableHead>名称</TableHead>
@@ -94,14 +139,20 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 											{row.title}
 										</span>
 										<div className="magnet-meta">
-											<time
-												dateTime={row.uploadedAt || undefined}
-												title={row.uploadedAt ? new Date(row.uploadedAt).toLocaleString('zh-CN', { hour12: false }) : '上传时间未提供'}
-											>
-												{row.uploadedAt ? new Date(row.uploadedAt).toLocaleDateString('zh-CN') : '上传时间未提供'}
-											</time>
-											<span title={`下载中 ${count(row.leechers)}`}>下载中 {count(row.leechers)}</span>
-											<span title={`完成 ${count(row.completed)}`}>完成 {count(row.completed)}</span>
+											{source === 'javtao' ? (
+												<time dateTime={row.sharedAt || undefined}>分享 {row.sharedAt ? row.sharedAt.replaceAll('-', '/') : '日期未提供'}</time>
+											) : (
+												<>
+													<time
+														dateTime={row.uploadedAt || undefined}
+														title={row.uploadedAt ? new Date(row.uploadedAt).toLocaleString('zh-CN', { hour12: false }) : '上传时间未提供'}
+													>
+														{row.uploadedAt ? new Date(row.uploadedAt).toLocaleDateString('zh-CN') : '上传时间未提供'}
+													</time>
+													<span title={`下载中 ${count(row.leechers)}`}>下载中 {count(row.leechers)}</span>
+													<span title={`完成 ${count(row.completed)}`}>完成 {count(row.completed)}</span>
+												</>
+											)}
 										</div>
 									</TableCell>
 									<TableCell className="magnet-size">{row.size || '—'}</TableCell>
@@ -146,7 +197,7 @@ export function MagnetSearch({ origin, code }: { origin: MagnetOrigin; code: str
 			)}
 			{!loading && ready && (
 				<p className="magnet-search-note">
-					按站点默认顺序显示首页，最多 {result.limit} 条。{result.checkedAt && ` 查询于 ${new Date(result.checkedAt).toLocaleString('zh-CN', { hour12: false })}`}
+					按来源页面顺序显示，最多 {result.limit} 条。{result.checkedAt && ` 查询于 ${new Date(result.checkedAt).toLocaleString('zh-CN', { hour12: false })}`}
 				</p>
 			)}
 		</section>

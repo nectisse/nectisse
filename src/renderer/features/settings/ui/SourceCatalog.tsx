@@ -1,3 +1,4 @@
+import { isPerformerProvider } from '@shared/sources';
 import { useSubscriptions, useDesktopActions } from '@/shared/desktop';
 import { toast } from '@/shared/ui/sonner';
 import type { PreferencesPatch } from '@shared/preferences';
@@ -202,7 +203,7 @@ const capabilities = (source: SourceSpec): string =>
 	[
 		source.metadata ? '资料' : '',
 		source.metadata && source.images.length && source.id !== 'javdb' ? '封面' : '',
-		source.follow ? (source.id === 'javdb' ? '演员新作' : '动态订阅') : '',
+		source.follow ? (isPerformerProvider(source.id) ? '演员新作' : '动态订阅') : '',
 	]
 		.filter(Boolean)
 		.join(' · ') || '—';

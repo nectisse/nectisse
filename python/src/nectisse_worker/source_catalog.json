@@ -51,19 +51,6 @@
 		"credential": "none",
 		"note": "商品资料、卖家与封面；官方不提供演员栏；待在线验证"
 	},
-	"fc2cmadb": {
-		"name": "FC2CMADB",
-		"group": "资料来源",
-		"engine": "peach",
-		"metadata": true,
-		"follow": false,
-		"families": ["fc2"],
-		"root": "https://fc2cmadb.com/",
-		"domains": ["fc2cmadb.com"],
-		"images": ["fc2cmadb.com", "fc2.com"],
-		"credential": "cookie",
-		"note": "FC2 镜像资料与人物证据；可能需要 Cookie；待在线验证"
-	},
 	"fc2ppvdb": {
 		"name": "FC2PPV-DB",
 		"group": "资料来源",
@@ -141,6 +128,19 @@
 		"images": ["javdb.com", "jdbstatic.com", "jdbimgs.com"],
 		"credential": "cookie",
 		"note": "作品资料、演员名查询与新作订阅；演员头像本地缓存，作品图片仅作核验；部分页面受登录或出口限制"
+	},
+	"javtao": {
+		"name": "JavTao",
+		"group": "资料与演员新作",
+		"engine": "nectisse",
+		"metadata": true,
+		"follow": true,
+		"families": ["standard", "fc2"],
+		"root": "https://javtao.com/",
+		"domains": ["javtao.com"],
+		"images": ["javtao.com"],
+		"credential": "none",
+		"note": "公开作品资料、封面与演员目录；使用浏览器指纹连接；演员无头像，检查当前返回列表，不扩展历史；作品详情磁链另在磁链搜索中查询"
 	},
 	"sougouwiki": {
 		"name": "素人系総合 Wiki",

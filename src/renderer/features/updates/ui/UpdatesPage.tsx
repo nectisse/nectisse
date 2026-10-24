@@ -13,7 +13,7 @@ import { Pagination } from '@/shared/ui/pagination';
 import { ContentTabs } from '@/shared/components/content-tabs';
 
 import { TaskProgress } from '@/entities/subscription';
-import { FOLLOW_IDS, SOURCE_LABELS } from '@shared/sources';
+import { FOLLOW_IDS, SOURCE_LABELS, isPerformerProvider } from '@shared/sources';
 
 export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void; onAdd: () => void }): React.JSX.Element {
 	const state = useSubscriptions((state) => ({ entries: state.entries }));
@@ -25,7 +25,10 @@ export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void;
 	const entries = state.entries.filter(
 		(entry) =>
 			(filter === 'all' || !entry.read) &&
-			(kind === 'all' || (kind === 'creators' && entry.provider !== 'javdb') || (kind === 'actors' && entry.provider === 'javdb') || entry.provider === kind),
+			(kind === 'all' ||
+				(kind === 'creators' && !isPerformerProvider(entry.provider)) ||
+				(kind === 'actors' && isPerformerProvider(entry.provider)) ||
+				entry.provider === kind),
 	);
 	const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
 	const currentPage = Math.min(page, pageCount);

@@ -1,3 +1,4 @@
+import { isPerformerProvider } from '@shared/sources';
 import { SOURCES, entryInputSchema, type FollowProvider, type FollowCandidate, type Subscription } from '@shared/subscriptions';
 import { allowedSourceUrl, canonicalFollow as canonical, validFollowEntry } from '@shared/source-identity';
 import { sourceCooldownSeconds, sourceTransport } from '../../platform/network';
@@ -105,7 +106,7 @@ export class FollowRunner {
 				latest.lastError = outcome.status === 'error' ? outcome.message : outcome.gap ? outcome.coverage! : (outcome.warnings ?? []).join('；');
 				latest.failureCount = outcome.status === 'error' ? latest.failureCount + 1 : 0;
 				latest.initialized ||= latest.provider === 'x' ? !!latest.xSyncState : outcome.status !== 'error';
-				const interval = latest.intervalMinutes ?? (task.provider === 'javdb' ? preferences.performerMinutes : preferences.creatorMinutes);
+				const interval = latest.intervalMinutes ?? (isPerformerProvider(task.provider) ? preferences.performerMinutes : preferences.creatorMinutes);
 				latest.nextCheckAt = new Date(
 					Math.max(
 						Date.now() + Math.min(interval * Math.min(2 ** Math.max(latest.failureCount - 1, 0), 8), 10080) * 60_000,

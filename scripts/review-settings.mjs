@@ -141,7 +141,7 @@ export async function reviewSettings(page, application, output) {
 	await page.screenshot({ path: join(output, '01-sources.png') });
 	await page.getByRole('button', { name: '配置 DMM / FANZA', exact: true }).click();
 	await chooseOption(page, '来源用途', '演员／创作者订阅');
-	assert.equal(await page.locator('.settings-source').count(), 7);
+	assert.equal(await page.locator('.settings-source').count(), 8);
 	await page.getByRole('button', { name: '配置 FANBOX', exact: true }).click();
 	const accountSecure = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).encryptionAvailable);
 	if (accountSecure) {

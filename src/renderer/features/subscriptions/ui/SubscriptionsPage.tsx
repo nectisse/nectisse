@@ -1,3 +1,4 @@
+import { isPerformerProvider } from '@shared/sources';
 import { useSubscriptions, useDesktopActions } from '@/shared/desktop';
 import { feedDate, formatTimestamp as date } from '@/shared/lib/format-date';
 import { EntryList } from '@/entities/update';
@@ -163,7 +164,7 @@ function SubscriptionRow({ subscription: sub, onOpen }: { subscription: Subscrip
 						}}
 						options={[
 							{ value: '', label: '使用默认频率' },
-							...(sub.provider !== 'javdb' ? [30, 60, 180, 360, 1440] : [360, 720, 1440, 10080]).map((value) => ({
+							...(!isPerformerProvider(sub.provider) ? [30, 60, 180, 360, 1440] : [360, 720, 1440, 10080]).map((value) => ({
 								value,
 								label: `每 ${value >= 1440 ? `${value / 1440} 天` : value >= 60 ? `${value / 60} 小时` : `${value} 分钟`}`,
 							})),
@@ -200,7 +201,7 @@ export function SubscriptionList({
 		onKindChange?.(value);
 	};
 
-	const list = state.subscriptions.filter((sub) => (kind === 'actors' ? sub.provider === 'javdb' : sub.provider !== 'javdb') && (archived || sub.following));
+	const list = state.subscriptions.filter((sub) => (kind === 'actors' ? isPerformerProvider(sub.provider) : !isPerformerProvider(sub.provider)) && (archived || sub.following));
 
 	return (
 		<section className="subscription-list">
@@ -270,7 +271,7 @@ export function SubscriptionsPage({
 	const [kind, setKind] = useState<SubscriptionKind>('actors');
 	useEffect(() => {
 		if (seed) {
-			setKind(seed.provider === 'javdb' ? 'actors' : 'creators');
+			setKind(isPerformerProvider(seed.provider) ? 'actors' : 'creators');
 			setSelected(seed.subscriptionId || '');
 		}
 	}, [seed]);
@@ -281,7 +282,7 @@ export function SubscriptionsPage({
 	return (
 		<div className="page subscriptions-page">
 			<PageHeader
-				title={sub ? (sub.provider === 'javdb' ? '演员主页' : '创作者主页') : '演员与创作者'}
+				title={sub ? (isPerformerProvider(sub.provider) ? '演员主页' : '创作者主页') : '演员与创作者'}
 				description={sub ? `${providerName(sub.provider)} · ${sub.handle ? `@${sub.handle}` : sub.ref}` : '留意演员的新作品，也关注创作者的动态。'}
 				actions={
 					<>

@@ -5,6 +5,8 @@ import { ArrowLeft, Check, ChevronRight, Clock3, Info, RefreshCw } from 'lucide-
 import { coverSource, preferredCover } from '@shared/cover-selection';
 import { SOURCE_LABELS, isActiveTask, type MetadataRecord, type QueryTask } from '@shared/metadata';
 import type { MagnetOrigin } from '@shared/magnets';
+import type { FollowProvider } from '@shared/subscriptions';
+import { canonicalFollow } from '@shared/source-identity';
 import { Button } from '@/shared/ui/button';
 import { PageHeader } from '@/shared/components/page-layout';
 import { ContentTabs } from '@/shared/components/content-tabs';
@@ -30,7 +32,7 @@ export function WorkDetail({
 	onOpenSource,
 	magnetOrigin,
 }: {
-	onPerformer?: (name: string) => void;
+	onPerformer?: (query: string, provider?: FollowProvider) => void;
 	records: MetadataRecord[];
 	task?: QueryTask;
 	onBack: () => void;
@@ -52,6 +54,21 @@ export function WorkDetail({
 		(coverId ? (covers.find((cover) => cover.id === coverId && cover.asset) ?? covers.find((cover) => cover.id === coverId)) : undefined) ??
 		preferredCover(covers, task?.coverPriority);
 	const people = firstAvailableField(records, 'people');
+	const followPerformer = onPerformer
+		? (name: string): void => {
+				const fromJavTao = records.find((record) => record.people.length)?.source === 'javtao';
+				const person = people.find((person) => person.name === name && person.role === 'performer');
+				let query = name;
+				if (fromJavTao && person?.sourceIdentity) {
+					try {
+						query = canonicalFollow('javtao', person.sourceIdentity);
+					} catch {
+						// 无效或旧身份退回姓名查询，仍需在弹窗中核对。
+					}
+				}
+				onPerformer(query, fromJavTao ? 'javtao' : 'javdb');
+			}
+		: undefined;
 	const title = firstAvailableField(records, 'title') || '标题未取得';
 	const facts = [
 		['作品编号', records[0]!.code],
@@ -137,7 +154,7 @@ export function WorkDetail({
 								)}
 								<h2 className="summary-title">人物与角色</h2>
 								{people.length ? (
-									<WorkPeople people={people} onPerformer={onPerformer} />
+									<WorkPeople people={people} onPerformer={followPerformer} />
 								) : (
 									<p className="summary-text">来源没有提供人物资料。不会从标题推断人物身份。</p>
 								)}

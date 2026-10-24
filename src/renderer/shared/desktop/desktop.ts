@@ -71,6 +71,8 @@ export function createDesktopState(bridge: DesktopBridge | undefined) {
 		magnets: {
 			cancel: async (id: string) => required().magnets.cancel(id),
 			action: async (...args: Parameters<DesktopBridge['magnets']['action']>) => required().magnets.action(...args),
+
+			openSite: async (...args: Parameters<DesktopBridge['magnets']['openSite']>) => required().magnets.openSite(...args),
 		},
 	};
 

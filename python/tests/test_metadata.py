@@ -14,7 +14,7 @@ from peach_core.sources.fc2 import Fc2Source
 from nectisse_worker.metadata.base import Page, SourceFailure, Cancelled
 from nectisse_worker.metadata.network import NetworkSession
 from nectisse_worker.metadata.query import normalize, query
-from nectisse_worker.metadata.cover import fetch_cover, probe_cover, PROBE_BYTES
+from nectisse_worker.metadata.cover import fetch_cover, probe_cover, webp_size, PROBE_BYTES
 from nectisse_worker.metadata.cover_candidates import cover_urls
 from nectisse_worker.metadata.dmm import VerifiedDmmSource
 
@@ -27,6 +27,13 @@ def dmm_item(cid="ssis00057"):
 
 
 class MetadataTests(unittest.TestCase):
+    def test_removed_fc2cmadb_cannot_dispatch_requests(self):
+        session = self.session(lambda request: self.fail('retired source dispatched a request'))
+        with self.assertRaises(SourceFailure) as caught:
+            query({'source': 'fc2cmadb', 'kind': 'code', 'code': 'FC2-PPV-1234567'}, session)
+        self.assertEqual(caught.exception.reason.value, 'unsupported')
+        self.assertEqual(session.count, 0)
+
     def session(self, handler, permit=lambda *args: None):
         result = NetworkSession("dmm", ("dmm.co.jp",), threading.Event(), permit,
                                 client=httpx.Client(transport=httpx.MockTransport(handler)), verify_dns=False)
@@ -161,6 +168,31 @@ class MetadataTests(unittest.TestCase):
             with self.assertRaises(SourceFailure):
                 fetch_cover({**params, 'expectedWidth': 1600, 'expectedHeight': 1000}, session)
             self.assertFalse(Path(params['destination']).exists())
+
+    def test_large_webp_prefix_probe_and_selected_full_image_validation(self):
+        import random
+        image = io.BytesIO()
+        pixels = random.Random(42).randbytes(800 * 537 * 3)
+        Image.frombytes('RGB', (800, 537), pixels).save(image, 'WEBP', quality=95)
+        body = image.getvalue()
+        self.assertGreater(len(body), PROBE_BYTES)
+        session = self.session(lambda request: httpx.Response(206 if request.headers.get('Range') else 200, content=body[:PROBE_BYTES] if request.headers.get('Range') else body))
+        with tempfile.TemporaryDirectory() as directory:
+            params = {'source': 'dmm', 'code': 'SSIS-057', 'url': dmm_item()['packageImage']['largeUrl'], 'destination': str(Path(directory) / 'cover.image')}
+            self.assertEqual(probe_cover(params, session), {'width': 800, 'height': 537, 'format': 'WEBP'})
+            self.assertEqual(list(Path(directory).iterdir()), [])
+            asset = fetch_cover({**params, 'expectedWidth': 800, 'expectedHeight': 537}, session)
+            self.assertEqual(asset['bytes'], len(body))
+            self.assertEqual(Path(params['destination']).read_bytes(), body)
+        # 扩展与无损头只提供尺寸；最终选图仍必须通过完整图片解码。
+        extended = b'RIFF' + (100000).to_bytes(4, 'little') + b'WEBPVP8X' + (10).to_bytes(4, 'little') + b'\0' * 4 + (799).to_bytes(3, 'little') + (536).to_bytes(3, 'little')
+        self.assertEqual(webp_size(extended), (800, 537))
+        lossless = b'RIFF' + (100000).to_bytes(4, 'little') + b'WEBPVP8L' + (5).to_bytes(4, 'little') + b'\x2f' + (799 | (536 << 14)).to_bytes(4, 'little')
+        self.assertEqual(webp_size(lossless), (800, 537))
+        with self.assertRaises(ValueError):
+            webp_size(extended[:20] + b'\x02' + extended[21:])
+        with self.assertRaises(ValueError):
+            webp_size(extended[:24])
 
     def test_cover_placeholder_redirect_and_unsafe_cdn_candidates_are_rejected(self):
         image = io.BytesIO(); Image.new('RGB', (800, 500)).save(image, 'JPEG')

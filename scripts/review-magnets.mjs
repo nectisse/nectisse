@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import electron from 'electron';
 import { _electron } from 'playwright-core';
+import { chooseOption } from './select.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const appPath = process.argv[2] ? resolve(process.argv[2]) : undefined;
@@ -33,10 +34,12 @@ try {
 	});
 	assert.equal(unauthorized, true, 'Only an existing work record can initiate the query');
 	assert.equal(await page.evaluate(() => window.nectisse.magnets.action({ code: 'NECT-024', id: 'a'.repeat(40), action: 'open' })), false);
-	await app.evaluate(({ ipcMain }) => {
+	await app.evaluate(({ ipcMain, shell }) => {
 		globalThis.__magnetCalls = [];
 		globalThis.__magnetActions = [];
 		globalThis.__magnetCancels = [];
+		globalThis.__externalMagnetSites = [];
+		shell.openExternal = async (url) => { globalThis.__externalMagnetSites.push(url); };
 		globalThis.__magnetMode = 'ready';
 		globalThis.__magnetPending = new Map();
 		ipcMain.removeHandler('nectisse:magnet-search');
@@ -44,7 +47,7 @@ try {
 		ipcMain.removeHandler('nectisse:magnet-action');
 		ipcMain.handle('nectisse:magnet-search', async (_event, request) => {
 			globalThis.__magnetCalls.push(request);
-			const result = { code: 'NECT-024', status: 'ready', items: [], checkedAt: '2026-10-24T04:00:00Z', message: '', reason: '', requests: 1, retryAfter: 0 };
+			const result = { code: 'NECT-024', source: request.source, status: 'ready', items: [], checkedAt: '2026-10-24T04:00:00Z', message: '', reason: '', requests: 1, retryAfter: 0 };
 			if (globalThis.__magnetMode === 'pending') {
 				return new Promise(resolvePending => globalThis.__magnetPending.set(request.id, () => resolvePending({ ...result, status: 'cancelled', message: '查询已取消，可手动重新查询' })));
 			}
@@ -53,6 +56,9 @@ try {
 			}
 			if (globalThis.__magnetMode !== 'empty') {
 				result.items = Array.from({ length: 20 }, (_, i) => ({ id: (i + 1).toString(16).padStart(40, '0'), title: `NECT-024 ${i === 0 ? '用于检查中日文长标题和窄窗口对齐的记录。'.repeat(7) : `示例记录 ${i + 1}`}`, magnet: `magnet:?xt=urn:btih:${(i + 1).toString(16).padStart(40, '0')}`, url: `https://sukebei.nyaa.si/view/${i + 1}`, size: '4.7 GiB', uploadedAt: i ? null : '2026-10-23T04:00:00Z', seeders: i, leechers: 2, completed: 1234 }));
+				if (request.source === 'javtao') {
+					result.items = result.items.map(row => ({ ...row, url: 'https://javtao.com/nect-024', uploadedAt: null, sharedAt: '2026-01-03', seeders: null, leechers: null, completed: null }));
+				}
 			}
 			return result;
 		});
@@ -70,6 +76,9 @@ try {
 	assert.deepEqual(await page.locator('.magnet-table tbody tr').first().locator('.magnet-meta > *').allTextContents(), ['2026/10/23', '下载中 2', '完成 1,234']);
 	assert.equal(await page.locator('.magnet-table tbody tr').nth(1).locator('.magnet-meta time').innerText(), '上传时间未提供');
 	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 1, 'StrictMode must not dispatch a duplicate query');
+	await page.getByRole('button', { name: '打开黑马磁力', exact: true }).click();
+	assert.deepEqual(await app.evaluate(() => globalThis.__externalMagnetSites), ['https://heimacili.org/']);
+	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 1, 'External site must not dispatch another query');
 	await page.evaluate(() => { window.dispatchEvent(new Event('offline')); window.dispatchEvent(new Event('online')); document.dispatchEvent(new Event('visibilitychange')); });
 	await new Promise(resolve => setTimeout(resolve, 50));
 	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 1, 'Focus and reconnect must not repeat the query');
@@ -87,7 +96,7 @@ try {
 			await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
 			await page.waitForFunction(() => getComputedStyle(document.querySelector('.magnet-title')).color === getComputedStyle(document.body).color);
 			await page.locator('.magnet-table-frame').evaluate(element => { element.scrollLeft = 0; });
-			const measure = await page.locator('.magnet-search').evaluate(element => ({ width: element.clientWidth, scrollWidth: element.scrollWidth, titleHeights: [...element.querySelectorAll('.magnet-title')].map(title => title.getBoundingClientRect().height), rowHeights: [...element.querySelectorAll('tbody tr')].map(row => row.getBoundingClientRect().height), cells: [...element.querySelectorAll('tbody tr')].map(row => row.querySelectorAll('td').length), controls: [...element.querySelectorAll('button')].map(button => button.getBoundingClientRect().height), appScroll: scrollY, pageOverflow: document.querySelector('.page-scroll').scrollWidth > document.querySelector('.page-scroll').clientWidth }));
+			const measure = await page.locator('.magnet-search').evaluate(element => ({ width: element.clientWidth, scrollWidth: element.scrollWidth, titleHeights: [...element.querySelectorAll('.magnet-title')].map(title => title.getBoundingClientRect().height), rowHeights: [...element.querySelectorAll('tbody tr')].map(row => row.getBoundingClientRect().height), cells: [...element.querySelectorAll('tbody tr')].map(row => row.querySelectorAll('td').length), controls: [...element.querySelectorAll('.magnet-actions button')].map(button => button.getBoundingClientRect().height), toolbarControls: [...element.querySelectorAll('.magnet-search-actions button')].map(button => button.getBoundingClientRect().height), appScroll: scrollY, pageOverflow: document.querySelector('.page-scroll').scrollWidth > document.querySelector('.page-scroll').clientWidth }));
 			assert.ok(measure.scrollWidth <= measure.width + 1, JSON.stringify(measure));
 			assert.equal(measure.pageOverflow, false);
 			assert.equal(measure.appScroll, 0);
@@ -101,8 +110,9 @@ try {
 				return { gap: meta.y - title.bottom, metaHeight: meta.height, borders: [...row.querySelectorAll('td')].map(cell => parseFloat(getComputedStyle(cell).borderLeftWidth)) };
 			}));
 			assert.ok(rows.every(row => Math.abs(row.gap - 4) <= 1 && row.metaHeight <= 17 && row.borders.every(width => width === 0)), JSON.stringify(rows));
-			assert.equal(measure.controls[0], 32);
-			assert.ok(measure.controls.slice(1).every(height => height === 28));
+			assert.equal(measure.toolbarControls.length, 2);
+			assert.ok(measure.toolbarControls.every(height => height === 32));
+			assert.ok(measure.controls.every(height => height === 28));
 			measurements.push({ width, theme, ...measure });
 			await page.screenshot({ path: join(output, `${width}-${theme}-magnet-table.png`) });
 			const frame = page.getByRole('region', { name: '磁链结果表格，可横向滚动', exact: true });
@@ -118,6 +128,15 @@ try {
 			await frame.evaluate(element => { element.scrollLeft = 0; });
 		}
 	}
+	await chooseOption(page, '磁链搜索来源', 'JavTao');
+	await page.getByRole('table', { name: 'JavTao 磁链结果', exact: true }).waitFor();
+	assert.equal(await page.locator('.magnet-seeds').nth(1).innerText(), '—');
+	assert.deepEqual(await page.locator('.magnet-table tbody tr').first().locator('.magnet-meta > *').allTextContents(), ['分享 2026/01/03']);
+	await page.getByRole('button', { name: /^复制磁链：/ }).first().click();
+	assert.equal((await app.evaluate(() => globalThis.__magnetActions)).at(-1).source, 'javtao');
+	await page.screenshot({ path: join(output, 'javtao-magnet-table.png') });
+	await chooseOption(page, '磁链搜索来源', 'Sukebei');
+	await page.getByRole('table', { name: 'Sukebei 磁链结果', exact: true }).waitFor();
 	const mode = async value => { await app.evaluate((_electron, value) => { globalThis.__magnetMode = value; }, value); };
 	await mode('empty');
 	await page.getByRole('button', { name: '刷新', exact: true }).click();

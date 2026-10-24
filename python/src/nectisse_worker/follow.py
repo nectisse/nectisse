@@ -14,11 +14,12 @@ from peach_core.fanbox import normalize_fanbox_post, FanboxContentError
 from .metadata.base import FailureReason, SourceFailure, SiteConfig
 from .metadata.network import NetworkSession, allowed_url
 from .catalog import CATALOG, image_domains
-from . import follow_extended, follow_x
+from . import follow_extended, follow_x, javtao
 
 CONFIGS = {
     "fanbox": SiteConfig("fanbox", "FANBOX", "fanbox-public", "https://www.fanbox.cc", ("fanbox.cc", "pximg.net"), "official"),
     "javdb": SiteConfig("javdb", "JavDB", "javdb-actor", "https://javdb.com", ("javdb.com", "jdbstatic.com", "jdbimgs.com"), "directory"),
+    "javtao": javtao.CONFIG,
 }
 CONFIGS.update({key: SiteConfig(key, row['name'], 'fxembed-public' if key == 'x' else 'peach-posts', row.get('apiRoot', row['root']).rstrip('/'), tuple(dict.fromkeys(row.get('requestDomains', row['domains']) + row['images'])), 'creator') for key, row in CATALOG.items() if row['follow'] and key not in CONFIGS})
 HANDLE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -100,6 +101,8 @@ def lookup(params, session):
         raise SourceFailure(FailureReason.UNSUPPORTED, '未接入此动态来源')
     if provider == 'x':
         return follow_x.lookup(params, session, CONFIGS[provider])
+    if provider == 'javtao':
+        return javtao.lookup(params, session)
     if provider not in {'fanbox', 'javdb'}:
         return follow_extended.lookup(params, session, CONFIGS[provider])
     if provider == "fanbox":
@@ -135,6 +138,8 @@ def check(params, session, publish):
         raise SourceFailure(FailureReason.UNSUPPORTED, '未接入此动态来源')
     if provider == 'x':
         return follow_x.check(params, session, publish, CONFIGS[provider])
+    if provider == 'javtao':
+        return javtao.check(params, session, publish)
     if provider not in {'fanbox', 'javdb'}:
         return follow_extended.check(params, session, publish, CONFIGS[provider])
     ref = identity(provider, params.get("ref"))
@@ -221,7 +226,7 @@ def job(method, params, cancelled, permit, publish):
     provider = params.get("provider")
     if provider not in CONFIGS:
         raise SourceFailure(FailureReason.UNSUPPORTED, "未接入此订阅来源")
-    session = NetworkSession(provider, CONFIGS[provider].domains, cancelled, permit, proxy=str(params.get("proxy") or ""))
+    session = NetworkSession(provider, CONFIGS[provider].domains, cancelled, permit, proxy=str(params.get("proxy") or ""), fingerprint=provider == 'javtao' and params.get('transport', 'fingerprint') == 'fingerprint')
     try:
         if method == "follow.image":
             url = str(params.get("url") or "")

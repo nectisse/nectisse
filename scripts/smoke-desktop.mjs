@@ -171,7 +171,7 @@ try {
 					'shadcn-select-no-search-keyboard-and-escape',
 					'select-values-persist-and-popup-fits-window',
 					'31-source-catalog-and-22-metadata-adapters',
-					'7-follow-sources-and-reference-boundaries',
+					'8-follow-sources-and-reference-boundaries',
 					...(live ? ['real-metadata-and-covers', 'source-link-identity', 'cancel-and-persist'] : []),
 					...(followReport ? [`fanbox-real-follow-${followReport.entries}-entries`, 'follow-dedup-and-read-persist', `javdb-${followReport.javdb}`] : []),
 					...(sourcesReport ? ['real-avbase-amane-onepondo-and-covers', 'real-kemono-follow-and-update-flow', 'expanded-follow-persistence-after-relaunch'] : []),

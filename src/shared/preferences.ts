@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ALL_IDS, DEFAULT_ENABLED, DEFAULT_METADATA_ORDER, DEFAULT_QUERY_SOURCES, METADATA_IDS, RETIRED_SOURCE_IDS, withoutRetiredSources } from '@shared/sources';
 import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY } from '@shared/cover-sources';
-import { DEFAULT_MAGNET_SETTINGS, magnetSettingsSchema, type MagnetSettings } from '@shared/magnets';
+import { DEFAULT_MAGNET_SETTINGS, magnetSettingsSchema, magnetSourceSchema, type MagnetSettings } from '@shared/magnets';
 
 const allSourceSchema = z.enum(ALL_IDS);
 export const querySourcesSchema = z
@@ -80,7 +80,10 @@ export const DEFAULT_PREFERENCES: Preferences = {
 };
 
 export type PreferencesPatch = Omit<Partial<Preferences>, 'magnetSearch'> & { magnetSearch?: Partial<MagnetSettings> };
-const patchFields = preferencesSchema.extend({ magnetSearch: magnetSettingsSchema.partial().strict() }).partial().strict();
+const patchFields = preferencesSchema
+	.extend({ magnetSearch: magnetSettingsSchema.partial().extend({ source: magnetSourceSchema.optional() }).strict() })
+	.partial()
+	.strict();
 
 export const preferencesPatchSchema = z.unknown().transform((input, context): PreferencesPatch => {
 	const parsed = patchFields.safeParse(input);

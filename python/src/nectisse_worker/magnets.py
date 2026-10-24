@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from peach_core.catalog_rules import normalise_code_key, _jav_code_pattern
 from .metadata.base import Cancelled, FailureReason, SiteConfig, SourceFailure
 from .metadata.network import NetworkSession
+from . import javtao
 
 ROOT = 'https://sukebei.nyaa.si'
 CONFIG = SiteConfig('sukebei', 'Sukebei', 'sukebei-search', ROOT, ('sukebei.nyaa.si',), 'community', page_limit=2 * 1024 * 1024)
@@ -83,16 +84,24 @@ def parse_search(body: str, code: str, limit: int = 20) -> list[dict]:
 
 
 def job(params, cancelled, permit):
+    source = params.get('source', 'sukebei')
+    if source not in {'sukebei', 'javtao'}:
+        raise ValueError('invalid magnet source')
     code = str(params.get('code') or '').strip().upper()
     if not re.fullmatch(r'[A-Z0-9]+(?:[-_][A-Z0-9]+)*', code) or not 3 <= len(code) <= 64 or normalise_code_key(code).upper() != code:
         raise ValueError('invalid code')
     limit = params.get('maxResults', 20)
     if type(limit) is not int or limit not in {5, 10, 20} or params.get('transport', 'httpx') not in {'httpx', 'fingerprint'}:
         raise ValueError('invalid magnet settings')
-    session = NetworkSession('sukebei', CONFIG.domains, cancelled, permit, proxy=str(params.get('proxy') or ''), deadline_seconds=25, fingerprint=params.get('transport') == 'fingerprint')
+    config = javtao.CONFIG if source == 'javtao' else CONFIG
+    session = NetworkSession(source, config.domains, cancelled, permit, proxy=str(params.get('proxy') or ''), deadline_seconds=25, fingerprint=source == 'javtao' or params.get('transport') == 'fingerprint')
     try:
-        page = session.get(ROOT + '/?' + urlencode({'f': '0', 'c': '0_0', 'q': code}), config=CONFIG)
-        items = parse_search(page.text, code, limit)
+        if source == 'javtao':
+            page = javtao.fetch_work(session, code)
+            items = javtao.parse_magnets(page, code, limit)
+        else:
+            page = session.get(ROOT + '/?' + urlencode({'f': '0', 'c': '0_0', 'q': code}), config=CONFIG)
+            items = parse_search(page.text, code, limit)
         if cancelled.is_set():
             raise Cancelled()
         return {'status': 'ready', 'items': items, 'message': '', 'reason': '', 'requests': session.count, 'retryAfter': 0}

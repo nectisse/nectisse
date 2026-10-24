@@ -1,3 +1,4 @@
+import { isPerformerProvider } from '@shared/sources';
 import { useSubscriptions, useDesktopActions } from '@/shared/desktop';
 import { feedDate, formatTimestamp as date } from '@/shared/lib/format-date';
 import { useRef, useState } from 'react';
@@ -24,7 +25,13 @@ function feedTitle(entry: FeedEntry): string {
 }
 
 function entryCategory(entry: FeedEntry): string {
-	return entry.provider === 'javdb' ? '演员新作' : entry.provider === 'x' ? '原创动态' : ['kemono', 'pawchive', 'coomer'].includes(entry.provider) ? '归档收录' : '创作者动态';
+	return isPerformerProvider(entry.provider)
+		? '演员新作'
+		: entry.provider === 'x'
+			? '原创动态'
+			: ['kemono', 'pawchive', 'coomer'].includes(entry.provider)
+				? '归档收录'
+				: '创作者动态';
 }
 
 function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {
@@ -94,13 +101,13 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 								<span
 									title={
 										entry.publishedAt
-											? `${entry.provider === 'javdb' ? '发行日期' : '发布时间'}：${entry.publishedPrecision === 'date' || entry.provider === 'javdb' ? feedDate(entry.publishedAt, true) : date(entry.publishedAt)}${entry.publishedPrecision === 'approximate' ? '（估算）' : ''}`
+											? `${isPerformerProvider(entry.provider) ? '发行日期' : '发布时间'}：${entry.publishedPrecision === 'date' || isPerformerProvider(entry.provider) ? feedDate(entry.publishedAt, true) : date(entry.publishedAt)}${entry.publishedPrecision === 'approximate' ? '（估算）' : ''}`
 											: '来源未提供日期'
 									}
 								>
-									{entry.provider === 'javdb' ? '发行' : '发布'}{' '}
+									{isPerformerProvider(entry.provider) ? '发行' : '发布'}{' '}
 									<time dateTime={entry.publishedAt || undefined}>
-										{feedDate(entry.publishedAt, entry.provider === 'javdb' || entry.publishedPrecision === 'date')}
+										{feedDate(entry.publishedAt, isPerformerProvider(entry.provider) || entry.publishedPrecision === 'date')}
 									</time>
 									{entry.publishedPrecision === 'approximate' ? '（约）' : ''}
 								</span>
@@ -135,10 +142,10 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 					selected
 						? [
 								{
-									label: selected.provider === 'javdb' ? '发行日期' : '发布时间',
+									label: isPerformerProvider(selected.provider) ? '发行日期' : '发布时间',
 									value: (
 										<time dateTime={selected.publishedAt || undefined}>
-											{feedDate(selected.publishedAt, selected.provider === 'javdb' || selected.publishedPrecision === 'date')}
+											{feedDate(selected.publishedAt, isPerformerProvider(selected.provider) || selected.publishedPrecision === 'date')}
 											{selected.publishedPrecision === 'approximate' ? '（估算）' : ''}
 										</time>
 									),
@@ -148,9 +155,9 @@ export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (
 							]
 						: []
 				}
-				summary={selected?.provider === 'javdb' ? '' : selected?.summary || ''}
+				summary={isPerformerProvider(selected?.provider) ? '' : selected?.summary || ''}
 				notice={
-					selected?.provider === 'javdb'
+					isPerformerProvider(selected?.provider)
 						? undefined
 						: selected?.restricted
 							? '仅显示来源公开提供的内容。'

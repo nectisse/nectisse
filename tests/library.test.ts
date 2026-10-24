@@ -68,24 +68,29 @@ test('收藏独立保留来源快照、选择封面、尺寸和时间；清理�
 	assert.equal((await stat(join(root, 'library', 'library.sqlite'))).mode & 0o777, 0o600);
 });
 
-test('已移除资料来源的收藏仍可离线读取快照与封面', async (t) => {
-	const { root, service } = await setup(t);
-	const item = record();
-	item.source = 'fc2club';
-	item.sourceUrl = 'https://fc2club.top/html/FC2-1234567.html';
-	item.covers[0]!.source = 'fc2club';
-	item.covers[0]!.url = 'https://fc2club.top/cover.jpg';
-	const work = await service.save([item], undefined, false, readImage);
-	await service.stop();
-	const restored = new LibraryService(root);
-	t.after(() => restored.stop());
-	await restored.initialize();
-	assert.equal(restored.getState().works.length, 1);
-	assert.equal(restored.getWork(work.id)?.records[0]?.source, 'fc2club');
-	assert.equal(restored.getState().works[0]?.cover?.source, 'fc2club');
-	assert.deepEqual((await restored.image(asset.sha256))?.bytes, bytes);
-	assert.equal(restored.sourceUrl(work.id, item.id), item.sourceUrl);
-});
+for (const [source, origin] of [
+	['fc2club', 'https://fc2club.top'],
+	['fc2cmadb', 'https://fc2cmadb.com'],
+] as const) {
+	test(`${source} 的收藏仍可离线读取快照与封面`, async (t) => {
+		const { root, service } = await setup(t);
+		const item = record();
+		item.source = source;
+		item.sourceUrl = `${origin}/article/1234567`;
+		item.covers[0]!.source = source;
+		item.covers[0]!.url = `${origin}/cover.jpg`;
+		const work = await service.save([item], undefined, false, readImage);
+		await service.stop();
+		const restored = new LibraryService(root);
+		t.after(() => restored.stop());
+		await restored.initialize();
+		assert.equal(restored.getState().works.length, 1);
+		assert.equal(restored.getWork(work.id)?.records[0]?.source, source);
+		assert.equal(restored.getState().works[0]?.cover?.source, source);
+		assert.deepEqual((await restored.image(asset.sha256))?.bytes, bytes);
+		assert.equal(restored.sourceUrl(work.id, item.id), item.sourceUrl);
+	});
+}
 
 test('同编号并发收藏去重，重复查询不会覆盖收藏；明确更新保留最初收藏时间', async (t) => {
 	const { service } = await setup(t);

@@ -1,3 +1,4 @@
+import { isPerformerProvider } from '@shared/sources';
 import { mergePreferences } from '@shared/preferences';
 import { EventEmitter } from 'node:events';
 import { z } from 'zod';
@@ -117,7 +118,7 @@ export class SubscriptionsService extends EventEmitter {
 					if (previous.creatorMinutes !== next.creatorMinutes || previous.performerMinutes !== next.performerMinutes) {
 						for (const sub of this.store.subscriptions()) {
 							if (sub.lastCheckedAt && sub.intervalMinutes === null) {
-								const minutes = sub.provider === 'javdb' ? next.performerMinutes : next.creatorMinutes;
+								const minutes = isPerformerProvider(sub.provider) ? next.performerMinutes : next.creatorMinutes;
 								sub.nextCheckAt = new Date(Math.max(Date.parse(sub.lastCheckedAt) + minutes * 60_000, this.store.source(sub.provider).cooldownUntil)).toISOString();
 								this.store.saveSubscription(sub);
 							}
@@ -179,7 +180,7 @@ export class SubscriptionsService extends EventEmitter {
 					if (!sub) {
 						throw new Error('该订阅不存在');
 					}
-					if (command.intervalMinutes != null && sub.provider === 'javdb' && command.intervalMinutes < 360) {
+					if (command.intervalMinutes != null && isPerformerProvider(sub.provider) && command.intervalMinutes < 360) {
 						throw new Error('演员新作检查间隔至少 360 分钟');
 					}
 					if (command.enabled !== undefined) {
@@ -195,7 +196,7 @@ export class SubscriptionsService extends EventEmitter {
 						sub.intervalMinutes = command.intervalMinutes;
 						if (sub.lastCheckedAt) {
 							const preferences = this.store.preferences();
-							const minutes = sub.intervalMinutes ?? (sub.provider === 'javdb' ? preferences.performerMinutes : preferences.creatorMinutes);
+							const minutes = sub.intervalMinutes ?? (isPerformerProvider(sub.provider) ? preferences.performerMinutes : preferences.creatorMinutes);
 							sub.nextCheckAt = new Date(Math.max(Date.parse(sub.lastCheckedAt) + minutes * 60_000, this.store.source(sub.provider).cooldownUntil)).toISOString();
 						}
 					}
