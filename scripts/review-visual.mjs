@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chooseOption } from './select.mjs';
@@ -34,6 +35,7 @@ export async function reviewVisual(page, application, output) {
 	assert.equal(await exit.evaluate((button) => getComputedStyle(button).webkitAppRegion), 'no-drag');
 	assert.equal(await page.locator('.workspace-shell').count(), 1);
 	assert.equal(await page.locator('[data-testid="live-query"]').count(), 1);
+	await selectQueryRecord(page, '示例作品');
 	await page.waitForFunction(() => document.querySelectorAll('.live-result-grid .live-result-card').length > 0 || document.querySelectorAll('.live-result-grid button').length > 0);
 	await screenshot('01-shared-query.png');
 	await openPeople(page, 'actors');
@@ -55,12 +57,13 @@ export async function reviewVisual(page, application, output) {
 	assert.equal(await page.getByRole('heading', { name: '最新动态', exact: true }).count(), 0);
 	await page.getByRole('textbox', { name: '搜索创作者', exact: true }).fill('灯里');
 	await page.getByRole('button', { name: '查看灯里工作室的主页', exact: true }).click();
-	await page.getByRole('button', { name: '关注设置', exact: true }).click();
-	const settings = page.getByRole('dialog');
+	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
+	await openPeople(page, 'creators', 'manage');
+	const settings = page.locator('.subscription-card').filter({ has: page.getByRole('button', { name: '灯里工作室', exact: true }) });
 	await settings.getByRole('button', { name: '暂停', exact: true }).click();
 	await settings.getByRole('button', { name: '恢复', exact: true }).waitFor();
 	await chooseOption(page, '灯里工作室 检查频率', '每 3 小时');
-	await settings.getByRole('button', { name: '完成', exact: true }).click();
+	await settings.getByRole('button', { name: '灯里工作室', exact: true }).click();
 	await page.getByRole('tab', { name: '未读', exact: true }).click();
 	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 2);
 	assert.equal(await page.locator('.real-feed-entry').count(), 2);

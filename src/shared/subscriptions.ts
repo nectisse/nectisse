@@ -55,6 +55,7 @@ export const entryInputSchema = z.object({
 export type EntryInput = z.infer<typeof entryInputSchema>;
 export const subscriptionSchema = candidateSchema.extend({
 	id: z.string().uuid(),
+	manualAvatarAsset: imageAssetSchema.optional(),
 	kind: z.enum(['creator_posts', 'performer_releases']),
 	following: z.boolean(),
 	enabled: z.boolean(),
@@ -161,6 +162,7 @@ export const followCommandSchema = z.discriminatedUnion('action', [
 		intervalMinutes: z.number().int().min(15).max(10080).nullable().optional(),
 	}),
 	z.object({ action: z.literal('check'), id: z.string().uuid() }),
+	z.object({ action: z.literal('restore-avatar'), id: z.string().uuid() }),
 	z.object({ action: z.literal('cancel'), id: z.string().uuid() }),
 	z.object({ action: z.literal('retry-images'), subscriptionId: z.string().uuid().optional() }),
 	z.object({ action: z.literal('read'), ids: z.array(z.string().max(200)).max(500), read: z.boolean() }),
@@ -170,6 +172,7 @@ export type FollowCommand = z.infer<typeof followCommandSchema>;
 export const commandReplySchema = z.object({ ok: z.boolean(), message: z.string().optional(), id: z.string().optional() });
 export type CommandReply = z.infer<typeof commandReplySchema>;
 export interface SubscriptionsBridge {
+	uploadAvatar?: (id: string) => Promise<AvatarReply>;
 	getEntries?: (request: EntryPageRequest) => Promise<EntryPage>;
 	getState: () => Promise<SubscriptionsState>;
 	retry: () => Promise<SubscriptionsState>;
@@ -178,6 +181,7 @@ export interface SubscriptionsBridge {
 	onSettings: (callback: () => void) => () => void;
 }
 export const SUBS_IPC = {
+	uploadAvatar: 'nectisse:subscription-avatar-upload',
 	entries: 'nectisse:subscription-entries',
 	get: 'nectisse:subscriptions-get',
 	retry: 'nectisse:subscriptions-retry',
@@ -185,3 +189,10 @@ export const SUBS_IPC = {
 	state: 'nectisse:subscriptions-state',
 	settings: 'nectisse:settings-open',
 } as const;
+
+export const avatarReplySchema = commandReplySchema.extend({ cancelled: z.boolean().optional() });
+export type AvatarReply = z.infer<typeof avatarReplySchema>;
+
+export function personAvatar(identity: Pick<FollowCandidate, 'avatarAsset'> & { manualAvatarAsset?: Subscription['manualAvatarAsset'] }) {
+	return identity.manualAvatarAsset ?? identity.avatarAsset;
+}

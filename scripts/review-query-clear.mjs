@@ -25,7 +25,7 @@ try {
 		env,
 	});
 	await app.evaluate(({ ipcMain, session }) => {
-		globalThis.__historyProbe = { requests: [], fail: false };
+		globalThis.__historyProbe = { requests: [], queries: [], fail: false };
 		session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
 			globalThis.__historyProbe.requests.push(details.url);
 			callback({ cancel: true });
@@ -44,6 +44,25 @@ try {
 	const input = page.getByRole('textbox', { name: '作品编号、标题或原站链接', exact: true });
 	const current = () => page.evaluate(() => window.nectisse.metadata.getState());
 	const before = await current();
+	assert.ok(before.tasks.length > 0, '启动前已有本地查询记录');
+	await page.getByRole('heading', { name: '从一部值得留下的作品开始。', exact: true }).waitFor();
+	assert.equal(await input.inputValue(), '');
+	assert.equal(await page.locator('.live-result-grid').count(), 0, '启动时不自动选择最近记录');
+	await app.evaluate(({ ipcMain }, taskId) => {
+		ipcMain.removeHandler('nectisse:metadata-query');
+		ipcMain.handle('nectisse:metadata-query', (_event, request) => {
+			globalThis.__historyProbe.queries.push(request.query);
+			return { ok: true, taskId, cached: true };
+		});
+	}, before.tasks[0].id);
+	await input.fill('NECT-024');
+	await page.getByRole('button', { name: '查询资料', exact: true }).click();
+	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).waitFor();
+	assert.deepEqual(await app.evaluate(() => globalThis.__historyProbe.queries), ['NECT-024'], '主动查询仍能显示返回的资料');
+	await nav.getByRole('button', { name: '演员', exact: true }).click();
+	await nav.getByRole('button', { name: '资料查询', exact: true }).click();
+	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).waitFor();
+	assert.equal(await input.inputValue(), 'NECT-024', '当前会话内切换页面保留主动查询');
 	await page.evaluate(async (taskId) => window.nectisse.library.save({ taskId, code: 'NECT-024' }), before.tasks[0].id);
 	const saved = await page.evaluate(() => window.nectisse.library.getState());
 	const subscriptions = await page.evaluate(async () => (await window.nectisse.subscriptions.getState()).subscriptions);
@@ -62,6 +81,12 @@ try {
 	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).waitFor();
 	assert.equal(await input.inputValue(), 'NECT-024');
 	await page.screenshot({ path: join(output, '01-query-actions.png') });
+	await page.reload();
+	await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor();
+	await page.getByRole('heading', { name: '从一部值得留下的作品开始。', exact: true }).waitFor();
+	assert.equal(await input.inputValue(), '');
+	assert.equal(await page.locator('.live-result-grid').count(), 0, '重新打开界面后不恢复已选择的历史');
+	assert.deepEqual((await current()).tasks, before.tasks, '空白起始页不删除历史记录');
 	await page.getByRole('button', { name: '查询记录', exact: true }).click();
 	const history = page.getByRole('dialog', { name: '查询记录', exact: true });
 	await history.getByRole('button', { name: '清空记录', exact: true }).click();
@@ -97,7 +122,7 @@ try {
 	assert.equal(await page.locator('.live-result-grid').count(), 0);
 	assert.deepEqual(errors, []);
 	assert.deepEqual(await app.evaluate(() => globalThis.__historyProbe.requests), []);
-	console.log(JSON.stringify({ application: appPath ? 'packaged' : 'development', checks: ['clear-current-keeps-history', 'empty-view-survives-navigation', 'history-selection-restores-results', 'cancel-confirmation-keeps-records', 'failed-clear-can-retry', 'clear-history-persists', 'collection-and-subscriptions-unchanged', 'empty-view-after-reload', 'no-site-requests'], screenshots: output }, null, 2));
+	console.log(JSON.stringify({ application: appPath ? 'packaged' : 'development', checks: ['startup-blank-with-existing-history', 'clear-current-keeps-history', 'empty-view-survives-navigation', 'history-selection-restores-results', 'reload-does-not-restore-history', 'cancel-confirmation-keeps-records', 'failed-clear-can-retry', 'clear-history-persists', 'collection-and-subscriptions-unchanged', 'empty-view-after-reload', 'no-site-requests'], screenshots: output }, null, 2));
 } finally {
 	await app?.close().catch(() => {});
 	await rm(profile, { recursive: true, force: true });

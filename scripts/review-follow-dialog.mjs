@@ -1,5 +1,6 @@
 import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -67,7 +68,7 @@ try {
 	const dialog = page.getByRole('dialog', { name: '添加关注', exact: true });
 	const input = page.getByRole('textbox', { name: '主页、账号或演员名', exact: true });
 	const mode = value => app.evaluate((_electron, value) => { globalThis.__followDialogTest.mode = value; }, value);
-	const open = async () => { if (await page.locator('.person-profile').count()) { await page.getByRole('button', { name: '关注设置', exact: true }).click(); await page.getByRole('button', { name: '添加其他关注', exact: true }).click(); } else { await page.locator('main').getByRole('button', { name: '添加关注', exact: true }).click(); } await dialog.waitFor(); await page.waitForFunction(() => document.activeElement?.id === 'follow-query'); };
+	const open = async () => { if (await page.locator('.person-profile').count()) { await page.getByRole('button', { name: '返回关注列表', exact: true }).click(); } await page.locator('main').getByRole('button', { name: '添加关注', exact: true }).click(); await dialog.waitFor(); await page.waitForFunction(() => document.activeElement?.id === 'follow-query'); };
 	const lookup = async (text = '布局样本') => { await input.fill(text); await dialog.getByRole('button', { name: '查询身份', exact: true }).click(); };
 	const close = async () => { await dialog.getByRole('button', { name: '关闭添加关注', exact: true }).click(); await dialog.waitFor({ state: 'hidden' }); };
 	await openPeople(page, 'actors', 'manage');
@@ -125,7 +126,7 @@ try {
 	assert.equal(await dialog.getByRole('button', { name: '查询身份', exact: true }).isDisabled(), true);
 	await dialog.getByRole('button', { name: '来源设置', exact: true }).click(); await dialog.waitFor({ state: 'hidden' });
 	assert.equal(await page.locator('#page-heading').innerText(), '设置');
-	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
+	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await selectQueryRecord(page, 'NECT-024'); await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
 	await page.getByRole('button', { name: /订阅.*新作/ }).click(); await dialog.waitFor();
 	assert.equal(await page.locator('#page-heading').innerText(), '作品详情'); assert.match(await input.inputValue(), /白石/); await close();
 	await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'source-enabled', source: 'javtao', enabled: true }));
@@ -135,8 +136,9 @@ try {
 	await lookup('演员甲'); await dialog.locator('[data-follow-ref="actor-1"]').waitFor();
 	await dialog.locator('[data-follow-ref="actor-1"]').getByRole('button', { name: '确认关注', exact: true }).click();
 	await dialog.waitFor({ state: 'hidden' }); await page.locator('.person-profile[data-kind="actors"]').waitFor();
-	await page.getByRole('button', { name: '关注设置', exact: true }).click();
-	await page.getByRole('combobox', { name: '候选人物 1 检查频率', exact: true }).click();
+	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
+	await openPeople(page, 'actors', 'manage');
+	await page.locator('.subscription-card').filter({ hasText: 'JavTao' }).getByRole('combobox', { name: '候选人物 1 检查频率', exact: true }).click();
 	await page.getByRole('option').first().waitFor();
 	assert.deepEqual(await page.getByRole('option').allTextContents(), ['使用默认频率', '每 6 小时', '每 12 小时', '每 1 天', '每 7 天']);
 	await page.keyboard.press('Escape');

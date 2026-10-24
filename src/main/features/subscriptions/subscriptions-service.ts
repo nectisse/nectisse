@@ -15,6 +15,8 @@ import { ImageBackfill } from './image-backfill';
 import { FollowRunner } from './follow-runner';
 import { SubscriptionScheduler } from './subscription-scheduler';
 import type { ImageStore } from '../../platform/images';
+import type { ImageBytes } from '../../platform/images';
+import { ManualAvatars } from './manual-avatars';
 export { PROVIDER_ROOTS } from './follow-runner';
 
 export class SubscriptionsService extends EventEmitter {
@@ -23,6 +25,7 @@ export class SubscriptionsService extends EventEmitter {
 	private images: ImageCache;
 	private backfill: ImageBackfill;
 	private scheduler: SubscriptionScheduler;
+	private avatars: ManualAvatars;
 
 	constructor(
 		readonly store: SubscriptionStore,
@@ -35,13 +38,25 @@ export class SubscriptionsService extends EventEmitter {
 	) {
 		super();
 		this.images = new ImageCache(store, host, resolveProxy, sharedImages);
+		this.avatars = new ManualAvatars(store, sharedImages);
 		this.backfill = new ImageBackfill(store, this.images);
 		const follow = new FollowRunner(store, host, resolveProxy, this.images);
 		this.scheduler = new SubscriptionScheduler(store, this.images, this.backfill, follow, () => this.publish(), intervalMs, gate);
 	}
 
-	initialize(): Promise<void> {
-		return this.scheduler.initialize();
+	async initialize(): Promise<void> {
+		await this.scheduler.initialize();
+		await this.avatars.prepare();
+	}
+
+	async uploadAvatar(id: string, image: ImageBytes): Promise<CommandReply> {
+		try {
+			await this.scheduler.command(() => this.avatars.replace(z.string().uuid().parse(id), image));
+			this.publish();
+			return { ok: true };
+		} catch {
+			return { ok: false, message: '头像未能保存，请重新选择图片或检查本机存储' };
+		}
 	}
 
 	getState(): SubscriptionsState {
@@ -243,6 +258,8 @@ export class SubscriptionsService extends EventEmitter {
 					return { ok: true, id: this.scheduler.launch('check', sub.provider, '', sub) };
 				} else if (command.action === 'cancel') {
 					await this.cancel(command.id);
+				} else if (command.action === 'restore-avatar') {
+					await this.avatars.restore(command.id);
 				} else if (command.action === 'retry-images') {
 					this.backfill.retry(command.subscriptionId);
 				} else if (command.action === 'read') {
@@ -285,8 +302,9 @@ export class SubscriptionsService extends EventEmitter {
 		return this.scheduler.cancel(id);
 	}
 
-	stop(): Promise<void> {
-		return this.scheduler.stop();
+	async stop(): Promise<void> {
+		await this.scheduler.stop();
+		await this.avatars.drain();
 	}
 
 	private publish(): void {

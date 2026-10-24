@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -54,6 +55,7 @@ try {
  }
  await writeFile(path, JSON.stringify(metadata));
  await launch();
+ await selectQueryRecord(page, 'NECT-024');
  await page.locator('.live-result-grid').waitFor();
  assert.equal(await page.getByRole('button', { name: '收藏作品', exact: true }).count(), 3);
  await page.getByRole('button', { name: '收藏作品', exact: true }).first().click();
@@ -73,7 +75,7 @@ try {
  for (let i = 0; i < 2; i++) { await page.getByRole('button', { name: '收藏作品', exact: true }).first().click(); await page.waitForFunction(n => window.nectisse.library.getState().then(state => state.works.length === n), i + 2); }
  await library(); await count(3);
  if (navigationOnly) {
-  for (let cycle = 0; cycle < 8; cycle++) { await nav().getByRole('button', { name: '资料查询', exact: true }).click(); await page.locator('.live-result-grid').waitFor(); await library(); await count(3); }
+  for (let cycle = 0; cycle < 8; cycle++) { await nav().getByRole('button', { name: '资料查询', exact: true }).click(); await selectQueryRecord(page, 'NECT-024'); await page.locator('.live-result-grid').waitFor(); await library(); await count(3); }
   await quit(); console.log(JSON.stringify({ check: 'save-three-and-repeated-navigation', passed: true }));
  } else {
  const search = page.getByRole('textbox', { name: '搜索收藏作品', exact: true });

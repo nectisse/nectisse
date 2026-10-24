@@ -2,6 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, session
 import { createHash } from 'node:crypto';
 import { ImageStore } from './platform/images';
 import { ImageAccess } from './app/image-access';
+import { readAvatarFile } from './app/avatar-file';
 import { STORAGE_IPC } from '@shared/storage';
 import { preferredCover } from '@shared/cover-selection';
 import { dirname, join, resolve } from 'node:path';
@@ -327,6 +328,41 @@ if (!app.requestSingleInstanceLock()) {
 					await images!.setLimit(subscriptionStore!.preferences().imageCacheMiB);
 				}
 				return reply;
+			});
+			let avatarPickerOpen = false;
+			ipcMain.handle(SUBS_IPC.uploadAvatar, async (event, id: unknown) => {
+				trusted(event);
+				await waitLocal();
+				const subscriptionId = z.string().uuid().parse(id);
+				if (quitting || !subscriptionStore!.subscription(subscriptionId)) {
+					return { ok: false, message: '该订阅暂不可用' };
+				}
+				if (avatarPickerOpen) {
+					return { ok: false, message: '请先完成当前图片选择' };
+				}
+				avatarPickerOpen = true;
+				try {
+					const parent = BrowserWindow.fromWebContents(event.sender);
+					if (!parent || parent.isDestroyed()) {
+						return { ok: false, cancelled: true };
+					}
+					const selection = await dialog.showOpenDialog(parent, {
+						title: '上传头像',
+						buttonLabel: '使用这张图片',
+						properties: ['openFile'],
+						filters: [{ name: '头像图片', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
+					});
+					const path = selection.filePaths[0];
+					if (selection.canceled || !path || quitting) {
+						return { ok: false, cancelled: true };
+					}
+					const image = await readAvatarFile(path);
+					return await subscriptions!.uploadAvatar(subscriptionId, image);
+				} catch (error) {
+					return { ok: false, message: error instanceof Error && !('code' in error) ? error.message : '图片未能读取，请重新选择' };
+				} finally {
+					avatarPickerOpen = false;
+				}
 			});
 			const observedOutcomes = new Set<string>();
 			metadataReady = new InitializationStep(async () => {

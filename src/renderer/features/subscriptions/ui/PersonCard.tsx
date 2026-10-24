@@ -1,15 +1,16 @@
-import type { Subscription } from '@shared/subscriptions';
+import { personAvatar, type Subscription } from '@shared/subscriptions';
 import { useDesktopActions } from '@/shared/desktop';
 import { Button } from '@/shared/ui/button';
 import { FeedImage } from '@/entities/update';
 
 export function PersonCard({ subscription: sub, onOpen }: { subscription: Subscription; onOpen: () => void }): React.JSX.Element {
 	const { imageUrl } = useDesktopActions();
+	const avatar = personAvatar(sub);
 	return (
 		<Button variant="media" size="media" className="person-card" onClick={onOpen} aria-label={`查看${sub.name}的主页`}>
 			<span className="person-card-portrait">
-				{sub.avatarAsset ? (
-					<FeedImage src={imageUrl('avatars', sub.avatarAsset.sha256)} alt={`${sub.name}的来源头像`} />
+				{avatar ? (
+					<FeedImage src={imageUrl('avatars', avatar.sha256)} alt={`${sub.name}的头像`} />
 				) : (
 					<span className="person-card-initial">{Array.from(sub.name)[0] ?? '?'}</span>
 				)}

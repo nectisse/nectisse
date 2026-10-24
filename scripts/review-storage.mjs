@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile, rm, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -64,6 +65,7 @@ try {
 	await mkdir(output, { recursive: true });
 	execFileSync(process.execPath, ['--import', 'tsx', 'scripts/seed-workspace-fixtures.ts', profile], { cwd: root, stdio: 'pipe' });
 	await launch();
+	await selectQueryRecord(page, 'NECT-024');
 	await page.locator('.live-result-grid').waitFor();
 	await page.waitForFunction(() => [...document.querySelectorAll('.live-result-grid img')].every((image) => image.complete && image.naturalWidth > 0));
 	const task = (await page.evaluate(() => window.nectisse.metadata.getState())).tasks[0];

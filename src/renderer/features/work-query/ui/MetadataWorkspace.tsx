@@ -69,15 +69,19 @@ function SourceStatus({ task }: { task: QueryTask }): React.JSX.Element {
 
 export default function MetadataWorkspace({
 	seed,
+	selectedTaskId,
+	onSelectTask: setSelectedTaskId,
 	onClear,
 	onPerformer,
 	renderSaveAction,
 }: {
 	seed?: { query: string; token: number };
+	selectedTaskId: string | null;
+	onSelectTask: (id: string | null) => void;
 	onClear?: () => void;
 	onPerformer?: (query: string, provider?: FollowProvider) => void;
 	renderSaveAction?: (input: SaveActionInput) => ReactNode;
-} = {}): React.JSX.Element {
+}): React.JSX.Element {
 	const actions = useDesktopActions();
 	const subscriptionState = useSubscriptions((state) => ({ preferences: state.preferences }));
 	const { invoke } = useDesktopActions();
@@ -93,9 +97,8 @@ export default function MetadataWorkspace({
 
 	const state = useMetadata((state) => state);
 	const { error: metadataError } = useMetadataStatus();
-	const [query, setQuery] = useState('');
+	const [query, setQuery] = useState(() => seed?.query ?? state.tasks.find((task) => task.id === selectedTaskId)?.plan.query ?? '');
 	const [savingSources, setSavingSources] = useState(false);
-	const [selectedTaskId, setSelectedTaskId] = useState<string | null>('');
 	const [selectedCode, setSelectedCode] = useState('');
 	const [recentOpen, setRecentOpen] = useState(false);
 	const [clearConfirm, setClearConfirm] = useState(false);
@@ -116,7 +119,7 @@ export default function MetadataWorkspace({
 		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
 	}, [selectedCode]);
 
-	const task = selectedTaskId === null ? undefined : (state.tasks.find((task) => task.id === selectedTaskId) ?? state.tasks[0]);
+	const task = state.tasks.find((task) => task.id === selectedTaskId);
 	const active = state.tasks.find((task) => task.id === state.activeId);
 	const busy = submitting || !!active || savingSources || reading || clearingHistory;
 	const sources = subscriptionState.preferences.querySources;
@@ -457,9 +460,7 @@ export default function MetadataWorkspace({
 				>
 					<DialogContent className="query-history-confirm" finalFocus={historyTitle}>
 						<DialogTitle>清空全部查询记录？</DialogTitle>
-						<DialogDescription>
-							将删除全部 {state.tasks.length} 条查询记录及其资料快照，无法撤销。作品收藏、订阅和图片缓存不受影响。
-						</DialogDescription>
+						<DialogDescription>将删除全部 {state.tasks.length} 条查询记录及其资料快照，无法撤销。作品收藏、订阅和图片缓存不受影响。</DialogDescription>
 						<div className="query-history-footer-actions">
 							<Button variant="outline" size="sm" disabled={clearingHistory} onClick={() => setClearConfirm(false)}>
 								取消

@@ -57,7 +57,7 @@ export function SubscriptionsPage({
 	};
 
 	if (sub) {
-		return <PersonProfile key={sub.id} subscription={sub} onBack={() => onViewChange({ selectedId: '' })} onAdd={onAdd} onWork={onWork} />;
+		return <PersonProfile key={sub.id} subscription={sub} onBack={() => onViewChange({ selectedId: '' })} onWork={onWork} />;
 	}
 
 	return (

@@ -1,5 +1,6 @@
 import { openPeople, openUpdates } from './people.mjs';
 import assert from 'node:assert/strict';
+import { selectQueryRecord } from './query.mjs';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -79,6 +80,7 @@ try {
 		ipcMain.handle('nectisse:magnet-action', (_event, input) => { globalThis.__magnetActions.push(input); return true; });
 	});
 	await nav.getByRole('button', { name: '资料查询', exact: true }).click();
+	await selectQueryRecord(page, 'NECT-024');
 	await page.getByRole('button', { name: '查看真实作品 NECT-024', exact: true }).click();
 	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 0);
 	assert.deepEqual(await page.getByRole('tablist', { name: '真实作品详情' }).getByRole('tab').allTextContents(), ['作品资料', '来源与差异', '磁链搜索']);
