@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fork } from 'node:child_process';
-import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -25,6 +25,7 @@ function alive(pid: number): boolean {
 }
 
 async function assertGone(pids: number[]): Promise<void> {
+	assert.ok(pids.length > 0 && pids.every((pid) => Number.isSafeInteger(pid) && pid > 0), 'Expected actual positive process IDs');
 	for (let attempt = 0; attempt < 100; attempt++) {
 		if (pids.every((pid) => !alive(pid))) {
 			return;
@@ -108,25 +109,51 @@ test('阻塞操作取消时清理工作者及其子进程', async () => {
 	}
 });
 
-test('超时结束进程；shutdown 取消活动任务并禁止新请求', async () => {
-	const host = new PythonTaskHost(layout, { diagnostics: true, graceMs: 50 });
-	let pid = 0;
+test('握手前超时也会结束实际创建的 Python 进程', async (t) => {
+	const temporary = await mkdtemp(join(tmpdir(), 'nectisse-before-ready-test-'));
+	t.after(() => rm(temporary, { recursive: true, force: true }));
+	const bootstrap = join(temporary, 'before-ready.py');
+	await writeFile(bootstrap, 'import time\ntime.sleep(60)\n');
+	const host = new PythonTaskHost({ ...layout, bootstrap }, { graceMs: 50 });
+	let ready = false;
 	try {
-		await assert.rejects(
-			host.run(
-				'diagnostics.wait',
-				{ seconds: 60 },
-				{
-					timeoutMs: 300,
+		const task = host.run(
+			'health',
+			{},
+			{
+				timeoutMs: 50,
 
-					onReady: (processId) => {
-						pid = processId;
-					},
+				onReady: () => {
+					ready = true;
 				},
-			),
-			(error) => error instanceof PythonWorkerError && error.code === 'WORKER_TIMEOUT',
+			},
 		);
-		await assertGone([pid]);
+		const pids = host.activePids;
+		await assert.rejects(task, (error) => error instanceof PythonWorkerError && error.code === 'WORKER_TIMEOUT');
+		assert.equal(ready, false);
+		await assertGone(pids);
+		assert.deepEqual(host.activePids, []);
+	} finally {
+		await host.shutdown();
+	}
+});
+
+test('超时结束实际创建的 Python 进程', async () => {
+	const host = new PythonTaskHost(layout, { diagnostics: true, graceMs: 50 });
+	try {
+		const task = host.run('diagnostics.wait', { seconds: 60 }, { timeoutMs: 300 });
+		const pids = host.activePids;
+		await assert.rejects(task, (error) => error instanceof PythonWorkerError && error.code === 'WORKER_TIMEOUT');
+		await assertGone(pids);
+		assert.deepEqual(host.activePids, []);
+	} finally {
+		await host.shutdown();
+	}
+});
+
+test('握手后 shutdown 取消活动任务、结束进程并禁止新请求', async () => {
+	const host = new PythonTaskHost(layout, { diagnostics: true, graceMs: 50 });
+	try {
 		let shutdown: Promise<void> | undefined;
 		const task = host.run(
 			'diagnostics.wait',
@@ -137,9 +164,13 @@ test('超时结束进程；shutdown 取消活动任务并禁止新请求', async
 				},
 			},
 		);
+		const pids = host.activePids;
 		await assert.rejects(task, TaskCancelledError);
+		assert.ok(shutdown, 'Expected shutdown after the worker handshake');
 		await shutdown;
+		await assertGone(pids);
 		await assert.rejects(host.run('health'), TaskCancelledError);
+		assert.deepEqual(host.activePids, []);
 	} finally {
 		await host.shutdown();
 	}
