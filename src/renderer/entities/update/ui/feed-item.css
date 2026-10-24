@@ -279,8 +279,22 @@
 [data-presentation='cards'] .feed-item-thumbnail[data-slot='button'] {
 	width: calc(100% - 32px);
 	aspect-ratio: 16 / 9;
-	max-height: 400px;
 	margin: 14px 16px 0;
+}
+[data-presentation='cards'] .feed-item-thumbnail img {
+	object-fit: cover;
+	object-position: center top;
+}
+.feed-item-long-image[data-slot='badge'] {
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	padding: 2px 6px;
+	font-size: 10px;
+	font-weight: 400;
+	background: var(--card);
+	color: var(--muted-foreground);
+	pointer-events: none;
 }
 [data-presentation='cards'] .feed-item-footer {
 	margin: 14px 16px;

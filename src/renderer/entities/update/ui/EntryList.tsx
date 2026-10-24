@@ -60,7 +60,7 @@ function EntryImage({ entry, variant = 'thumbnail' }: { entry: FeedEntry; varian
 	return (
 		<FeedImage
 			key={`${entry.imageAsset?.sha256 ?? ''}:${status ?? ''}`}
-			src={entry.thumbnailUrl ? imageUrl('updates', entry.id, variant) : undefined}
+			src={entry.thumbnailUrl ? imageUrl('updates', entry.id, variant, entry.imageAsset?.sha256) : undefined}
 			unavailable={unavailable}
 			alt={`${entry.title || '来源内容'} · 来源封面`}
 		/>
@@ -111,6 +111,8 @@ export function EntryList({
 							flags={[...(entry.initial ? [{ label: '初次收录' }] : []), ...(entry.restricted ? [{ label: '正文受限', warning: true }] : [])]}
 							read={entry.read}
 							image={presentation === 'cards' && !entry.thumbnailUrl && !entry.imageAsset ? undefined : <EntryImage entry={entry} />}
+							imageKey={entry.imageAsset?.sha256 ?? entry.thumbnailUrl}
+							imageAspectRatio={entry.imageAsset ? entry.imageAsset.width / entry.imageAsset.height : undefined}
 							published={
 								<span
 									title={

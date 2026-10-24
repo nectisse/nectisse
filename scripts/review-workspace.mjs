@@ -143,9 +143,9 @@ try {
     const image = item.querySelector('.feed-item-thumbnail')?.getBoundingClientRect();
     const title = item.querySelector('.feed-item-title > span').getBoundingClientRect();
     const summary = item.querySelector('.feed-item-summary').getBoundingClientRect();
-    return { height: item.getBoundingClientRect().height, x: image?.x, width: item.getBoundingClientRect().width, titleHeight: title.height, summaryHeight: summary.height };
+    return { height: item.getBoundingClientRect().height, x: image?.x, imageWidth: image?.width, imageHeight: image?.height, width: item.getBoundingClientRect().width, titleHeight: title.height, summaryHeight: summary.height };
    }));
-   assert.ok(itemLayout.every(item => item.height <= 650 && item.titleHeight <= 49 && item.summaryHeight <= 92), JSON.stringify(itemLayout));
+   assert.ok(itemLayout.every(item => item.height > 0 && (!item.imageHeight || item.imageHeight <= item.imageWidth * 2 + 1) && item.titleHeight <= 49 && item.summaryHeight <= 92), JSON.stringify(itemLayout));
    assert.ok(itemLayout.every(item => Math.abs(item.width - itemLayout[0].width) <= 1 && item.width < 500), 'Creator updates use equally sized columns');
    await updates('actors');
    const actorEntry = page.locator('.real-feed-entry').filter({ has: page.getByRole('button', { name: '查询 NECT-024 资料', exact: true }) });

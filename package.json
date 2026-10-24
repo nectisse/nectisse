@@ -24,6 +24,7 @@
 		"test:magnets": "node scripts/review-magnets.mjs",
 		"test:scroll": "node scripts/review-scroll.mjs",
 		"test:creator-stream": "node scripts/review-creator-stream.mjs",
+		"test:creator-images": "node scripts/review-creator-images.mjs",
 		"test:profile-pagination": "node scripts/review-profile-pagination.mjs",
 		"test:creator-profile": "node scripts/review-creator-profile.mjs",
 		"test:manual-avatars": "node scripts/review-manual-avatars.mjs",
