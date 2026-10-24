@@ -43,6 +43,4 @@ npm-debug.log*
 /ref/
 /design/
 /.wu
-/docs/*
-!/docs/SOURCE_SUPPORT.md
-!/docs/THIRD_PARTY_NOTICES.md
+/docs/
