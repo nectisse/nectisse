@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import { METADATA_IDS } from '@shared/sources';
+import { LEGACY_METADATA_IDS, METADATA_IDS, withoutRetiredSources } from '@shared/sources';
 import { COVER_SOURCE_IDS } from '@shared/cover-sources';
 export { SOURCE_LABELS } from '@shared/sources';
 
 export const sourceIdSchema = z.enum(METADATA_IDS);
 export type SourceId = z.infer<typeof sourceIdSchema>;
+const recordSourceSchema = z.enum([...METADATA_IDS, ...LEGACY_METADATA_IDS]);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 export const imageAssetSchema = z.object({
 	sha256: hash,
@@ -23,7 +24,7 @@ export const imageProbeSchema = imageAssetSchema.pick({ width: true, height: tru
 export const coverSchema = z.object({
 	id: hash,
 	url: z.string().url().max(2000),
-	source: sourceIdSchema,
+	source: recordSourceSchema,
 	identity: z.literal('source-matched'),
 	asset: imageAssetSchema.optional(),
 	probe: imageProbeSchema.optional(),
@@ -31,7 +32,7 @@ export const coverSchema = z.object({
 });
 export const metadataRecordSchema = z.object({
 	id: hash,
-	source: sourceIdSchema,
+	source: recordSourceSchema,
 	parser: z.string().max(100),
 	parserVersion: z.string().max(100),
 	code: z.string().max(100),
@@ -67,11 +68,11 @@ export const queryPlanSchema = z.object({
 	code: z.string().max(100),
 	contentId: z.string().max(100),
 	sourceUrl: z.string().max(2000).optional(),
-	sources: z.array(sourceIdSchema).max(METADATA_IDS.length),
+	sources: z.preprocess(withoutRetiredSources, z.array(sourceIdSchema).max(METADATA_IDS.length)),
 });
 export type QueryPlan = z.infer<typeof queryPlanSchema>;
 export const sourceOutcomeSchema = z.object({
-	source: sourceIdSchema,
+	source: recordSourceSchema,
 	status: z.enum(['success', 'partial', 'error', 'cached']),
 	reason: z.string().max(100),
 	message: z.string().max(500),
@@ -86,12 +87,12 @@ export const queryTaskSchema = z.object({
 	status: z.enum(['running', 'cancelling', 'cancelled', 'succeeded', 'partial', 'failed', 'interrupted']),
 	phase: z.string().max(500),
 	plan: queryPlanSchema,
-	coverPriority: z.array(z.enum(COVER_SOURCE_IDS)).max(COVER_SOURCE_IDS.length).optional(),
+	coverPriority: z.preprocess(withoutRetiredSources, z.array(z.enum(COVER_SOURCE_IDS)).max(COVER_SOURCE_IDS.length).optional()),
 	startedAt: z.string(),
 	finishedAt: z.string().optional(),
 	cancelRequestedAt: z.string().optional(),
 	records: z.array(metadataRecordSchema).max(30),
-	outcomes: z.array(sourceOutcomeSchema).max(METADATA_IDS.length),
+	outcomes: z.array(sourceOutcomeSchema).max(METADATA_IDS.length + LEGACY_METADATA_IDS.length),
 	requests: z.number().int().min(0).max(24),
 });
 export type QueryTask = z.infer<typeof queryTaskSchema>;

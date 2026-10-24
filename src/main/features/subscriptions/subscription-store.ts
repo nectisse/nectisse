@@ -1,4 +1,4 @@
-import { DEFAULT_PREFERENCES, preferencesSchema, type Preferences } from '@shared/preferences';
+import { DEFAULT_PREFERENCES, preferencesSchema, storedPreferencesSchema, type Preferences } from '@shared/preferences';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, chmodSync } from 'node:fs';
@@ -23,6 +23,8 @@ export interface Cipher {
 }
 
 const now = (): string => new Date().toISOString();
+// 保留旧行，但不让已移除的订阅进入调度、动态或任务列表。
+const retainedProvider = "COALESCE(json_extract(value,'$.provider'),'') NOT IN ('subscribestar','rule34video')";
 
 export class SubscriptionStore {
 	readonly db: DatabaseSync;
@@ -86,7 +88,7 @@ export class SubscriptionStore {
 
 	preferences(): Preferences {
 		const row = this.db.prepare('SELECT value FROM preferences WHERE id=1').get();
-		return row ? preferencesSchema.parse(JSON.parse(String(row.value))) : structuredClone(DEFAULT_PREFERENCES);
+		return row ? storedPreferencesSchema.parse(JSON.parse(String(row.value))) : structuredClone(DEFAULT_PREFERENCES);
 	}
 
 	savePreferences(value: Preferences): void {
@@ -124,7 +126,7 @@ export class SubscriptionStore {
 
 	subscriptions(): Subscription[] {
 		return this.db
-			.prepare('SELECT value FROM subscriptions ORDER BY rowid DESC')
+			.prepare(`SELECT value FROM subscriptions WHERE ${retainedProvider} ORDER BY rowid DESC`)
 			.all()
 			.map((row) => {
 				const value = subscriptionSchema.parse(JSON.parse(String(row.value)));
@@ -134,7 +136,7 @@ export class SubscriptionStore {
 	}
 
 	subscription(id: string): Subscription | undefined {
-		const row = this.db.prepare('SELECT value FROM subscriptions WHERE id=?').get(id);
+		const row = this.db.prepare(`SELECT value FROM subscriptions WHERE id=? AND ${retainedProvider}`).get(id);
 		return row ? subscriptionSchema.parse(JSON.parse(String(row.value))) : undefined;
 	}
 
@@ -180,13 +182,13 @@ export class SubscriptionStore {
 
 	entries(subscriptionId?: string): FeedEntry[] {
 		const rows = subscriptionId
-			? this.db.prepare('SELECT value FROM entries WHERE subscription_id=? ORDER BY first_seen DESC,rowid ASC LIMIT 500').all(subscriptionId)
-			: this.db.prepare('SELECT value FROM entries ORDER BY first_seen DESC,rowid ASC LIMIT 500').all();
+			? this.db.prepare(`SELECT value FROM entries WHERE subscription_id=? AND ${retainedProvider} ORDER BY first_seen DESC,rowid ASC LIMIT 500`).all(subscriptionId)
+			: this.db.prepare(`SELECT value FROM entries WHERE ${retainedProvider} ORDER BY first_seen DESC,rowid ASC LIMIT 500`).all();
 		return rows.map((row) => JSON.parse(String(row.value)) as FeedEntry);
 	}
 
 	entry(id: string): FeedEntry | undefined {
-		const row = this.db.prepare('SELECT value FROM entries WHERE id=?').get(id);
+		const row = this.db.prepare(`SELECT value FROM entries WHERE id=? AND ${retainedProvider}`).get(id);
 		return row ? (JSON.parse(String(row.value)) as FeedEntry) : undefined;
 	}
 
@@ -294,7 +296,7 @@ export class SubscriptionStore {
 
 	tasks(): FollowTask[] {
 		return this.db
-			.prepare('SELECT value FROM follow_tasks ORDER BY started_at DESC,rowid DESC LIMIT 20')
+			.prepare(`SELECT value FROM follow_tasks WHERE ${retainedProvider} ORDER BY started_at DESC,rowid DESC LIMIT 20`)
 			.all()
 			.map((row) => followTaskSchema.parse(JSON.parse(String(row.value))));
 	}
@@ -319,7 +321,7 @@ export class SubscriptionStore {
 
 	private imageEntries(url: string): FeedEntry[] {
 		return this.db
-			.prepare("SELECT value FROM entries WHERE json_extract(value,'$.thumbnailUrl')=?")
+			.prepare(`SELECT value FROM entries WHERE json_extract(value,'$.thumbnailUrl')=? AND ${retainedProvider}`)
 			.all(url)
 			.map((row) => JSON.parse(String(row.value)) as FeedEntry);
 	}

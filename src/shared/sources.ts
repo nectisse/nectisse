@@ -16,18 +16,20 @@ export const METADATA_IDS = [
 	'sougouwiki',
 	'av_neme',
 	'av_name',
-	'kmib',
 	'makers',
 	'prestige',
 	'faleno',
 	'dahlia',
 	'mgstage',
 	'avsox',
-	'fc2club',
 	'freejavbt',
 	'airav',
 ] as const;
-export const FOLLOW_IDS = ['fanbox', 'javdb', 'patreon', 'subscribestar', 'kemono', 'pawchive', 'coomer', 'rule34video'] as const;
+export const FOLLOW_IDS = ['fanbox', 'javdb', 'patreon', 'kemono', 'pawchive', 'coomer'] as const;
+export const RETIRED_SOURCE_IDS = ['rule34video', 'subscribestar', 'rule34xxx', 'rule34paheal', 'fc2club', 'kmib'] as const;
+// 仅用于读取既有资料与收藏，不参与新查询。
+export const LEGACY_METADATA_IDS = ['fc2club', 'kmib'] as const;
+export type LegacyMetadataSource = (typeof LEGACY_METADATA_IDS)[number];
 export type SourceId = (typeof METADATA_IDS)[number];
 export const DEFAULT_QUERY_SOURCES: SourceId[] = ['dmm', 'r18dev', 'fc2'];
 export type FollowProvider = (typeof FOLLOW_IDS)[number];
@@ -58,7 +60,11 @@ export const SOURCES: SourceSpec[] = ALL_IDS.map((id) => ({
 }));
 
 export const SOURCE_BY_ID = Object.fromEntries(SOURCES.map((source) => [source.id, source])) as Record<AllSource, (typeof SOURCES)[number]>;
-export const SOURCE_LABELS = Object.fromEntries(SOURCES.map((source) => [source.id, source.name])) as Record<AllSource, string>;
+export const SOURCE_LABELS = {
+	...(Object.fromEntries(SOURCES.map((source) => [source.id, source.name])) as Record<AllSource, string>),
+	fc2club: 'FC2Club（已移除）',
+	kmib: 'K-MIB（已移除）',
+};
 export const DEFAULT_METADATA_ORDER: SourceId[] = [
 	'dmm',
 	'r18dev',
@@ -76,13 +82,11 @@ export const DEFAULT_METADATA_ORDER: SourceId[] = [
 	'javdb',
 	'javarchive',
 	'avsox',
-	'fc2club',
 	'freejavbt',
 	'airav',
 	'sougouwiki',
 	'av_neme',
 	'av_name',
-	'kmib',
 	'javbus',
 ];
 export const DEFAULT_ENABLED: AllSource[] = ['dmm', 'r18dev', 'fc2', 'fanbox', 'javdb'];
@@ -90,3 +94,7 @@ export const DEFAULT_ENABLED: AllSource[] = ['dmm', 'r18dev', 'fc2', 'fanbox', '
 export const isFollowProvider = (value: string): value is FollowProvider => (FOLLOW_IDS as readonly string[]).includes(value);
 
 export const isMetadataSource = (value: string): value is SourceId => (METADATA_IDS as readonly string[]).includes(value);
+
+export function withoutRetiredSources(value: unknown): unknown {
+	return Array.isArray(value) ? value.filter((id) => !(RETIRED_SOURCE_IDS as readonly unknown[]).includes(id)) : value;
+}

@@ -76,6 +76,65 @@ test('输入分流、编号与链接身份：FC2 不访问 JAV 来源，标题�
 	}
 });
 
+test('已移除来源的查询历史仍能读取，旧计划不再包含可派发来源', async (t) => {
+	const root = await directory(t);
+	let calls = 0;
+	const service = new MetadataService(
+		root,
+		{
+			run: async () => {
+				calls++;
+				return success;
+			},
+		},
+		undefined,
+		0,
+	);
+	await service.initialize();
+	await service.stop();
+	const path = join(root, 'metadata', 'state.json');
+	const saved = JSON.parse(await readFile(path, 'utf8'));
+	const legacy = { ...record(), source: 'kmib', sourceUrl: 'https://www.k-mib.com/video/video-view.php?idx=7' };
+	const taskId = '00000000-0000-4000-8000-000000000001';
+	saved.activeId = taskId;
+	saved.tasks = [
+		{
+			id: taskId,
+			status: 'running',
+			phase: '',
+			plan: { kind: 'url', query: legacy.sourceUrl, code: '', contentId: '7', sourceUrl: legacy.sourceUrl, sources: ['kmib', 'fc2club'] },
+			coverPriority: ['kmib', 'dmm', 'fc2club'],
+			startedAt: '',
+			records: [legacy],
+			outcomes: [{ ...success, source: 'kmib' }],
+			requests: 1,
+		},
+	];
+	await writeFile(path, JSON.stringify(saved));
+	const restored = new MetadataService(
+		root,
+		{
+			run: async () => {
+				calls++;
+				return success;
+			},
+		},
+		undefined,
+		0,
+	);
+	t.after(() => restored.stop());
+	await restored.initialize();
+	assert.equal(restored.getState().notice, undefined);
+	const task = restored.getState().tasks[0]!;
+	assert.equal(task.status, 'interrupted');
+	assert.deepEqual(task.plan.sources, []);
+	assert.deepEqual(task.coverPriority, ['dmm']);
+	assert.equal(task.records[0]?.source, 'kmib');
+	assert.equal(task.outcomes[0]?.source, 'kmib');
+	assert.equal(restored.sourceUrl(task.id, legacy.id), legacy.sourceUrl);
+	assert.equal(calls, 0);
+});
+
 test('系统代理解析支持 HTTP、HTTPS 与 SOCKS；不把带密码或无法识别的代理静默改为直连', () => {
 	assert.equal(proxyFromRules('DIRECT'), '');
 	assert.equal(proxyFromRules('PROXY 127.0.0.1:6152; DIRECT'), 'http://127.0.0.1:6152');

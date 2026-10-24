@@ -142,7 +142,7 @@ export async function reviewVisual(page, application, output) {
 	// A source-specific settings action must still open Sources after previewing General.
 	await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();
 	await page.locator('.page-heading-actions').getByRole('button', { name: '添加关注', exact: true }).click();
-	await chooseOption(page, '关注来源', 'SubscribeStar');
+	await chooseOption(page, '关注来源', 'Coomer');
 	await page.getByRole('dialog', { name: '添加关注', exact: true }).getByRole('button', { name: '来源设置', exact: true }).click();
 	assert.equal(await page.getByRole('tab', { name: '来源与账号', exact: true }).getAttribute('aria-selected'), 'true');
 	await nav.getByRole('button', { name: '资料查询', exact: true }).click();

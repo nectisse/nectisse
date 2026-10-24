@@ -1,9 +1,9 @@
 """Peach 官方公开页与归档动态适配；仅收集发布资料和封面。"""
 import json
 import re
-from urllib.parse import urlsplit, quote, urljoin
+from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
-from peach_core.official_posts import PatreonConnector, SubscribeStarConnector
+from peach_core.official_posts import PatreonConnector
 from nectisse_worker.catalog import CATALOG, image_domains
 from .metadata.base import FailureReason, SourceFailure
 from .metadata.network import allowed_url
@@ -18,30 +18,21 @@ def canonical(provider, ref):
         if not match or match[2] in {'.', '..'}:
             raise SourceFailure(FailureReason.UNSUPPORTED, '归档身份需要 service/user_id 或创作者原站主页')
         return f'https://{ARCHIVES[provider]}/{match[1]}/user/{match[2]}'
-    if provider == 'rule34video':
-        if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,80}', ref):
-            raise SourceFailure(FailureReason.UNSUPPORTED, '请输入模特／作者主页 slug')
-        return f'https://rule34video.com/models/{ref}/'
     if provider == 'patreon':
         if re.fullmatch(r'user/\d+', ref):
             return f'https://www.patreon.com/user?u={ref[5:]}'
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', ref) or ref.lower() in PatreonConnector._RESERVED:
             raise SourceFailure(FailureReason.UNSUPPORTED, '请输入 Patreon 主页或账号')
         return f'https://www.patreon.com/cw/{ref}'
-    if provider == 'subscribestar':
-        host, slug = SubscribeStarConnector._split_ref(ref)
-        if slug.lower() in SubscribeStarConnector._RESERVED:
-            raise SourceFailure(FailureReason.UNSUPPORTED, '请输入 SubscribeStar 创作者主页')
-        return f'https://{host}/{slug}'
     raise SourceFailure(FailureReason.UNSUPPORTED, '未接入此动态来源')
 
 
 def identity(provider, value):
+    if provider not in ARCHIVES and provider != 'patreon':
+        raise SourceFailure(FailureReason.UNSUPPORTED, '未接入此动态来源')
     value = str(value or '').strip()
     if '://' not in value:
-        ref = value.lower() if provider == 'rule34video' else value
-        if provider == 'subscribestar' and '/' not in ref:
-            raise SourceFailure(FailureReason.UNSUPPORTED, 'SubscribeStar 需要带 .com 或 .adult 的完整主页')
+        ref = value
         canonical(provider, ref)
         return ref
     if not allowed_url(value, tuple(CATALOG[provider]['domains'])):
@@ -52,14 +43,8 @@ def identity(provider, value):
         if not match or parsed.query:
             raise SourceFailure(FailureReason.UNSUPPORTED, '需要创作者主页，而不是帖子或全站列表')
         ref = f'{match[1]}/{match[2]}'
-    elif provider == 'rule34video':
-        match = re.fullmatch(r'/models/([a-z0-9][a-z0-9_-]{0,80})/?', parsed.path)
-        if not match or parsed.query:
-            raise SourceFailure(FailureReason.UNSUPPORTED, '需要 /models/ 下的作者关联主页')
-        ref = match[1]
     else:
-        cls = PatreonConnector if provider == 'patreon' else SubscribeStarConnector
-        ref = cls.parse_url(provider, parsed, parsed.hostname.removeprefix('www.')).ref
+        ref = PatreonConnector.parse_url(provider, parsed, parsed.hostname.removeprefix('www.')).ref
     canonical(provider, ref)
     return ref
 
@@ -90,8 +75,7 @@ def archive_rows(session, provider, ref, config, params, page=0):
 
 
 def official_fetch(session, provider, ref, config, params):
-    cls = PatreonConnector if provider == 'patreon' else SubscribeStarConnector
-    result = cls(session, config, params).fetch(ref)
+    result = PatreonConnector(session, config, params).fetch(ref)
     soup = BeautifulSoup(result.raw_body, 'html.parser')
     title = soup.title.get_text(' ', strip=True) if soup.title else ''
     if re.search(r'^(?:log\s*in|sign\s*in|登录|登入|age verification)', title, re.I):
@@ -107,28 +91,6 @@ def official_fetch(session, provider, ref, config, params):
     return result, display
 
 
-def video_rows(session, ref, config, params, page=0):
-    url = canonical('rule34video', ref)
-    if page:
-        url += '?mode=async&function=get_block&block_id=custom_list_videos_common_videos&sort_by=post_date&from=02'
-    soup = BeautifulSoup(request(session, 'rule34video', url, config, params), 'html.parser')
-    rows, seen = [], set()
-    for anchor in soup.select('a[href*="/video/"]'):
-        href = urljoin(url, str(anchor.get('href') or ''))
-        match = re.match(r'^https://rule34video\.com/video/(\d+)/[^?#]*$', href)
-        if not match or match[1] in seen:
-            continue
-        seen.add(match[1])
-        image = anchor.select_one('img')
-        title = clean(anchor.get('title') or (anchor.select_one('.thumb_title, .title').get_text(' ', strip=True) if anchor.select_one('.thumb_title, .title') else ''), 1000)
-        rows.append({'externalId': match[1], 'title': title, 'summary': '来源作者关联页收录；模特／作者署名不自动等同原创发布。', 'author': params.get('name', ref), 'publishedAt': '', 'publishedPrecision': 'unknown', 'url': href, 'thumbnailUrl': urljoin(url, str(image.get('data-original') or image.get('data-src') or image.get('src') or '')) if image else '', 'code': '', 'restricted': False, 'partial': True})
-        if len(rows) >= 24:
-            break
-    if not rows:
-        raise SourceFailure(FailureReason.PARSE_ERROR, '作者关联页没有可核对的条目，不能当作没有更新')
-    return soup, rows
-
-
 def lookup(params, session, config):
     provider = params['provider']
     ref = identity(provider, params.get('query'))
@@ -137,12 +99,6 @@ def lookup(params, session, config):
         if not rows:
             raise SourceFailure(FailureReason.NOT_FOUND, '归档站未返回可核对的帖子或作者资料')
         name, record, evidence = ref, '归档站创作者身份', '归档 API 返回该服务／用户的帖子；未取得官方显示名，不下载全站索引'
-    elif provider == 'rule34video':
-        soup, _ = video_rows(session, ref, config, params)
-        heading = soup.select_one('h1')
-        if not heading:
-            raise SourceFailure(FailureReason.PARSE_ERROR, '作者关联主页缺少名称')
-        name, record, evidence = clean(heading.get_text(' ', strip=True), 200), '模特／作者关联身份', '站点的 /models/ 主页；请核对署名关系'
     else:
         _, name = official_fetch(session, provider, ref, config, params)
         record, evidence = '创作者公开主页', '公开主页实际返回的名称；仅检查当前公开卡片，不支持历史分页'
@@ -154,7 +110,7 @@ def check(params, session, publish, config):
     seen = set(params.get('seen', [])[:200])
     first = not params.get('initialized')
     overlap, ended = False, False
-    paginated = provider in ARCHIVES or provider == 'rule34video'
+    paginated = provider in ARCHIVES
     for page in range(1 if first or not paginated else 2):
         if provider in ARCHIVES:
             posts = archive_rows(session, provider, ref, config, params, page)
@@ -168,9 +124,6 @@ def check(params, session, publish, config):
                 thumb = f'https://img.{ARCHIVES[provider]}/thumbnail/data{path}' if path else ''
                 content = post.get('content') or post.get('substring') or ''
                 rows.append({'externalId': key, 'title': clean(post.get('title'), 1000), 'summary': clean(content, 3000), 'author': params.get('name', ref), 'publishedAt': str(post.get('published') or '')[:100], 'publishedPrecision': 'exact' if post.get('published') else 'unknown', 'url': canonical(provider, ref) + '/post/' + key, 'thumbnailUrl': thumb, 'code': '', 'restricted': False, 'partial': not bool(post.get('content'))})
-        elif provider == 'rule34video':
-            _, rows = video_rows(session, ref, config, params, page)
-            ended = len(rows) < 24
         else:
             result, name = official_fetch(session, provider, ref, config, params)
             rows = [{'externalId': item.external_id, 'title': clean(item.title, 1000), 'summary': clean(item.summary, 3000), 'author': clean(item.author or name, 200), 'publishedAt': item.published_at or '', 'publishedPrecision': str(item.extra.get('published_precision') or 'unknown'), 'url': item.url or '', 'thumbnailUrl': item.thumb_url or '', 'code': '', 'restricted': False, 'partial': True} for item in result.candidates]

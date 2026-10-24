@@ -1,10 +1,10 @@
-import { SOURCE_BY_ID, type AllSource } from '@shared/sources';
+import { SOURCE_BY_ID, type AllSource, type LegacyMetadataSource } from '@shared/sources';
 import type { CoverCandidate } from '@shared/metadata';
 
 export { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY, type CoverSource } from '@shared/cover-sources';
 import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY, type CoverSource } from '@shared/cover-sources';
 
-export function coverSource(cover: Pick<CoverCandidate, 'source' | 'url'>): AllSource {
+export function coverSource(cover: Pick<CoverCandidate, 'source' | 'url'>): AllSource | LegacyMetadataSource {
 	let host: string;
 	try {
 		host = new URL(cover.url).hostname.toLowerCase();

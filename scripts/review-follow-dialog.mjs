@@ -114,7 +114,7 @@ try {
 	assert.equal(await page.locator('#page-heading').innerText(), '设置');
 	await dialog.locator('[data-follow-ref="Actor1"]').getByRole('button', { name: '确认关注', exact: true }).click();
 	await dialog.waitFor({ state: 'hidden' }); await page.getByRole('heading', { name: '创作者主页', exact: true }).waitFor();
-	await open(); await chooseOption(page, '关注来源', 'SubscribeStar');
+	await open(); await chooseOption(page, '关注来源', 'Coomer');
 	assert.equal(await dialog.getByRole('button', { name: '查询身份', exact: true }).isDisabled(), true);
 	await dialog.getByRole('button', { name: '来源设置', exact: true }).click(); await dialog.waitFor({ state: 'hidden' });
 	assert.equal(await page.locator('#page-heading').innerText(), '设置');

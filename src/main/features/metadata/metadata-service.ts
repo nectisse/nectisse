@@ -24,7 +24,7 @@ import { coverRank, DEFAULT_COVER_PRIORITY, preferredCover } from '@shared/cover
 import { planQuery } from './metadata-input';
 import { PythonTaskHost, TaskCancelledError, PythonWorkerError } from '../../platform/python';
 import type { Preferences } from '@shared/preferences';
-import { METADATA_IDS, SOURCE_BY_ID, type AllSource } from '@shared/sources';
+import { isMetadataSource, METADATA_IDS, SOURCE_BY_ID, type AllSource } from '@shared/sources';
 import { allowedSourceUrl } from '@shared/source-identity';
 import { sourceCooldownSeconds, sourceTransport } from '../../platform/network';
 
@@ -474,6 +474,9 @@ export class MetadataService extends EventEmitter {
 							measured.push({ record, candidate, probe: cached });
 							continue;
 						}
+						if (!isMetadataSource(record.source)) {
+							continue;
+						}
 						// 留出最后一次请求获取选中原图，尺寸探测不能耗尽整次预算。
 						if (task.requests >= 23) {
 							candidate.error = '查询预算不足，封面尺寸尚未取得';
@@ -548,6 +551,9 @@ export class MetadataService extends EventEmitter {
 			} catch {
 				delete this.store.assets[candidate.id];
 			}
+		}
+		if (!isMetadataSource(record.source)) {
+			return false;
 		}
 		if (task.requests >= 24 || this.store.policies[record.source].cooldownUntil > Date.now()) {
 			candidate.error = '封面获取暂未完成，可重新查询';

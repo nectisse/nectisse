@@ -1,10 +1,14 @@
-import { SOURCE_BY_ID, type AllSource, type FollowProvider } from '@shared/sources';
+import { SOURCE_BY_ID, type AllSource, type FollowProvider, type LegacyMetadataSource } from '@shared/sources';
+
+const legacyPageDomains = { fc2club: ['fc2club.top'], kmib: ['k-mib.com'] };
 
 /** 按用途使用登记的域名清单，查询与收藏共享同一套来源外链校验。 */
-export function allowedSourceUrl(source: AllSource, value: string, kind: 'page' | 'image' = 'page'): string | undefined {
+export function allowedSourceUrl(source: AllSource | LegacyMetadataSource, value: string, kind: 'page' | 'image' = 'page'): string | undefined {
 	try {
 		const url = new URL(value);
-		const domains = kind === 'image' ? SOURCE_BY_ID[source].images : SOURCE_BY_ID[source].domains;
+		const spec = SOURCE_BY_ID[source as AllSource];
+		// 旧收藏仍可打开原文，已移除来源不再获取远程图片。
+		const domains = spec ? (kind === 'image' ? spec.images : spec.domains) : kind === 'page' ? legacyPageDomains[source as LegacyMetadataSource] : [];
 		if (url.protocol !== 'https:' || url.username || url.password || url.port) {
 			return;
 		}
@@ -29,9 +33,6 @@ export function canonicalFollow(provider: FollowProvider, ref: string): string {
 		const match = /^([a-z0-9_-]{1,32})\/([A-Za-z0-9_.-]{1,64})$/.exec(ref);
 		return match && !['.', '..'].includes(match[2]!) ? `${SOURCE_BY_ID[provider].root}${match[1]}/user/${match[2]}` : invalid();
 	}
-	if (provider === 'rule34video') {
-		return /^[a-z0-9][a-z0-9_-]{0,80}$/.test(ref) ? `https://rule34video.com/models/${ref}/` : invalid();
-	}
 	if (provider === 'patreon') {
 		if (/^user\/\d+$/.test(ref)) {
 			return `https://www.patreon.com/user?u=${ref.slice(5)}`;
@@ -40,9 +41,7 @@ export function canonicalFollow(provider: FollowProvider, ref: string): string {
 			? `https://www.patreon.com/cw/${ref}`
 			: invalid();
 	}
-	return /^subscribestar\.(adult|com)\/[A-Za-z0-9_-]{1,80}$/.test(ref) && !['posts', 'search', 'login', 'signup'].includes(ref.split('/')[1]!.toLowerCase())
-		? `https://${ref}`
-		: invalid();
+	return invalid();
 }
 
 export function validFollowEntry(provider: FollowProvider, ref: string, entry: { url: string; externalId: string }): boolean {
@@ -66,10 +65,7 @@ export function validFollowEntry(provider: FollowProvider, ref: string, entry: {
 		if (provider === 'patreon') {
 			return ['www.patreon.com', 'patreon.com'].includes(url.hostname) && new RegExp(`^/posts/(?:[A-Za-z0-9_-]+-)?${entry.externalId}/?$`).test(url.pathname);
 		}
-		if (provider === 'subscribestar') {
-			return url.hostname === ref.split('/')[0] && url.pathname === `/posts/${entry.externalId}`;
-		}
-		return url.hostname === 'rule34video.com' && new RegExp(`^/video/${entry.externalId}/[A-Za-z0-9_-]*/?$`).test(url.pathname);
+		return false;
 	} catch {
 		return false;
 	}

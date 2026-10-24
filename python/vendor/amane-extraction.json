@@ -65,10 +65,6 @@
       "upstreamSha256": "de67e25e9cce3025e8d8c3bb06ba272e3702228d460f21ea9f07aa0b5261709b"
     },
     {
-      "path": "crawlers/sites/fc2club.py",
-      "upstreamSha256": "867597f8dca7e8763288951f663a937ddfb51b33c80f632a0d93b054645a6e58"
-    },
-    {
       "path": "crawlers/sites/freejavbt.py",
       "upstreamSha256": "6e8f9d47ad2d4826f6b4b3ccd24e8d56a6b571b7ff18db2725255a2d4c23549c"
     },

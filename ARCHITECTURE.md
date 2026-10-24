@@ -127,7 +127,11 @@ shadcn 的 `components.json` 已指向 `shared/ui`、`shared/lib/utils` 和新�
 | 模块 | 责任 |
 | --- | --- |
 | `subscription-store.ts` | SQLite 设置、关注身份、更新、凭据密文及订阅任务记录 |
-| `subscriptions-service.ts` | 身份查询、关注、增量检查、自动调度及订阅图片补齐 |
+| `subscriptions-service.ts` | 订阅命令入口、设置与关注操作、状态快照和事件发布 |
+| `subscription-scheduler.ts` | 自动检查、唯一活动任务、请求许可、取消与退出清理 |
+| `follow-runner.ts` | 身份查询、增量检查、来源校验、检查结果与头像绑定 |
+| `image-backfill.ts` | 最近已收录动态的封面批次、URL 去重、进度与有限重试 |
+| `image-cache.ts` | 图片取得、缓存读取、哈希校验、临时文件清理和容量淘汰 |
 | `metadata-service.ts` | 查询计划执行、来源记录、封面选择与临时缓存 |
 | `library-service.ts` | 收藏快照、列表摘要和长期保留的封面 |
 | `magnet-service.ts` | 作品详情内的搜索、结果缓存和取消 |
@@ -141,6 +145,19 @@ shadcn 的 `components.json` 已指向 `shared/ui`、`shared/lib/utils` 和新�
 TS 与 Python 使用带版本和任务 id 的标准输入输出消息。普通任务使用独立工作者；FC2PPV-DB 通过单独的会话工作者复用实际 Chrome / Edge 与独立 profile。`worker-contracts.ts` 保存运行选项，`python-errors.ts` 保存公共错误，避免普通任务宿主和浏览器宿主互相引用。
 
 站点网络与解析留在 Python，调度、取消、落盘和界面状态留在 TS。来源登记以 `python/src/nectisse_worker/source_catalog.json` 为准，TS 与 Python 共同读取；`scripts/write-source-matrix.mjs` 从该文件生成文档。
+
+### 订阅模块内部
+
+对外继续使用 `SubscriptionsService` 和既有 IPC。内部依赖方向为入口 → 调度 → 内容执行／封面补齐 → 图片缓存；执行模块可以读写现有 `SubscriptionStore`，不反向引用入口或调度实现。`task-context.ts` 保存执行约定和 Python 结果校验，避免类型循环。
+
+- 调度模块独占活动任务、AbortController、定时器和命令计数。内容执行与封面补齐接收同一任务上下文，通过它检查任务是否有效、报告进度和申请请求许可，不另建工作循环或并发任务槽。
+- 查询与检查最多使用 24 次请求，头像获取计入同一预算。动态封面使用独立的有限批次，范围仍是最近已收录的 500 条，不因图片补齐额外请求动态或历史页面。
+- 头像与封面共用图片取得、临时文件和容量管理。图片由原 Python `follow.image` 获取，继续采用来源传输设置；TS 校验长度与哈希后才允许绑定。头像查询沿用已有文件存在检查，封面复用和对外图片读取验证哈希。
+- 显式取消先保存 `cancelRequestedAt` 和整批取消状态，再中止工作者；迟到结果不能绑定。前台让位和订阅暂停保留中断原因，不写入用户取消意图，未完成图片退回队列且不耗重试预算。
+- 退出先停止派发、等待当前执行与临时文件清理，再由应用入口关闭数据库。普通封面中断允许后续重新排队，显式取消和容量淘汰不会自动恢复。
+- `SubscriptionStore` 中已有的重启恢复逻辑保留原位置与数据格式。图片补齐仅接收残留 loading 状态的恢复，不另建持久化队列。
+
+依赖规则禁止图片缓存导入执行或调度模块、执行模块导入调度或入口、调度导入入口。回归仍从订阅公开行为验证取消、让位、恢复及缓存，避免只测试文件拆分后的内部方法。
 
 ## 本机数据位置
 
@@ -171,7 +188,7 @@ Zustand 和 TanStack Query 的直接依赖限定在 `src/renderer/shared/desktop
 
 ## 后续整理边界
 
-- `subscriptions-service.ts` 仍同时承担调度和图片缓存。后续可以按任务执行与图片队列拆分，保留取消、落盘和站点冷却的一致性。
+- 订阅入口中的设置与关注命令仍集中处理；后续如需继续拆分，优先按明确的业务操作提取，保留单一任务协调点及现有数据格式。
 - `app/styles/foundation.css` 仍保留部分早期共用和演示样式。后续整理应按选择器使用方归属拆分，保持层叠顺序并验证布局，不为目录形式提前拆细。
 - 增加数据读取时先确定唯一所有者：持续推送数据进入现有快照，按需读取进入 Query，采集任务保持明确派发与取消。新增 Query 不能另存完整订阅或任务列表。
 

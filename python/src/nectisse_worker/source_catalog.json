@@ -181,19 +181,6 @@
 		"credential": "none",
 		"note": "按精确编号核对出演证据；有界搜索；待在线验证"
 	},
-	"kmib": {
-		"name": "K-MIB",
-		"group": "资料来源",
-		"engine": "peach",
-		"metadata": true,
-		"follow": false,
-		"families": ["kmib"],
-		"root": "https://www.k-mib.com/",
-		"domains": ["k-mib.com"],
-		"images": ["k-mib.com"],
-		"credential": "none",
-		"note": "仅支持原站单片链接；复用官方单片解析，不扫描或遍历全站；待在线验证"
-	},
 	"makers": {
 		"name": "片商官网（amane）",
 		"group": "资料来源",
@@ -302,19 +289,6 @@
 		"credential": "none",
 		"note": "无码资料后备来源；待在线验证"
 	},
-	"fc2club": {
-		"name": "FC2Club",
-		"group": "资料来源",
-		"engine": "amane",
-		"metadata": true,
-		"follow": false,
-		"families": ["fc2"],
-		"root": "https://fc2club.top/",
-		"domains": ["fc2club.top"],
-		"images": ["fc2club.top", "fc2.com"],
-		"credential": "none",
-		"note": "FC2 社区资料；待在线验证"
-	},
 	"freejavbt": {
 		"name": "FreeJavBT",
 		"group": "资料来源",
@@ -367,19 +341,6 @@
 		"credential": "cookie",
 		"note": "创作者主页／账号，公开帖子卡片；无历史分页，时间可能为估算；待在线验证"
 	},
-	"subscribestar": {
-		"name": "SubscribeStar",
-		"group": "创作者动态",
-		"engine": "peach",
-		"metadata": false,
-		"follow": true,
-		"families": [],
-		"root": "https://subscribestar.adult/",
-		"domains": ["subscribestar.adult", "subscribestar.com"],
-		"images": ["subscribestar.adult", "subscribestar.com"],
-		"credential": "cookie",
-		"note": "公开主页与动态；.com 与 .adult 分开保存身份，无历史分页；已有本机在线成功样本"
-	},
 	"kemono": {
 		"name": "Kemono",
 		"group": "归档动态",
@@ -418,45 +379,6 @@
 		"images": ["coomer.st"],
 		"credential": "cookie",
 		"note": "服务／用户身份与归档帖子；归档更新不承诺实时性；待在线验证"
-	},
-	"rule34video": {
-		"name": "Rule34Video",
-		"group": "作者关联发布",
-		"engine": "peach",
-		"metadata": false,
-		"follow": true,
-		"families": [],
-		"root": "https://rule34video.com/",
-		"domains": ["rule34video.com"],
-		"images": ["rule34video.com"],
-		"credential": "cookie",
-		"note": "模特／作者关联主页；显示站点署名关系，仅采集标题、摘要和封面；待在线验证"
-	},
-	"rule34xxx": {
-		"name": "Rule34.xxx",
-		"group": "需额外适配",
-		"engine": "reference",
-		"metadata": false,
-		"follow": false,
-		"families": [],
-		"root": "https://rule34.xxx/",
-		"domains": ["rule34.xxx"],
-		"images": [],
-		"credential": "api",
-		"note": "Peach 按标签订阅，需 user_id / API key；尚无可靠的作者发布判据，当前不派发"
-	},
-	"rule34paheal": {
-		"name": "Rule34 Paheal",
-		"group": "需额外适配",
-		"engine": "reference",
-		"metadata": false,
-		"follow": false,
-		"families": [],
-		"root": "https://rule34.paheal.net/",
-		"domains": ["rule34.paheal.net"],
-		"images": [],
-		"credential": "none",
-		"note": "Peach 按标签订阅；标签命中不等于作者发布，当前不派发"
 	},
 	"f95zone": {
 		"name": "F95zone",

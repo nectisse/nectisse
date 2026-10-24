@@ -57,7 +57,7 @@ try {
  assert.ok(Math.abs(inputRect.height - submitRect.height) <= 1);
  assert.ok(Math.abs(inputRect.y - submitRect.y) <= 1);
  await page.getByRole('button', { name: '调整资料来源', exact: true }).click();
- assert.equal(await page.locator('.metadata-source-picker button[aria-pressed]').count(), 24);
+ assert.equal(await page.locator('.metadata-source-picker button[aria-pressed]').count(), 22);
  await check('00-source-picker');
  await page.getByRole('button', { name: '调整资料来源', exact: true }).click();
  await nav.getByRole('button', { name: '演员与创作者', exact: true }).click();

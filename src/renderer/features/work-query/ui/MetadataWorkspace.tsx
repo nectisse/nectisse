@@ -15,15 +15,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { QuietButton } from '@/shared/components/quiet-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { SOURCE_LABELS, isActiveTask, type SourceId, type QueryTask, type MetadataRecord } from '@shared/metadata';
+import { LEGACY_METADATA_IDS } from '@shared/sources';
 
 const statusLabels = { running: '查询中', cancelling: '正在取消', cancelled: '已取消', succeeded: '已完成', partial: '部分取得', failed: '未取得', interrupted: '已中断' };
 
 function groupRecordsByCode(records: MetadataRecord[], order: readonly SourceId[]): MetadataRecord[][] {
 	const map = new Map<string, MetadataRecord[]>();
+	const priority: readonly string[] = [...order, ...LEGACY_METADATA_IDS];
 	for (const record of records) {
 		map.set(record.code, [...(map.get(record.code) ?? []), record]);
 	}
-	return [...map.values()].map((group) => group.toSorted((a, b) => order.indexOf(a.source) - order.indexOf(b.source)));
+	return [...map.values()].map((group) => group.toSorted((a, b) => priority.indexOf(a.source) - priority.indexOf(b.source)));
 }
 
 const fetched = (value: string): string => new Date(value).toLocaleString('zh-CN', { hour12: false });

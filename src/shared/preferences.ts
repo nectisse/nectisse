@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ALL_IDS, DEFAULT_ENABLED, DEFAULT_METADATA_ORDER, DEFAULT_QUERY_SOURCES, METADATA_IDS } from '@shared/sources';
+import { ALL_IDS, DEFAULT_ENABLED, DEFAULT_METADATA_ORDER, DEFAULT_QUERY_SOURCES, METADATA_IDS, RETIRED_SOURCE_IDS, withoutRetiredSources } from '@shared/sources';
 import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY } from '@shared/cover-sources';
 import { DEFAULT_MAGNET_SETTINGS, magnetSettingsSchema, type MagnetSettings } from '@shared/magnets';
 
@@ -42,6 +42,26 @@ export const preferencesSchema = z.object({
 	magnetSearch: magnetSettingsSchema.default(DEFAULT_MAGNET_SETTINGS),
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
+
+export const storedPreferencesSchema = z.preprocess((input) => {
+	if (!input || typeof input !== 'object' || Array.isArray(input)) {
+		return input;
+	}
+	const saved = { ...input } as Record<string, unknown>;
+	for (const key of ['querySources', 'enabledSources', 'metadataPriority', 'coverPriority']) {
+		const previous = saved[key];
+		const current = withoutRetiredSources(previous);
+		saved[key] = current;
+		if (key === 'metadataPriority' && Array.isArray(previous) && Array.isArray(current) && current.length < previous.length) {
+			saved[key] = [...current, ...DEFAULT_METADATA_ORDER.filter((id) => !current.includes(id))];
+		}
+	}
+	if (saved.sourceTransports && typeof saved.sourceTransports === 'object' && !Array.isArray(saved.sourceTransports)) {
+		saved.sourceTransports = Object.fromEntries(Object.entries(saved.sourceTransports).filter(([id]) => !(RETIRED_SOURCE_IDS as readonly string[]).includes(id)));
+	}
+	return saved;
+}, preferencesSchema);
+
 export const DEFAULT_PREFERENCES: Preferences = {
 	querySources: [...DEFAULT_QUERY_SOURCES],
 	enabledSources: [...DEFAULT_ENABLED],

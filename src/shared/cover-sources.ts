@@ -7,7 +7,6 @@ export const COVER_SOURCE_IDS = [
 	'1pondo',
 	'fc2',
 	'duga',
-	'kmib',
 	'javbus',
 	'avbase',
 	'fc2cmadb',
@@ -15,7 +14,6 @@ export const COVER_SOURCE_IDS = [
 	'javten',
 	'javarchive',
 	'avsox',
-	'fc2club',
 	'freejavbt',
 	'airav',
 ] as const;

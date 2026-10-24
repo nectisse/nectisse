@@ -3,14 +3,13 @@ import asyncio
 import importlib
 import json
 import logging
-import re
 from urllib.parse import urlsplit
 
 from peach_core.catalog_rules import same_release_code
 from nectisse_worker.catalog import CATALOG
 from .base import FailureReason, SourceFailure, SiteConfig, SiteRecord
 
-CLASSES = {'makers': ('official', 'OfficialCrawler'), 'prestige': ('prestige', 'PrestigeCrawler'), 'faleno': ('faleno', 'FalenoCrawler'), 'dahlia': ('dahlia', 'DahliaCrawler'), 'mgstage': ('mgstage', 'MGStageCrawler'), 'avsox': ('avsox', 'AvsoxCrawler'), 'fc2club': ('fc2club', 'FC2ClubCrawler'), 'freejavbt': ('freejavbt', 'FreejavbtCrawler'), 'airav': ('airav', 'AiravCrawler')}
+CLASSES = {'makers': ('official', 'OfficialCrawler'), 'prestige': ('prestige', 'PrestigeCrawler'), 'faleno': ('faleno', 'FalenoCrawler'), 'dahlia': ('dahlia', 'DahliaCrawler'), 'mgstage': ('mgstage', 'MGStageCrawler'), 'avsox': ('avsox', 'AvsoxCrawler'), 'freejavbt': ('freejavbt', 'FreejavbtCrawler'), 'airav': ('airav', 'AiravCrawler')}
 
 
 class BoundedClient:
@@ -87,11 +86,6 @@ class AmaneSource:
             raise SourceFailure(map_reason(str(error.reason)), 'amane 来源未返回可用资料，请查看连接、登录或验证状态') from None
         if result is None:
             raise SourceFailure(FailureReason.NOT_FOUND, '来源未找到匹配作品')
-        if self.source == 'fc2club':
-            # 此爬虫的 number 来自请求 URL，需用页面标题独立核对实际返回的作品。
-            shown = re.search(r'\bFC2[-_\s]*(?:PPV[-_\s]*)?(\d{5,})(?!\d)', result.title or '', re.I)
-            if not shown or not same_release_code(code, f'FC2-PPV-{shown[1]}'):
-                raise SourceFailure(FailureReason.PARSE_ERROR, '来源页面未返回与请求一致的 FC2 编号，资料未采用')
         if not same_release_code(code, result.number):
             raise SourceFailure(FailureReason.PARSE_ERROR, '来源返回的编号与请求不一致，资料未采用')
         delivery = (result.release or '') if self.source == 'prestige' else ''
