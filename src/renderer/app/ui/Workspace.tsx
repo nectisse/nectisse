@@ -10,7 +10,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { MetadataWorkspace } from '@/features/work-query';
 import { SettingsPage } from '@/features/settings';
 import { SubscriptionsPage, AddFollowDialog, type FollowDialogSeed } from '@/features/subscriptions';
-import { UpdatesPage } from '@/features/updates';
 import { IdentityAvatar } from '@/entities/subscription';
 import { LibraryPage, SaveWorkButton } from '@/features/library';
 
@@ -267,20 +266,6 @@ export function Workspace({
 							onAdd={(provider) => add(provider)}
 							onSettings={openSourceSettings}
 							onWork={work}
-							updates={
-								<UpdatesPage
-									scope={page}
-									view={navigation[page].feed}
-									onViewChange={(feed) => updatePeople(page, { feed })}
-									onWork={work}
-									onPerson={(id) => {
-										const sub = subscriptions.find((sub) => sub.id === id);
-										if (sub) {
-											openPerson(id, sub.provider);
-										}
-									}}
-								/>
-							}
 						/>
 					) : (
 						<SettingsPage

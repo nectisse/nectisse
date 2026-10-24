@@ -464,7 +464,14 @@ if (!app.requestSingleInstanceLock()) {
 				trusted(event);
 				await waitLibrary();
 				try {
-					await library!.remove(libraryIdSchema.parse(id));
+					const workId = libraryIdSchema.parse(id);
+					const work = library!.getWork(workId);
+					await library!.remove(workId);
+					if (work) {
+						await magnets?.forgetSaved(work.code).catch(() => {
+							console.warn('[magnets] 收藏磁链缓存未能清理');
+						});
+					}
 					return { ok: true };
 				} catch {
 					return { ok: false, message: '取消收藏未完成，请重新检查收藏库后重试。' };
@@ -511,7 +518,7 @@ if (!app.requestSingleInstanceLock()) {
 					throw new Error('WORK_NOT_FOUND');
 				}
 				await waitLocal();
-				return magnets!.search(request.id, code, request.force, request.source);
+				return magnets!.search(request.id, code, request.force, request.source, request.origin.kind === 'library' ? 'saved' : 'temporary');
 			});
 			ipcMain.handle(MAGNET_IPC.cancel, async (event, input: unknown) => {
 				trusted(event);

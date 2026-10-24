@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { BellPlus, Search, Settings2, Users } from 'lucide-react';
 import type { FollowProvider } from '@shared/subscriptions';
 import { isPerformerProvider } from '@shared/sources';
@@ -15,6 +15,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { PersonCard } from './PersonCard';
 import { PersonProfile } from './PersonProfile';
 import { SubscriptionRow } from './SubscriptionRow';
+import { PeopleArtwork } from './PeopleArtwork';
 
 export function SubscriptionsPage({
 	scope,
@@ -23,7 +24,6 @@ export function SubscriptionsPage({
 	onAdd,
 	onSettings,
 	onWork,
-	updates,
 }: {
 	scope: PeopleScope;
 	view: PeopleView;
@@ -31,14 +31,12 @@ export function SubscriptionsPage({
 	onAdd: (provider?: FollowProvider) => void;
 	onSettings: () => void;
 	onWork: (code: string) => void;
-	updates: ReactNode;
 }): React.JSX.Element {
 	const subscriptions = useSubscriptions((state) => state.subscriptions.filter((sub) => isPerformerProvider(sub.provider) === (scope === 'actors')));
 	const entries = useSubscriptions((state) => state.entries);
 	const sub = subscriptions.find((sub) => sub.id === view.selectedId);
 	const name = scope === 'actors' ? '演员' : '创作者';
 	const defaultProvider = scope === 'actors' ? 'javdb' : 'fanbox';
-	const hasUpdates = subscriptions.some((sub) => sub.following) || entries.some((entry) => isPerformerProvider(entry.provider) === (scope === 'actors'));
 	const list = subscriptions.filter(
 		(sub) =>
 			((view.tab === 'manage' && view.archived) || sub.following) &&
@@ -60,27 +58,30 @@ export function SubscriptionsPage({
 	};
 
 	if (sub) {
-		return <PersonProfile subscription={sub} onBack={() => onViewChange({ selectedId: '' })} onAdd={onAdd} onSettings={onSettings} onWork={onWork} />;
+		return <PersonProfile key={sub.id} subscription={sub} onBack={() => onViewChange({ selectedId: '' })} onAdd={onAdd} onWork={onWork} />;
 	}
 
 	return (
 		<div className="page people-page" data-scope={scope}>
-			<PageHeader
-				title={name}
-				description={scope === 'actors' ? '关注熟悉的面孔，留意新的作品。' : '关注创作的人，也关注作品之外的日常。'}
-				actions={
-					<>
-						<Button variant="ghost" size="sm" onClick={onSettings}>
-							<Settings2 />
-							来源设置
-						</Button>
-						<Button size="sm" onClick={() => onAdd(defaultProvider)}>
-							<BellPlus />
-							添加关注
-						</Button>
-					</>
-				}
-			/>
+			<div className="people-heading">
+				<PeopleArtwork scope={scope} />
+				<PageHeader
+					title={name}
+					description={scope === 'actors' ? '关注熟悉的面孔，留意新的作品。' : '关注创作的人，也关注作品之外的日常。'}
+					actions={
+						<>
+							<Button variant="ghost" size="sm" onClick={onSettings}>
+								<Settings2 />
+								来源设置
+							</Button>
+							<Button size="sm" onClick={() => onAdd(defaultProvider)}>
+								<BellPlus />
+								添加关注
+							</Button>
+						</>
+					}
+				/>
+			</div>
 			<ContentTabs
 				value={view.tab}
 				onChange={(tab) => onViewChange({ tab })}
@@ -133,7 +134,6 @@ export function SubscriptionsPage({
 					action={view.query ? undefined : { label: '添加关注', onClick: () => onAdd(defaultProvider) }}
 				/>
 			)}
-			{view.tab === 'browse' && hasUpdates && updates}
 		</div>
 	);
 }

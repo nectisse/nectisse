@@ -1,3 +1,64 @@
+.people-artwork {
+	--art-base: #e6e9e2;
+	--art-wash: #c1d2ce;
+	--art-paper: #faf3e7;
+	--art-rose: #cd9c91;
+	--art-blue: #719b9c;
+	--art-honey: #e1bd7d;
+	--art-ink: #546063;
+	display: block;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+}
+.people-artwork[data-scope='actors'] {
+	--art-base: #efe3dd;
+	--art-wash: #dbc0b7;
+	--art-rose: #be8589;
+	--art-blue: #8c9eab;
+	--art-ink: #65525c;
+}
+:root[data-theme='night'] .people-artwork {
+	--art-base: #2d3a39;
+	--art-wash: #465753;
+	--art-paper: #b3b6a6;
+	--art-rose: #a77671;
+	--art-blue: #648f91;
+	--art-honey: #a88d62;
+	--art-ink: #354548;
+}
+:root[data-theme='night'] .people-artwork[data-scope='actors'] {
+	--art-base: #3c3039;
+	--art-wash: #655059;
+	--art-rose: #a16d7d;
+	--art-blue: #6f8599;
+	--art-ink: #493d4c;
+}
+.people-heading {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	padding: 28px;
+	margin-bottom: 24px;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--card);
+}
+.people-heading > .people-artwork {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	mask-image: linear-gradient(90deg, transparent 20%, #000 85%);
+	opacity: 0.65;
+}
+.workspace-shell .people-heading .workspace-page-heading {
+	margin: 0;
+}
+.people-heading .page-heading-actions {
+	padding: 4px;
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--card) 88%, transparent);
+}
 .people-page > .content-tabs {
 	margin-bottom: 20px;
 }
@@ -96,23 +157,6 @@
 	margin-top: 6px;
 	color: var(--subtle);
 }
-.people-updates {
-	margin-top: 36px;
-}
-.people-section-heading {
-	display: flex;
-	align-items: baseline;
-	gap: 12px;
-	margin-bottom: 16px;
-}
-.people-section-heading h2 {
-	font-size: 16px;
-	font-weight: 550;
-}
-.people-section-heading > span {
-	color: var(--muted-foreground);
-	font-size: 11px;
-}
 .person-settings-dialog {
 	width: min(780px, calc(100vw - 48px));
 	padding: 24px;
@@ -129,9 +173,6 @@
 }
 .person-settings-dialog > .subscription-card {
 	flex-shrink: 0;
-}
-.person-profile .creator-header-actions {
-	align-items: center;
 }
 @media (hover: hover) and (pointer: fine) {
 	.person-card:hover {

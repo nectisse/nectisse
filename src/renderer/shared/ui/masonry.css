@@ -1,0 +1,10 @@
+.masonry-grid {
+	display: grid;
+	grid-auto-rows: 1px;
+	row-gap: 0;
+	align-items: start;
+}
+.masonry-grid > * {
+	min-width: 0;
+	align-self: start;
+}

@@ -40,16 +40,19 @@ try {
    const rect = selector => { const box = document.querySelector(selector).getBoundingClientRect(); return { x: box.x, y: box.y, right: box.right, width: box.width, height: box.height }; };
    const controls = [...document.querySelectorAll('.page-toolbar [data-slot="select-trigger"], .page-toolbar [data-slot="input"], .page-toolbar [data-slot="tabs-list"]')].map(node => ({ slot: node.dataset.slot, height: node.getBoundingClientRect().height }));
    const creator = !!document.querySelector('.real-creator-page');
-   return { viewport: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-gutter')), top: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-top')), scroll: rect('.page-scroll'), page: rect('.page'), heading: rect(creator ? '.creator-profile-navigation' : '.workspace-page-heading'), title: rect('#page-heading'), toolbar: rect('.workspace-toolbar'), controls, creator };
+   const people = !!document.querySelector('.people-page');
+   return { viewport: innerWidth, gutter: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-gutter')), top: parseFloat(getComputedStyle(document.querySelector('.workspace-shell')).getPropertyValue('--page-top')), scroll: rect('.page-scroll'), page: rect('.page'), heading: rect(creator ? '.creator-profile-navigation' : people ? '.people-heading' : '.workspace-page-heading'), title: rect('#page-heading'), toolbar: rect('.workspace-toolbar'), controls, creator, people };
   });
   layouts.push({ name, ...layout });
   const near = (a, b) => Math.abs(a - b) <= 1;
   assert.ok(near(layout.page.x, layout.scroll.x) && near(layout.page.width, layout.scroll.width), `${name}: page must fill the available width`);
   assert.ok(near(layout.heading.x, layout.scroll.x + layout.gutter) && near(layout.heading.right, layout.scroll.right - layout.gutter), `${name}: shared side gutters`);
   if (layout.creator) {
-   const hero = await page.locator('.real-creator-banner').boundingBox();
-   assert.ok(near(hero.x, layout.heading.x) && near(hero.width, layout.heading.width), `${name}: creator banner shares side gutters`);
-   assert.ok(layout.title.y >= hero.y + hero.height, `${name}: creator identity appears below the banner`);
+   const overview = await page.locator('.person-overview').boundingBox();
+   assert.ok(near(overview.x, layout.heading.x) && near(overview.width, layout.heading.width), `${name}: person overview shares side gutters`);
+   assert.ok(layout.title.y >= overview.y && layout.title.y < overview.y + overview.height, `${name}: identity stays inside the overview`);
+  } else if (layout.people) {
+   assert.ok(layout.title.x >= layout.heading.x + 20 && layout.title.y >= layout.heading.y + 20, `${name}: people title stays inside the illustrated header`);
   } else {
    assert.ok(near(layout.title.x, layout.heading.x) && near(layout.title.y, layout.scroll.y + layout.top), `${name}: shared title origin`);
   }
@@ -83,8 +86,8 @@ try {
  await page.getByRole('dialog').getByRole('button', { name: '完成', exact: true }).click();
  await updates();
  assert.equal(await page.locator('.real-feed-entry').count(), 3);
- await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry .feed-image-placeholder').length === 2);
- assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail').count(), 3);
+ assert.equal(await page.locator('.real-feed-entry .feed-image-placeholder').count(), 0);
+ assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail').count(), 1);
  assert.equal(await page.locator('.real-feed-entry .feed-item-thumbnail img').count(), 1);
  const title = page.getByRole('button', { name: '十月的拍摄手记：让光再停留一会儿（布局检查样本）', exact: true });
  await title.click();
@@ -125,13 +128,13 @@ try {
    await page.getByRole('button', { name: '关闭添加关注', exact: true }).click();
    await updates();
    const itemLayout = await page.locator('.real-feed-entry').evaluateAll(items => items.map(item => {
-    const image = item.querySelector('.feed-item-thumbnail').getBoundingClientRect();
+    const image = item.querySelector('.feed-item-thumbnail')?.getBoundingClientRect();
     const title = item.querySelector('.feed-item-title > span').getBoundingClientRect();
     const summary = item.querySelector('.feed-item-summary').getBoundingClientRect();
-    return { height: item.getBoundingClientRect().height, x: image.x, width: image.width, titleHeight: title.height, summaryHeight: summary.height };
+    return { height: item.getBoundingClientRect().height, x: image?.x, width: item.getBoundingClientRect().width, titleHeight: title.height, summaryHeight: summary.height };
    }));
-   assert.ok(itemLayout.every(item => item.height <= 160 && item.titleHeight <= 43 && item.summaryHeight <= 20), JSON.stringify(itemLayout));
-   assert.ok(itemLayout.every(item => item.x === itemLayout[0].x && item.width === itemLayout[0].width), 'Every update reserves the same image column');
+   assert.ok(itemLayout.every(item => item.height <= 650 && item.titleHeight <= 49 && item.summaryHeight <= 92), JSON.stringify(itemLayout));
+   assert.ok(itemLayout.every(item => Math.abs(item.width - itemLayout[0].width) <= 1 && item.width < 500), 'Creator updates use equally sized columns');
    await updates('actors');
    const actorEntry = page.locator('.real-feed-entry').filter({ has: page.getByRole('button', { name: '查询 NECT-024 资料', exact: true }) });
    assert.equal(await actorEntry.locator('.feed-item-dates > span').first().innerText(), '发行 2026/10/23');
@@ -220,5 +223,5 @@ try {
  await page.keyboard.press('Escape');
  assert.deepEqual(errors, []);
  assert.deepEqual(await app.evaluate(() => globalThis.__requests), []);
- console.log(JSON.stringify({ application: appPath ? 'packaged' : 'development', checks: ['four-real-pages-with-isolated-fixtures', 'both-themes-and-window-sizes', 'source-picker', 'uniform-control-sizes', 'fixed-image-column-and-missing-cover-fallback', 'compact-items-and-two-line-title', 'date-only-release-without-fabricated-time', 'default-frequency-and-read-persistence', 'dialog-escape-and-focus-return', 'large-cover-before-title-without-zoom', 'three-facts-without-collection-explanation', 'creator-source-summary-retained', 'long-title-and-fixed-actions', 'live-cover-states-and-retry-control', 'background-cover-arrives-in-open-dialog', 'no-site-requests'], screenshots: output }, null, 2));
+ console.log(JSON.stringify({ application: appPath ? 'packaged' : 'development', checks: ['four-real-pages-with-isolated-fixtures', 'both-themes-and-window-sizes', 'source-picker', 'uniform-control-sizes', 'responsive-creator-cards-and-text-only-items', 'compact-actor-rows-and-two-line-title', 'date-only-release-without-fabricated-time', 'default-frequency-and-read-persistence', 'dialog-escape-and-focus-return', 'large-cover-before-title-without-zoom', 'three-facts-without-collection-explanation', 'creator-source-summary-retained', 'long-title-and-fixed-actions', 'live-cover-states-and-retry-control', 'background-cover-arrives-in-open-dialog', 'no-site-requests'], screenshots: output }, null, 2));
 } finally { await app?.close().catch(() => {}); await rm(userData, { recursive: true, force: true }); }

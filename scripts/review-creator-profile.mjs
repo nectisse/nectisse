@@ -36,7 +36,7 @@ try {
 	execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', seed, profile], { cwd: root, stdio: 'pipe' });
 	app = await _electron.launch({ executablePath: electron, args: [root, `--user-data-dir=${profile}`], cwd: profile, env });
 	await app.evaluate(({ ipcMain, session, shell }) => {
-		globalThis.__creatorProfileTest = { requests: [], opened: [], checks: [] };
+		globalThis.__creatorProfileTest = { requests: [], opened: [], checks: [], retries: [] };
 		session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
 			globalThis.__creatorProfileTest.requests.push(details.url);
 			callback({ cancel: true });
@@ -50,6 +50,10 @@ try {
 		ipcMain.handle(channel, async (event, value) => {
 			if (value.action === 'check') {
 				globalThis.__creatorProfileTest.checks.push(value.id);
+				return { ok: true };
+			}
+			if (value.action === 'retry-images') {
+				globalThis.__creatorProfileTest.retries.push(value.subscriptionId);
 				return { ok: true };
 			}
 			return command(event, value);
@@ -79,8 +83,8 @@ try {
 	try {
 		await page.waitForFunction(
 			() =>
-				[...document.querySelectorAll('.creator-profile-avatar img, .real-creator-banner img')].length === 2 &&
-				[...document.querySelectorAll('.creator-profile-avatar img, .real-creator-banner img')].every((image) => image.complete && image.naturalWidth > 0),
+				document.querySelectorAll('.creator-profile-avatar img').length === 1 &&
+				[...document.querySelectorAll('.creator-profile-avatar img')].every((image) => image.complete && image.naturalWidth > 0),
 		);
 	} catch (error) {
 		await page.screenshot({ path: join(output, 'failed-images.png') });
@@ -92,7 +96,7 @@ try {
 		);
 		throw error;
 	}
-	assert.match(await page.locator('.creator-name > p').innerText(), /@_yu_8_8/);
+	assert.match(await page.locator('.person-account').innerText(), /@_yu_8_8/);
 	assert.match(await page.locator('.creator-bio').innerText(), /记录创作与日常。\n/);
 	assert.equal(await page.locator('.real-feed-list').getAttribute('data-presentation'), 'cards');
 	assert.equal(await page.locator('.real-feed-entry').count(), 20);
@@ -110,17 +114,26 @@ try {
 	await page.keyboard.press('Escape');
 	await page.waitForFunction(() => document.activeElement?.classList.contains('feed-item-title'));
 	const pager = page.getByRole('navigation', { name: '已收录内容分页', exact: true });
-	await pager.getByRole('button', { name: '下一页', exact: true }).click();
-	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 3);
+	assert.equal(await pager.count(), 0);
+	await page.locator('.creator-load-more').scrollIntoViewIfNeeded();
+	await page.waitForFunction(() => document.querySelectorAll('.real-feed-entry').length === 23);
 	assert.deepEqual(
 		await page.locator('.real-feed-entry').evaluateAll((items) => items.map((item) => item.dataset.postId)),
-		expected.slice(20).map((entry) => entry.id),
+		expected.map((entry) => entry.id),
 	);
-	assert.equal(await pager.getByRole('button', { name: '下一页', exact: true }).isDisabled(), true);
-	await page.locator('.real-feed-entry .feed-item-title').first().click();
+	await page.locator('.creator-load-more').getByText('已显示全部 23 条动态', { exact: true }).waitFor();
+	await page.locator('.real-feed-entry .feed-item-title').nth(20).click();
 	await page.keyboard.press('Escape');
-	assert.equal(await page.locator('.real-feed-entry').count(), 3);
-	await pager.getByRole('button', { name: '上一页', exact: true }).click();
+	assert.equal(await page.locator('.real-feed-entry').count(), 23);
+	const coverSnapshot = await state();
+	const missing = coverSnapshot.entries.find((entry) => entry.id === expected[1].id);
+	missing.thumbnailUrl = 'https://example.invalid/missing-cover.jpg';
+	missing.imageCache = { status: 'failed', attempts: 1, nextAttemptAt: 0, reason: 'not_found' };
+	coverSnapshot.revision++;
+	await app.evaluate(({ BrowserWindow }, snapshot) => BrowserWindow.getAllWindows()[0].webContents.send('nectisse:subscriptions-state', snapshot), coverSnapshot);
+	const updateToolbar = page.getByRole('region', { name: '更新工具栏', exact: true });
+	await updateToolbar.getByRole('button', { name: '重试未缓存封面', exact: true }).click();
+	assert.deepEqual(await app.evaluate(() => globalThis.__creatorProfileTest.retries), [creator.id]);
 	await page.getByRole('button', { name: '关注设置', exact: true }).click();
 	await chooseOption(page, `${creator.name} 检查频率`, '每 3 小时');
 	assert.equal((await state()).subscriptions.find((sub) => sub.id === creator.id).intervalMinutes, 180);
@@ -138,15 +151,15 @@ try {
 	await page.getByRole('button', { name: '取消关注', exact: true }).click();
 	await page.getByRole('button', { name: '重新关注', exact: true }).waitFor();
 	assert.equal((await state()).subscriptions.find((sub) => sub.id === creator.id).following, false);
-	assert.equal(await page.locator('.real-feed-entry').count(), 20);
+	assert.equal(await page.locator('.real-feed-entry').count(), 23);
 	await page.getByRole('button', { name: '重新关注', exact: true }).click();
 	await page.getByRole('button', { name: '取消关注', exact: true }).waitFor();
 	await page.getByRole('dialog').getByRole('button', { name: '完成', exact: true }).click();
 	await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'source-enabled', source: 'x', enabled: false }));
-	await page.waitForFunction(() => document.querySelector('.creator-header-actions button').disabled);
+	await page.waitForFunction(() => document.querySelector('.person-updates-toolbar .page-toolbar-actions button').disabled);
 	assert.equal(await page.getByRole('button', { name: '检查更新', exact: true }).isDisabled(), true);
 	await page.evaluate(() => window.nectisse.subscriptions.command({ action: 'source-enabled', source: 'x', enabled: true }));
-	await page.waitForFunction(() => !document.querySelector('.creator-header-actions button').disabled);
+	await page.waitForFunction(() => !document.querySelector('.person-updates-toolbar .page-toolbar-actions button').disabled);
 	for (const width of [1000, 1280, 1600]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 900), width);
 		await page.waitForFunction((width) => innerWidth === width, width);
@@ -168,33 +181,43 @@ try {
 					documentHeight: document.scrollingElement.scrollHeight,
 					viewport: innerHeight,
 					fits: scroller.scrollWidth <= scroller.clientWidth + 1,
-					hero: rect('.real-creator-banner'),
+					overview: rect('.person-overview'),
+					cover: rect('.person-cover'),
+					columns: getComputedStyle(document.querySelector('.real-feed-list')).gridTemplateColumns.split(' ').length,
+					items: [...document.querySelectorAll('.real-feed-entry')].slice(0, 4).map((item) => ({ x: item.getBoundingClientRect().x, y: item.getBoundingClientRect().y, width: item.getBoundingClientRect().width, fits: item.scrollWidth <= item.clientWidth + 1 })),
 					avatar: rect('.creator-profile-avatar'),
 					heading: rect('#page-heading'),
 					content: rect('.creator-content'),
-					aside: rect('.creator-aside'),
+					toolbar: rect('.person-updates-toolbar'),
 					cards: rect('.collected-entries'),
-					controls: [...document.querySelectorAll('.creator-profile-navigation button, .creator-header-actions button')].map(
+					controls: [...document.querySelectorAll('.creator-profile-navigation button, .person-updates-toolbar .page-toolbar-actions button')].map(
 						(button) => button.getBoundingClientRect().height,
 					),
 				};
 			});
 			assert.ok(layout.fits && layout.rootScroll === 0 && layout.documentHeight <= layout.viewport + 1, JSON.stringify(layout));
-			assert.ok(layout.avatar.y < layout.hero.bottom && layout.avatar.y + layout.avatar.height > layout.hero.bottom);
-			assert.ok(layout.heading.y >= layout.hero.bottom && layout.aside.x > layout.cards.x + layout.cards.width);
+			assert.ok(layout.avatar.y >= layout.overview.y && layout.avatar.y + layout.avatar.height <= layout.overview.bottom);
+			assert.ok(layout.avatar.y < layout.cover.bottom && layout.avatar.y + layout.avatar.height > layout.cover.bottom);
+			assert.ok(layout.heading.y > layout.cover.bottom && layout.heading.y < layout.overview.bottom);
+			assert.equal(layout.columns, { 1000: 2, 1280: 3, 1600: 4 }[width]);
+			assert.ok(layout.items.every((item) => item.fits && item.width >= 300 && item.width < 500));
+			assert.ok(layout.items[0].y === layout.items[1].y && layout.items[0].x < layout.items[1].x);
+			assert.ok(Math.abs(layout.content.width - layout.cards.width) <= 1 && Math.abs(layout.cards.width - layout.toolbar.width) <= 1);
 			assert.ok(layout.controls.every((height) => height === 32));
 			layouts.push({ theme, ...layout });
 			await page.screenshot({ path: join(output, `${width}-${theme}-x.png`), animations: 'disabled', style: '[data-sonner-toaster] { visibility: hidden; }' });
 		}
 	}
-	await page.getByRole('button', { name: '来源与订阅设置', exact: true }).click();
+	assert.equal(await page.getByRole('button', { name: '来源与订阅设置', exact: true }).count(), 0);
+	assert.equal(await page.locator('.person-overview').getByText('已关注', { exact: true }).count(), 0);
+	await page.getByRole('button', { name: '设置', exact: true }).click();
 	await page.getByRole('heading', { name: '设置', exact: true }).waitFor();
 	await page.locator('.sidebar-author').filter({ hasText: creator.name }).click();
 	await page.locator('.real-creator-page').waitFor();
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
 	await page.locator('.subscription-name').filter({ hasText: '还没有动态的创作者' }).click();
 	await page.getByRole('heading', { name: '还没有可显示的内容', exact: true }).waitFor();
-	assert.equal(await page.locator('.real-creator-banner img').count(), 0);
+	assert.equal(await page.locator('.person-cover .people-artwork').count(), 1);
 	assert.equal(await pager.count(), 0);
 	await page.screenshot({ path: join(output, 'empty-creator.png'), animations: 'disabled', style: '[data-sonner-toaster] { visibility: hidden; }' });
 	await page.reload();
@@ -216,15 +239,15 @@ try {
 				checks: [
 					'real-creator-profile-from-list-and-sidebar',
 					'actor-and-creator-profiles',
-					'local-avatar-and-banner',
+					'local-avatar-and-svg-cover-overlap',
 					'text-only-cards-without-empty-images',
-					'20-and-3-entry-pages',
+					'twenty-then-twenty-three-with-infinite-scroll',
 					'read-dialog-and-focus-return',
 					'frequency-pause-follow-and-persistence',
 					'manual-check-and-original-page',
-					'source-disabled-and-settings',
+					'scoped-update-toolbar-and-no-duplicate-settings',
 					'empty-creator',
-					'1000-1280-1600-both-themes',
+					'two-three-four-column-cards-in-both-themes',
 					'zero-site-requests',
 				],
 				screenshots: output,

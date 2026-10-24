@@ -71,7 +71,7 @@ try {
 	await page.getByRole('heading', { name: '还没有可显示的内容', exact: true }).waitFor(); assert.equal(await pager.count(), 0);
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
 	await openPeople(page, 'creators', 'manage'); await page.locator('.subscription-name').filter({ hasText: '白石 澪' }).click();
-	assert.equal(await page.locator('.real-feed-entry').count(), 3); assert.equal(await pager.getByRole('button', { name: '下一页', exact: true }).isDisabled(), true);
+	assert.equal(await page.locator('.real-feed-entry').count(), 3); assert.equal(await pager.count(), 0); await page.getByText('已显示全部 3 条动态', { exact: true }).waitFor();
 	await nav.getByRole('button', { name: '资料查询', exact: true }).click(); await openPeople(page, 'actors', 'manage'); await openActor('三宫 椿');
 	for (const width of [1000, 1600]) {
 		await app.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, width === 1000 ? 700 : 840), width);
@@ -83,8 +83,27 @@ try {
 			await page.screenshot({ path: join(output, `${width}-${theme}.png`) });
 		}
 	}
+	const beforeBulk = (await state()).entries;
+	const lastPageIds = await ids();
+	await page.getByRole('button', { name: '本页全部已读', exact: true }).click();
+	await page.waitForFunction(ids => [...document.querySelectorAll('.real-feed-entry')].filter(item => ids.includes(item.dataset.postId)).every(item => item.dataset.read === 'true'), lastPageIds);
+	const afterBulk = (await state()).entries;
+	assert.ok(afterBulk.filter(entry => lastPageIds.includes(entry.id)).every(entry => entry.read));
+	assert.deepEqual(afterBulk.filter(entry => !lastPageIds.includes(entry.id)), beforeBulk.filter(entry => !lastPageIds.includes(entry.id)));
+	await page.getByRole('tab', { name: '未读', exact: true }).click();
+	const unread = afterBulk.filter(entry => entry.subscriptionId === actor.id && !entry.read);
+	await verify(1, unread.slice(0, 20).map(entry => entry.id));
+	await pager.getByRole('button', { name: '下一页', exact: true }).click();
+	await verify(2, unread.slice(20).map(entry => entry.id));
+	await page.getByRole('button', { name: '本页全部已读', exact: true }).click();
+	await verify(1, unread.slice(0, 20).map(entry => entry.id));
+	assert.deepEqual((await state()).entries.filter(entry => entry.subscriptionId !== actor.id), beforeBulk.filter(entry => entry.subscriptionId !== actor.id));
+	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
+	await openActor('另一位演员');
+	assert.equal(await page.getByRole('tab', { name: '全部', exact: true }).getAttribute('aria-selected'), 'true');
+	assert.equal(await ids().then(items => items.length), 20);
 	assert.equal((await app.evaluate(() => globalThis.__requests)).length, 0); assert.deepEqual(errors, []);
-	console.log(JSON.stringify({ checks: ['45-actor-entries-in-three-pages', 'no-duplicates-or-cross-actor-entries', '20-20-5-page-sizes', 'page-boundaries', 'dialog-and-read-preserve-page', 'switch-actor-resets-page', 'empty-and-creator-single-page', '32px-controls-both-themes-1000-and-1600', 'fixed-shell', 'zero-site-requests'], reports, screenshots: output }, null, 2));
+	console.log(JSON.stringify({ checks: ['45-actor-entries-in-three-pages', 'no-duplicates-or-cross-actor-entries', '20-20-5-page-sizes', 'page-boundaries', 'dialog-and-read-preserve-page', 'switch-actor-resets-page-and-filter', 'bulk-read-only-current-person-and-page', 'unread-filter-and-last-page-clamp', 'empty-and-short-creator-stream', '32px-controls-both-themes-1000-and-1600', 'fixed-shell', 'zero-site-requests'], reports, screenshots: output }, null, 2));
 } finally {
 	await mkdir(output, { recursive: true }); await writeFile(join(output, 'verification.json'), JSON.stringify({ reports, errors }, null, 2));
 	await app?.close().catch(() => {}); await rm(profile, { recursive: true, force: true });
