@@ -80,17 +80,18 @@
 }
 .people-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-	gap: 20px;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 14px;
 }
 .person-card[data-slot='button'] {
 	display: flex;
 	flex-direction: column;
 	align-items: stretch;
+	justify-content: flex-start;
 	gap: 0;
 	min-width: 0;
 	border: 1px solid var(--border);
-	border-radius: 10px;
+	border-radius: 8px;
 	overflow: hidden;
 	background: var(--card);
 	text-align: left;
@@ -100,27 +101,28 @@
 	align-items: center;
 	justify-content: center;
 	position: relative;
+	flex: none;
 	width: 100%;
-	aspect-ratio: 4 / 5;
+	aspect-ratio: 1;
 	background: color-mix(in srgb, var(--accent) 38%, var(--muted));
 	overflow: hidden;
 }
 .person-card-portrait > img {
 	width: 100%;
 	height: 100%;
-	object-fit: contain;
+	object-fit: cover;
 }
 .person-card-initial {
 	font-family: 'Snell Roundhand', Georgia, serif;
-	font-size: 54px;
+	font-size: 44px;
 	font-weight: 400;
 	color: var(--primary);
 }
 .person-card-unread {
 	position: absolute;
-	bottom: 12px;
-	right: 12px;
-	padding: 4px 8px;
+	bottom: 8px;
+	right: 8px;
+	padding: 3px 6px;
 	border-radius: 5px;
 	background: var(--primary);
 	color: var(--primary-foreground);
@@ -128,34 +130,35 @@
 	font-weight: 400;
 }
 .person-card-copy {
-	display: grid;
-	gap: 5px;
-	padding: 14px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 9px 10px;
 	min-width: 0;
 }
 .person-card-name {
-	display: -webkit-box;
-	-webkit-box-orient: vertical;
-	-webkit-line-clamp: 2;
-	overflow: hidden;
-	overflow-wrap: anywhere;
-	font-size: 15px;
-	font-weight: 550;
-	line-height: 1.6;
-}
-.person-card-source,
-.person-card-latest {
 	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 14px;
+	font-weight: 550;
+	line-height: 1.5;
+	white-space: nowrap;
+}
+.person-card-account {
+	display: block;
+	flex: 0 1 auto;
+	min-width: 0;
+	max-width: 55%;
 	color: var(--muted-foreground);
 	font-size: 11px;
-	line-height: 1.8;
+	line-height: 1.6;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-.person-card-latest {
-	margin-top: 6px;
-	color: var(--subtle);
 }
 .person-settings-dialog {
 	width: min(780px, calc(100vw - 48px));
@@ -182,7 +185,7 @@
 }
 @media (max-width: 1100px) {
 	.people-grid {
-		grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-		gap: 16px;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 12px;
 	}
 }

@@ -1,8 +1,9 @@
-"""保留 Peach DMM 解析器，并在商品身份冲突时收紧接收条件。"""
+"""保留 Peach 配信解析与身份核对，缺片时再查询 DVD 通贩目录。"""
 import json
-from peach_core.sources.dmm import DmmSource
+from peach_core.sources.dmm import DmmSource, code_parts
 from peach_core.identity import identifies_code
-from .base import FailureReason, SourceFailure
+from .base import FailureReason, Page, SourceFailure
+from .dmm_dvd import dvd_cid, fetch_dvd, parse_dvd
 
 
 def consistent(code: str, item: dict) -> bool:
@@ -12,11 +13,26 @@ def consistent(code: str, item: dict) -> bool:
 
 
 class VerifiedDmmSource(DmmSource):
+    def fetch(self, code, *, session):
+        try:
+            return super().fetch(code, session=session)
+        except SourceFailure as failure:
+            if failure.reason != FailureReason.NOT_FOUND or not code_parts(code):
+                raise
+        return fetch_dvd(code, session)
+
+    def query_content(self, code, cid, *, session):
+        item = self.identified(code, cid, session=session)
+        page = Page(self.content_url(cid), json.dumps(item).encode()) if item is not None else fetch_dvd(code, session, cid)
+        return self.parse(page, code)
+
     def identified(self, code, cid, *, session):
         item = super().identified(code, cid, session=session)
         return item if item is not None and consistent(code, item) else None
 
     def parse(self, page, code):
+        if dvd_cid(page.url):
+            return parse_dvd(page, code)
         try:
             item = json.loads(page.body)
         except ValueError:

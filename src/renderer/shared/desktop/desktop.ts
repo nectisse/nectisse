@@ -42,7 +42,12 @@ export function createDesktopState(
 
 	const invoke = async (command: FollowCommand): Promise<CommandReply> => {
 		try {
-			return await required().subscriptions.command(command);
+			const reply = await required().subscriptions.command(command);
+			if (reply.ok && command.action === 'retry-images') {
+				const id = command.subscriptionId;
+				void queries.client.invalidateQueries({ queryKey: ['subscriptions'], predicate: (query) => !id || query.queryKey[2] === id });
+			}
+			return reply;
 		} catch {
 			return { ok: false, message: '应用通信或存储操作未完成，请重试' };
 		}
@@ -54,6 +59,17 @@ export function createDesktopState(
 
 	const actions = {
 		invoke,
+		markRead: async (ids: string[], read: boolean) => {
+			let processed = 0;
+			for (let start = 0; start < ids.length; start += 500) {
+				const reply = await invoke({ action: 'read', ids: ids.slice(start, start + 500), read });
+				if (!reply.ok) {
+					return { ...reply, processed };
+				}
+				processed += Math.min(500, ids.length - start);
+			}
+			return { ok: true, processed };
+		},
 		imageUrl,
 		updatePreferences: (patch: PreferencesPatch) => invoke({ action: 'preferences-patch', patch }),
 
@@ -85,11 +101,20 @@ export function createDesktopState(
 
 	const connect = (): (() => void) => {
 		if (users++ === 0) {
-			unsubscribeQueries = library.store.subscribe((next, previous) => {
+			const unsubscribeLibrary = library.store.subscribe((next, previous) => {
 				if (next.snapshot !== previous.snapshot) {
 					void queries.syncLibrary(previous.snapshot, next.snapshot);
 				}
 			});
+			const unsubscribeSubscriptions = subscriptions.store.subscribe((next, previous) => {
+				if (next.snapshot !== previous.snapshot) {
+					void queries.syncSubscriptions(previous.snapshot, next.snapshot);
+				}
+			});
+			unsubscribeQueries = () => {
+				unsubscribeLibrary();
+				unsubscribeSubscriptions();
+			};
 			connections = {
 				library: connectSnapshot(library, bridge?.library, '作品收藏暂未就绪，原有收藏已保留。请重新检查本机收藏库。'),
 				metadata: connectSnapshot(metadata, bridge?.metadata, '资料查询服务暂未就绪，请重新检查。'),

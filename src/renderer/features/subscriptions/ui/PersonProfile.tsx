@@ -3,7 +3,6 @@ import { ArrowLeft, ExternalLink, Settings2 } from 'lucide-react';
 import type { FollowProvider, Subscription } from '@shared/subscriptions';
 import { SOURCE_LABELS, isPerformerProvider } from '@shared/sources';
 import { IdentityAvatar, TaskProgress } from '@/entities/subscription';
-import { useSubscriptions } from '@/shared/desktop';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -23,12 +22,11 @@ export function PersonProfile({
 	onAdd: (provider?: FollowProvider) => void;
 	onWork: (code: string) => void;
 }): React.JSX.Element {
-	const entries = useSubscriptions((state) => state.entries.filter((entry) => entry.subscriptionId === sub.id));
 	const { status, statusTone, openSource } = useSubscriptionControls(sub);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const actor = isPerformerProvider(sub.provider);
 	const providerName = SOURCE_LABELS[sub.provider];
-	const unread = entries.filter((entry) => !entry.read).length;
+	const unread = sub.unread;
 	const aliases = sub.aliases.filter((alias) => alias !== sub.name);
 
 	return (
@@ -70,7 +68,7 @@ export function PersonProfile({
 				<dl className="person-stats">
 					<div>
 						<dt>{actor ? '已收录作品' : '动态'}</dt>
-						<dd>{entries.length}</dd>
+						<dd>{sub.collected ?? 0}</dd>
 					</div>
 					<div data-unread={unread > 0}>
 						<dt>未读</dt>

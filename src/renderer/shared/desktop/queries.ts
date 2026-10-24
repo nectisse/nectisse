@@ -1,4 +1,5 @@
-import { QueryClient, mutationOptions, queryOptions } from '@tanstack/react-query';
+import { QueryClient, infiniteQueryOptions, mutationOptions, queryOptions, type InfiniteData } from '@tanstack/react-query';
+import type { EntryPage, EntryPageRequest, SubscriptionsState } from '@shared/subscriptions';
 import type { DesktopBridge } from '@shared/protocol';
 import type { LibrarySave, LibraryState, SavedWork } from '@shared/library';
 import type { MagnetBridge } from '@shared/magnets';
@@ -10,6 +11,8 @@ export const queryKeys = {
 	work: (id: string) => ['library', 'work', id] as const,
 	diagnostics: ['diagnostics', 'report'] as const,
 	storage: ['storage', 'usage'] as const,
+	entries: (id: string, unread: boolean, page: number) => ['subscriptions', 'entries', id, unread, page] as const,
+	stream: (id: string, unread: boolean) => ['subscriptions', 'stream', id, unread] as const,
 };
 
 function latestReport(previous: DiagnosticReport | undefined, next: DiagnosticReport): DiagnosticReport {
@@ -31,7 +34,65 @@ export function createDesktopQueries(required: () => DesktopBridge) {
 		},
 	});
 	const changes = new Map<string, symbol>();
+	const subscriptionChanges = new Map<string, symbol>();
 	let reportSequence = 0;
+
+	const entryPage = (request: EntryPageRequest, signal: AbortSignal): Promise<EntryPage> =>
+		readLocal(async () => {
+			const bridge = required().subscriptions;
+			if (!bridge.getEntries) {
+				throw new Error('人物记录读取接口未就绪，请退出后重新打开应用');
+			}
+			return bridge.getEntries(request);
+		}, signal);
+
+	const syncSubscriptions = async (before: SubscriptionsState, after: SubscriptionsState): Promise<void> => {
+		const entries = new Map(after.entries.map((entry) => [entry.id, entry]));
+		client.setQueriesData<EntryPage | InfiniteData<EntryPage, number>>({ queryKey: ['subscriptions'] }, (previous) => {
+			if (!previous) {
+				return previous;
+			}
+			const patch = (page: EntryPage): EntryPage => ({ ...page, entries: page.entries.map((entry) => entries.get(entry.id) ?? entry) });
+			return 'pages' in previous ? { ...previous, pages: previous.pages.map(patch) } : patch(previous);
+		});
+		const previous = new Map(before.subscriptions.map((sub) => [sub.id, sub]));
+		const oldTasks = new Map(before.tasks.map((task) => [task.id, task]));
+		const finished = new Set(
+			after.tasks
+				.filter((task) => task.subscriptionId && !['running', 'cancelling'].includes(task.status) && oldTasks.get(task.id)?.status !== task.status)
+				.map((task) => task.subscriptionId),
+		);
+		await Promise.all(
+			after.subscriptions
+				.filter((sub) => {
+					const old = previous.get(sub.id);
+					return (
+						!old ||
+						finished.has(sub.id) ||
+						old.collected !== sub.collected ||
+						old.unread !== sub.unread ||
+						old.lastCheckedAt !== sub.lastCheckedAt ||
+						old.lastError !== sub.lastError ||
+						old.following !== sub.following ||
+						old.enabled !== sub.enabled ||
+						old.autoPaused !== sub.autoPaused
+					);
+				})
+				.map(async (sub) => {
+					const change = Symbol();
+					subscriptionChanges.set(sub.id, change);
+					const filters = { queryKey: ['subscriptions'], predicate: (query: { queryKey: readonly unknown[] }) => query.queryKey[2] === sub.id };
+					await client.cancelQueries(filters);
+					if (subscriptionChanges.get(sub.id) !== change) {
+						return;
+					}
+					await client.invalidateQueries(filters);
+					if (subscriptionChanges.get(sub.id) === change) {
+						subscriptionChanges.delete(sub.id);
+					}
+				}),
+		);
+	};
 
 	const work = (id: string) =>
 		queryOptions({
@@ -85,6 +146,7 @@ export function createDesktopQueries(required: () => DesktopBridge) {
 
 	const cancelReads = (): void => {
 		changes.clear();
+		subscriptionChanges.clear();
 		reportSequence++;
 		void client.cancelQueries();
 	};
@@ -105,6 +167,24 @@ export function createDesktopQueries(required: () => DesktopBridge) {
 		diagnostics,
 		syncLibrary,
 		cancelReads,
+		syncSubscriptions,
+		entries: (id: string, unread: boolean, page: number, enabled: boolean) =>
+			queryOptions({
+				queryKey: queryKeys.entries(id, unread, page),
+				enabled: !!id && enabled,
+				staleTime: 0,
+				queryFn: ({ signal }) => entryPage({ subscriptionId: id, unread, page, pageSize: 20 }, signal),
+			}),
+		entryStream: (id: string, unread: boolean, enabled: boolean) =>
+			infiniteQueryOptions({
+				queryKey: queryKeys.stream(id, unread),
+				enabled: !!id && enabled,
+				staleTime: 0,
+				gcTime: 0,
+				initialPageParam: 1,
+				queryFn: ({ signal, pageParam }) => entryPage({ subscriptionId: id, unread, page: pageParam, pageSize: 20 }, signal),
+				getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
+			}),
 		storage: () =>
 			queryOptions({
 				queryKey: queryKeys.storage,

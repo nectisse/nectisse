@@ -78,10 +78,10 @@ export function EntryList({
 	presentation?: 'list' | 'cards';
 	onPerson?: (id: string) => void;
 }): React.JSX.Element {
-	const state = useSubscriptions((state) => ({ entries: state.entries, subscriptions: state.subscriptions }));
+	const state = useSubscriptions((state) => ({ subscriptions: state.subscriptions }));
 	const { invoke } = useDesktopActions();
 	const [selection, setSelected] = useState<FeedEntry>();
-	const selected = state.entries.find((entry) => entry.id === selection?.id) ?? selection;
+	const selected = entries.find((entry) => entry.id === selection?.id) ?? selection;
 	const returnFocus = useRef<HTMLElement | null>(null);
 	const Layout = presentation === 'cards' ? Masonry : 'div';
 

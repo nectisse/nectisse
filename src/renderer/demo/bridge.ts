@@ -1,5 +1,5 @@
 import type { DesktopBridge } from '@shared/protocol';
-import { followCommandSchema, subscriptionSchema, type CommandReply, type FollowCandidate, type FollowCommand } from '@shared/subscriptions';
+import { followCommandSchema, subscriptionSchema, entryPageRequestSchema, type CommandReply, type FollowCandidate, type FollowCommand } from '@shared/subscriptions';
 import { mergePreferences, type Preferences } from '@shared/preferences';
 import { canonicalFollow } from '@shared/source-identity';
 import { isPerformerProvider } from '@shared/sources';
@@ -36,6 +36,10 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 	const metadata = fixture.metadata;
 	const library = fixture.library;
 	const allRecords = structuredClone(metadata.tasks[0]!.records);
+	for (const sub of state.subscriptions) {
+		sub.collected = state.entries.filter((entry) => entry.subscriptionId === sub.id).length;
+		sub.latestEntry = state.entries.find((entry) => entry.subscriptionId === sub.id);
+	}
 	const subsChannel = channel(state);
 	const metadataChannel = channel(metadata);
 	const libraryChannel = channel(library);
@@ -45,6 +49,8 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 	const publishSubscriptions = (): void => {
 		for (const sub of state.subscriptions) {
 			sub.unread = state.entries.filter((entry) => entry.subscriptionId === sub.id && !entry.read).length;
+			sub.collected = state.entries.filter((entry) => entry.subscriptionId === sub.id).length;
+			sub.latestEntry = state.entries.find((entry) => entry.subscriptionId === sub.id);
 		}
 		subsChannel.publish();
 	};
@@ -203,7 +209,19 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 				},
 			}),
 		},
-		subscriptions: { getState: subsChannel.get, retry: subsChannel.get, command, onState: subsChannel.subscribe, onSettings: () => () => {} },
+		subscriptions: {
+			getState: subsChannel.get,
+			retry: subsChannel.get,
+			command,
+			onState: subsChannel.subscribe,
+			onSettings: () => () => {},
+			getEntries: async (input) => {
+				const request = entryPageRequestSchema.parse(input);
+				const entries = state.entries.filter((entry) => entry.subscriptionId === request.subscriptionId && (!request.unread || !entry.read));
+				const start = (request.page - 1) * request.pageSize;
+				return structuredClone({ entries: entries.slice(start, start + request.pageSize), total: entries.length, page: request.page, pageSize: request.pageSize });
+			},
+		},
 		metadata: {
 			getState: metadataChannel.get,
 			retry: metadataChannel.get,

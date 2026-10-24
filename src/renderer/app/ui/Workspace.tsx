@@ -44,7 +44,7 @@ export function Workspace({
 	const { invoke, reloadSubscriptions: reload } = actions;
 	const libraryCount = useLibrary((state) => state.works.length);
 	const [librarySeed, setLibrarySeed] = useState<{ id: string; token: number }>();
-	const state = useSubscriptions((state) => ({ entries: state.entries, notice: state.notice, theme: state.preferences.theme }));
+	const state = useSubscriptions((state) => ({ subscriptions: state.subscriptions, notice: state.notice, theme: state.preferences.theme }));
 	const { error, reading } = useSubscriptionStatus();
 	const { page, settingsSection } = navigation;
 	const setPage = (page: Page): void => onNavigate({ page, scrollTop: 0 });
@@ -158,9 +158,11 @@ export function Workspace({
 							{item.page === 'query' ? (
 								<kbd>⌘ K</kbd>
 							) : (item.page === 'actors' || item.page === 'creators') &&
-							  state.entries.some((entry) => !entry.read && isPerformerProvider(entry.provider) === (item.page === 'actors')) ? (
+							  state.subscriptions.some((sub) => sub.unread > 0 && isPerformerProvider(sub.provider) === (item.page === 'actors')) ? (
 								<span className="unread-count" aria-hidden="true">
-									{state.entries.filter((entry) => !entry.read && isPerformerProvider(entry.provider) === (item.page === 'actors')).length}
+									{state.subscriptions
+										.filter((sub) => isPerformerProvider(sub.provider) === (item.page === 'actors'))
+										.reduce((count, sub) => count + sub.unread, 0)}
 								</span>
 							) : item.page === 'library' ? (
 								<span className="nav-count" aria-hidden="true">

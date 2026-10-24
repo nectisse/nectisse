@@ -15,6 +15,8 @@ import {
 	type FollowTask,
 	type AllSource,
 	type ImageCache,
+	type EntryPageRequest,
+	type EntryPage,
 } from '@shared/subscriptions';
 
 export interface Cipher {
@@ -45,6 +47,7 @@ export class SubscriptionStore {
 				CREATE TABLE IF NOT EXISTS subscriptions (id TEXT PRIMARY KEY, provider TEXT NOT NULL, ref TEXT NOT NULL, value TEXT NOT NULL, UNIQUE(provider,ref));
 				CREATE TABLE IF NOT EXISTS entries (id TEXT PRIMARY KEY, subscription_id TEXT NOT NULL, external_id TEXT NOT NULL, value TEXT NOT NULL, first_seen TEXT NOT NULL, UNIQUE(subscription_id,external_id));
 				CREATE INDEX IF NOT EXISTS entries_subscription ON entries(subscription_id);
+				CREATE INDEX IF NOT EXISTS entries_subscription_seen ON entries(subscription_id,first_seen DESC);
 				CREATE TABLE IF NOT EXISTS follow_tasks (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, value TEXT NOT NULL);
 				CREATE TABLE IF NOT EXISTS source_status (id TEXT PRIMARY KEY, value TEXT NOT NULL);
 				CREATE TABLE IF NOT EXISTS follow_images (url TEXT PRIMARY KEY, value TEXT NOT NULL, saved_at INTEGER NOT NULL);
@@ -131,7 +134,13 @@ export class SubscriptionStore {
 			.all()
 			.map((row) => {
 				const value = subscriptionSchema.parse(JSON.parse(String(row.value)));
-				value.unread = Number(this.db.prepare("SELECT count(*) AS n FROM entries WHERE subscription_id=? AND json_extract(value,'$.read')=0").get(value.id)?.n ?? 0);
+				const counts = this.db
+					.prepare("SELECT count(*) AS collected,COALESCE(sum(json_extract(value,'$.read')=0),0) AS unread FROM entries WHERE subscription_id=?")
+					.get(value.id)!;
+				value.unread = Number(counts.unread);
+				value.collected = Number(counts.collected);
+				const latest = this.db.prepare('SELECT value FROM entries WHERE subscription_id=? ORDER BY first_seen DESC,rowid ASC LIMIT 1').get(value.id);
+				value.latestEntry = latest ? JSON.parse(String(latest.value)) : undefined;
 				return value;
 			});
 	}
@@ -142,9 +151,12 @@ export class SubscriptionStore {
 	}
 
 	saveSubscription(value: Subscription): void {
+		const stored = { ...value };
+		delete stored.collected;
+		delete stored.latestEntry;
 		this.db
 			.prepare('INSERT INTO subscriptions VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value')
-			.run(value.id, value.provider, value.ref, JSON.stringify(value));
+			.run(value.id, value.provider, value.ref, JSON.stringify(stored));
 	}
 
 	follow(candidate: FollowCandidate): Subscription {
@@ -184,11 +196,26 @@ export class SubscriptionStore {
 		return value;
 	}
 
+	/** 后台近期任务与兼容快照；人物页面通过 entryPage 单独分页读取。 */
 	entries(subscriptionId?: string): FeedEntry[] {
 		const rows = subscriptionId
 			? this.db.prepare(`SELECT value FROM entries WHERE subscription_id=? AND ${retainedProvider} ORDER BY first_seen DESC,rowid ASC LIMIT 500`).all(subscriptionId)
 			: this.db.prepare(`SELECT value FROM entries WHERE ${retainedProvider} ORDER BY first_seen DESC,rowid ASC LIMIT 500`).all();
 		return rows.map((row) => JSON.parse(String(row.value)) as FeedEntry);
+	}
+
+	entryPage(request: EntryPageRequest): EntryPage {
+		const where = `subscription_id=? AND ${retainedProvider}${request.unread ? " AND json_extract(value,'$.read')=0" : ''}`;
+		const total = Number(this.db.prepare(`SELECT count(*) AS n FROM entries WHERE ${where}`).get(request.subscriptionId)!.n);
+		const rows = this.db
+			.prepare(`SELECT value FROM entries WHERE ${where} ORDER BY first_seen DESC,rowid ASC LIMIT ? OFFSET ?`)
+			.all(request.subscriptionId, request.pageSize, (request.page - 1) * request.pageSize);
+		const retryable = !!this.db
+			.prepare(
+				`SELECT 1 FROM entries WHERE subscription_id=? AND ${retainedProvider} AND json_extract(value,'$.thumbnailUrl')<>'' AND json_extract(value,'$.imageAsset') IS NULL AND json_extract(value,'$.imageCache.status') IN ('failed','cancelled','evicted','retry') LIMIT 1`,
+			)
+			.get(request.subscriptionId);
+		return { entries: rows.map((row) => JSON.parse(String(row.value)) as FeedEntry), total, page: request.page, pageSize: request.pageSize, retryable };
 	}
 
 	entry(id: string): FeedEntry | undefined {
