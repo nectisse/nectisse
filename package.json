@@ -40,6 +40,9 @@
 		"test:query-clear": "node scripts/review-query-clear.mjs",
 		"test:diagnostics": "node scripts/review-diagnostics.mjs",
 		"package:mac": "npm run icons:build && npm run build && node scripts/package-mac.mjs",
+		"release:mac": "npm run icons:build && npm run build && node --import tsx scripts/release/macos.ts",
+		"release:mac:preview": "npm run icons:build && npm run build && node --import tsx scripts/release/macos.ts --unsigned && node --import tsx scripts/release/verify.ts --unsigned",
+		"release:mac:verify": "node --import tsx scripts/release/verify.ts",
 		"check:architecture": "node scripts/check-architecture.mjs",
 		"check": "npm run check:architecture && npm run typecheck && npm test"
 	},

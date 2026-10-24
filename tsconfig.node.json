@@ -13,8 +13,8 @@
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
 		"allowImportingTsExtensions": true,
-		"noEmit": true,
+		"noEmit": true
 	},
-	"include": ["electron.vite.config.ts", "src/main/**/*.ts", "src/preload/**/*.ts", "src/shared/**/*.ts", "tests/**/*.ts"],
-	"extends": "./tsconfig.paths.json",
+	"include": ["electron.vite.config.ts", "src/main/**/*.ts", "src/preload/**/*.ts", "src/shared/**/*.ts", "tests/**/*.ts", "scripts/release/**/*.ts"],
+	"extends": "./tsconfig.paths.json"
 }

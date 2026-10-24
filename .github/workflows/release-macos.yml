@@ -1,0 +1,115 @@
+name: Release macOS arm64
+
+on:
+    push:
+        tags: ['v[0-9]*.[0-9]*.[0-9]*']
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: nectisse-macos-release
+    cancel-in-progress: false
+
+jobs:
+    release:
+        if: github.repository == 'nectisse/nectisse' && github.event.repository.private == false
+        runs-on: macos-15
+        timeout-minutes: 45
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+              with:
+                  node-version: '24'
+            - name: Install locked dependencies
+              run: npm ci
+            - name: Validate version, notes and public repository
+              id: prepare
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RELEASE_PREVIEW: ${{ github.event_name == 'workflow_dispatch' }}
+              run: node --import tsx scripts/release/github.ts prepare
+            - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+              with:
+                  version: '0.13.5'
+                  enable-cache: false
+            - name: Prepare bundled Python
+              run: npm run python:prepare
+            - name: Check types, dependencies and regression tests
+              run: |
+                  npm run check
+                  npm run test:python
+                  git diff --exit-code -- package.json package-lock.json
+            - name: Verify preview installers without signing secrets
+              if: github.event_name == 'workflow_dispatch'
+              run: npm run release:mac:preview
+            - name: Import signing certificate into a temporary keychain
+              if: github.event_name == 'push'
+              env:
+                  BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+                  P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  umask 077
+                  : "${BUILD_CERTIFICATE_BASE64:?Missing BUILD_CERTIFICATE_BASE64}"
+                  : "${P12_PASSWORD:?Missing P12_PASSWORD}"
+                  certificate_path="$RUNNER_TEMP/nectisse-signing.p12"
+                  keychain_path="$RUNNER_TEMP/nectisse-signing.keychain-db"
+                  keychain_password="$(openssl rand -base64 24)"
+                  printf '::add-mask::%s\n' "$keychain_password"
+                  printf '%s' "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+                  security create-keychain -p "$keychain_password" "$keychain_path"
+                  security set-keychain-settings -lut 21600 "$keychain_path"
+                  security unlock-keychain -p "$keychain_password" "$keychain_path"
+                  security import "$certificate_path" -P "$P12_PASSWORD" -t cert -f pkcs12 \
+                    -k "$keychain_path" -T /usr/bin/codesign -T /usr/bin/security
+                  security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+                    -k "$keychain_password" "$keychain_path" > /dev/null
+                  security list-keychains -d user -s "$keychain_path" "$HOME/Library/Keychains/login.keychain-db"
+                  printf 'CSC_KEYCHAIN=%s\n' "$keychain_path" >> "$GITHUB_ENV"
+            - name: Build, sign and notarize installers
+              if: github.event_name == 'push'
+              env:
+                  APPLE_ID: ${{ secrets.APPLE_ID }}
+                  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+                  APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+              run: npm run release:mac
+            - name: Remove signing material
+              if: always() && github.event_name == 'push'
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  keychain_path="$RUNNER_TEMP/nectisse-signing.keychain-db"
+                  if [ -f "$keychain_path" ]; then
+                    security delete-keychain "$keychain_path"
+                  fi
+                  rm -f "$RUNNER_TEMP/nectisse-signing.p12"
+            - name: Verify extracted applications and bundled Python
+              if: github.event_name == 'push'
+              env:
+                  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+              run: npm run release:mac:verify
+            - name: Publish verified files directly to GitHub Release
+              if: github.event_name == 'push'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: node --import tsx scripts/release/github.ts publish
+            - name: Write build summary
+              if: success()
+              env:
+                  RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
+                  RELEASE_PREVIEW: ${{ github.event_name == 'workflow_dispatch' }}
+              shell: bash
+              run: |
+                  printf '## Nectisse %s\n\n' "$RELEASE_VERSION" >> "$GITHUB_STEP_SUMMARY"
+                  if [ "$RELEASE_PREVIEW" = true ]; then
+                    printf '预览构建与安装包验收通过；未发布版本，也未保存 Actions artifact。\n' >> "$GITHUB_STEP_SUMMARY"
+                  else
+                    printf 'DMG、ZIP 与 SHA256SUMS 已上传到本仓库 Release。\n' >> "$GITHUB_STEP_SUMMARY"
+                  fi

@@ -72,6 +72,8 @@ export async function reviewVisual(page, application, output) {
 	assert.equal(await page.locator('.person-stats [data-unread] dd').innerText(), '1');
 	await page.getByRole('button', { name: '返回关注列表', exact: true }).click();
 	assert.equal(await page.getByRole('textbox', { name: '搜索创作者', exact: true }).inputValue(), '灯里');
+	assert.equal(await page.getByRole('tab', { name: '管理', exact: true }).getAttribute('aria-selected'), 'true');
+	await page.getByRole('tab', { name: '浏览', exact: true }).click();
 	assert.equal(await page.locator('.person-card-unread').innerText(), '1 条未读');
 	await page.getByRole('tab', { name: '管理', exact: true }).click();
 	const row = page.locator('.subscription-card').filter({ hasText: '灯里工作室' });
