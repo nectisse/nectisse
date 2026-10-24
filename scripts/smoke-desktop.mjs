@@ -85,7 +85,7 @@ try {
 		assert.equal(await fallback.evaluate(() => typeof window.nectisse), 'undefined');
 		await fallback.getByRole('button', { name: '重新检查', exact: true }).click();
 		await fallback.getByRole('button', { name: '作品收藏', exact: true }).click();
-		await fallback.getByText('收藏通信未就绪，请重新打开应用', { exact: false }).waitFor();
+		await fallback.locator('.library-page [role="alert"]').filter({ hasText: '作品收藏暂未就绪，原有收藏已保留。请重新检查本机收藏库。' }).waitFor();
 		await fallback.getByRole('button', { name: '重新检查收藏库', exact: true }).click();
 		assert.deepEqual(failures, []);
 	} finally {
