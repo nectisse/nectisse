@@ -28,7 +28,7 @@ try {
 	const sub = store.follow({provider:'x',ref:'1722511982610538496',handle:'_yu_8_8',name:'X 创作者（本地样本）',url:'https://x.com/_yu_8_8',aliases:[],recordType:'公开账号',bio:'记录创作与日常。\n仅使用隔离的本地样本检查个人主页，不访问 X。',evidence:'本地测试',avatarUrl:'https://pbs.twimg.com/profile_images/fixture.png',avatarAsset:asset});
 	sub.initialized=true;sub.lastCheckedAt='2026-10-24T08:00:00.000Z';sub.coverage='公开账号本人原创帖，不收录回复、引用与转发';store.saveSubscription(sub);
 	for(let index=0;index<23;index++) {
-	store.upsertEntry(sub,{externalId:String(1900000000000000000n+BigInt(index)),title:'原创动态 '+(index+1),summary:'今天的创作手记。\n保留换行与正文摘要，文字动态不占用空白图片区域。',author:sub.name,authorRef:sub.ref,authorHandle:sub.handle,postKind:'original',publishedAt:'2026-10-24T08:00:00.000Z',publishedPrecision:'exact',url:'https://x.com/_yu_8_8/status/'+(1900000000000000000n+BigInt(index)),thumbnailUrl:index===22?'https://pbs.twimg.com/media/fixture.png':'',code:'',restricted:false,partial:false},new Date(Date.UTC(2026,9,24,0,0,index)).toISOString());
+	store.upsertEntry(sub,{externalId:String(1900000000000000000n+BigInt(index)),title:'今天的创作手记。',summary:'今天的创作手记。\n保留换行与正文摘要，文字动态不占用空白图片区域。',author:sub.name,authorRef:sub.ref,authorHandle:sub.handle,postKind:'original',publishedAt:'2026-10-24T08:00:00.000Z',publishedPrecision:'exact',url:'https://x.com/_yu_8_8/status/'+(1900000000000000000n+BigInt(index)),thumbnailUrl:index===22?'https://pbs.twimg.com/media/fixture.png':'',code:'',restricted:false,partial:false},new Date(Date.UTC(2026,9,24,0,0,index)).toISOString());
 	if(index===22)store.saveImage(store.entries(sub.id).find(entry=>entry.externalId===String(1900000000000000000n+BigInt(index))),asset);
 	}
 	store.follow({provider:'fanbox',ref:'emptycreator',name:'还没有动态的创作者',url:'https://emptycreator.fanbox.cc',aliases:[],recordType:'创作者',bio:'',evidence:'本地测试'});
@@ -106,13 +106,18 @@ try {
 		expected.slice(0, 20).map((entry) => entry.id),
 	);
 	const first = page.locator('.real-feed-entry').first();
+	assert.equal((await first.innerText()).split('今天的创作手记。').length - 1, 1, 'X cards show the post text only once');
+	assert.equal(await page.locator('.real-feed-entry .feed-item-heading').count(), 0, 'X posts have no visible title');
 	await first.getByRole('button', { name: '标为已读', exact: true }).click();
 	await first.getByRole('button', { name: '标为未读', exact: true }).waitFor();
 	assert.equal((await state()).entries.find((entry) => entry.id === expected[0].id).read, true);
-	await first.locator('.feed-item-title').click();
-	await page.getByRole('dialog').waitFor();
+	await first.locator('button.feed-item-summary').click();
+	const dialog = page.getByRole('dialog', { name: `${creator.name}的动态`, exact: true });
+	await dialog.waitFor();
+	assert.equal(await dialog.locator('.entry-dialog-title').count(), 0, 'X details have no visible title');
+	assert.equal((await dialog.innerText()).split('今天的创作手记。').length - 1, 1, 'X details show the post text only once');
 	await page.keyboard.press('Escape');
-	await page.waitForFunction(() => document.activeElement?.classList.contains('feed-item-title'));
+	await page.waitForFunction(() => document.activeElement?.classList.contains('feed-item-summary'));
 	const pager = page.getByRole('navigation', { name: '已收录内容分页', exact: true });
 	assert.equal(await pager.count(), 0);
 	await page.locator('.creator-load-more').scrollIntoViewIfNeeded();
@@ -122,7 +127,9 @@ try {
 		expected.map((entry) => entry.id),
 	);
 	await page.locator('.creator-load-more').getByText('已显示全部 23 条动态', { exact: true }).waitFor();
-	await page.locator('.real-feed-entry .feed-item-title').nth(20).click();
+	await page.locator('.real-feed-entry button.feed-item-summary').nth(20).focus();
+	await page.keyboard.press('Enter');
+	await dialog.waitFor();
 	await page.keyboard.press('Escape');
 	assert.equal(await page.locator('.real-feed-entry').count(), 23);
 	const coverSnapshot = await state();
@@ -229,6 +236,7 @@ try {
 	assert.equal((await state()).entries.filter((entry) => entry.subscriptionId === creator.id && entry.read).length, 2);
 	await openCreator('白石 澪');
 	assert.equal(await page.locator('.real-feed-entry').count(), 3);
+	assert.equal(await page.locator('.real-feed-entry .feed-item-heading').count(), 3, 'Sources with real titles retain their headings');
 	assert.match(await page.locator('.creator-bio').innerText(), /较长的简介/);
 	await page.screenshot({ path: join(output, 'fanbox-long-name.png'), animations: 'disabled', style: '[data-sonner-toaster] { visibility: hidden; }' });
 	assert.deepEqual(await app.evaluate(() => globalThis.__creatorProfileTest.requests), []);
@@ -241,6 +249,7 @@ try {
 					'actor-and-creator-profiles',
 					'local-avatar-and-svg-cover-overlap',
 					'text-only-cards-without-empty-images',
+					'x-text-without-duplicate-title-in-cards-and-dialogs',
 					'twenty-then-twenty-three-with-infinite-scroll',
 					'read-dialog-and-focus-return',
 					'frequency-pause-follow-and-persistence',

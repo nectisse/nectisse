@@ -23,7 +23,7 @@ export function UpdateDetailDialog({
 }: {
 	open: boolean;
 	onClose: () => void;
-	title: string;
+	title?: string;
 	author: string;
 	avatar?: ReactNode;
 	source: string;
@@ -60,7 +60,7 @@ export function UpdateDetailDialog({
 						{author} · {source}，来源条目与已取得的摘要。
 					</DialogDescription>
 					<div className="entry-detail-image">{image}</div>
-					<DialogTitle className="entry-dialog-title">{title}</DialogTitle>
+					<DialogTitle className={title ? 'entry-dialog-title' : 'sr-only'}>{title || `${author}的动态`}</DialogTitle>
 					<div className="entry-dialog-byline">
 						{avatar}
 						<span>{author}</span>

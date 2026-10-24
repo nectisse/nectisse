@@ -154,6 +154,10 @@
 	color: var(--muted-foreground);
 	line-height: 1.7;
 }
+.feed-item-summary[data-slot='button'] {
+	display: block;
+	font-weight: 400;
+}
 .feed-item-footer {
 	display: flex;
 	align-items: center;
