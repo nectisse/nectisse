@@ -4,8 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_PREFERENCES, mergePreferences, preferencesPatchSchema } from '@shared/preferences';
-import { SubscriptionStore } from '../src/main/subscription-store';
-import { SubscriptionsService } from '../src/main/subscriptions-service';
+import { SubscriptionStore } from '../src/main/features/subscriptions/subscription-store';
+import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
 
 test('局部设置只包含明确提交的字段，默认值和未知字段不会混入更新', () => {
 	assert.deepEqual(preferencesPatchSchema.parse({ theme: 'night' }), { theme: 'night' });

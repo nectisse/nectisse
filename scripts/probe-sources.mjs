@@ -1,7 +1,7 @@
 // 显式的一站一项在线核验；不读取或复制用户凭据，不登记用户关注。
-import { PythonTaskHost } from '../src/main/python-host.ts';
-import { pythonLayout } from '../src/main/python-layout.ts';
-import { planQuery } from '../src/main/metadata-input.ts';
+import { PythonTaskHost } from '../src/main/platform/python/python-host.ts';
+import { pythonLayout } from '../src/main/platform/python/python-layout.ts';
+import { planQuery } from '../src/main/features/metadata/metadata-input.ts';
 import { METADATA_IDS, FOLLOW_IDS, SOURCE_BY_ID } from '@shared/sources.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';

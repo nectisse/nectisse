@@ -7,9 +7,9 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { PythonTaskHost, PythonWorkerError, TaskCancelledError } from '../src/main/python-host';
-import { pythonLayout } from '../src/main/python-layout';
-import { RuntimeService } from '../src/main/runtime';
+import { PythonTaskHost, PythonWorkerError, TaskCancelledError } from '../src/main/platform/python/python-host';
+import { pythonLayout } from '../src/main/platform/python/python-layout';
+import { RuntimeService } from '../src/main/platform/python/runtime';
 import { healthSchema } from '@shared/protocol';
 
 const root = fileURLToPath(new URL('..', import.meta.url));

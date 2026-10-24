@@ -70,6 +70,9 @@ try {
 	assert.deepEqual(await page.locator('.magnet-table tbody tr').first().locator('.magnet-meta > *').allTextContents(), ['2026/10/23', '下载中 2', '完成 1,234']);
 	assert.equal(await page.locator('.magnet-table tbody tr').nth(1).locator('.magnet-meta time').innerText(), '上传时间未提供');
 	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 1, 'StrictMode must not dispatch a duplicate query');
+	await page.evaluate(() => { window.dispatchEvent(new Event('offline')); window.dispatchEvent(new Event('online')); document.dispatchEvent(new Event('visibilitychange')); });
+	await new Promise(resolve => setTimeout(resolve, 50));
+	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), 1, 'Focus and reconnect must not repeat the query');
 	assert.equal(await page.locator('.magnet-seeds').nth(1).innerText(), '0');
 	await page.getByRole('button', { name: /^复制磁链：/ }).first().click();
 	await page.getByText('磁链已复制', { exact: true }).waitFor();
@@ -126,6 +129,10 @@ try {
 	await page.getByRole('button', { name: '重新查询', exact: true }).click();
 	await page.getByRole('button', { name: '取消', exact: true }).click();
 	await page.getByText('查询已取消，可手动重新查询', { exact: true }).waitFor();
+	const cancelledCalls = await app.evaluate(() => globalThis.__magnetCalls.length);
+	await page.evaluate(() => { window.dispatchEvent(new Event('offline')); window.dispatchEvent(new Event('online')); document.dispatchEvent(new Event('visibilitychange')); });
+	await new Promise(resolve => setTimeout(resolve, 50));
+	assert.equal(await app.evaluate(() => globalThis.__magnetCalls.length), cancelledCalls, 'Cancelled mutations must not resume');
 	await page.getByRole('button', { name: '重新查询', exact: true }).click();
 	await page.getByRole('button', { name: '取消', exact: true }).waitFor();
 	await page.getByRole('tab', { name: '作品资料', exact: true }).click();

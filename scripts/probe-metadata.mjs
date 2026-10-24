@@ -1,13 +1,13 @@
 // 显式、限量的真实来源验证；不读用户资料库，不采集视频或其他资源。
-import { PythonTaskHost } from '../src/main/python-host.ts';
-import { pythonLayout } from '../src/main/python-layout.ts';
+import { PythonTaskHost } from '../src/main/platform/python/python-host.ts';
+import { pythonLayout } from '../src/main/platform/python/python-layout.ts';
 import { fileURLToPath } from 'node:url';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { execFileSync } from 'node:child_process';
-import { MetadataService } from '../src/main/metadata-service.ts';
-import { planQuery } from '../src/main/metadata-input.ts';
+import { MetadataService } from '../src/main/features/metadata/metadata-service.ts';
+import { planQuery } from '../src/main/features/metadata/metadata-input.ts';
 import { tmpdir } from 'node:os';
 
 const root = fileURLToPath(new URL('..', import.meta.url));

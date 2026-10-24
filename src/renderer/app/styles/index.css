@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+@import './foundation.css';
+@import '../../features/work-query/ui/query.css';
+@import '../../entities/work/ui/cover.css';
+@import '../../features/work-query/ui/results.css';
+@import '../../entities/work/ui/people.css';
+@import '../../features/work-query/ui/history.css';
+@import '../../entities/work/ui/provenance.css';
+@import '../../features/settings/ui/preferences.css';
+@import '../../features/subscriptions/ui/profile.css';
+@import '../../features/subscriptions/ui/follow-dialog.css';
+@import './demo-controls.css';
+@import '../../features/settings/ui/responsive.css';
+@import '../../features/settings/ui/sources.css';
+@import '../../features/work-query/ui/source-picker.css';
+@import '../../features/settings/ui/diagnostics.css';
+@import './workspace.css';
+@import '../../entities/update/ui/feed-item.css';
+@import '../../entities/update/ui/update-detail-dialog.css';
+@import '../../features/library/ui/styles.css';
+@import '../../shared/components/empty-state.css';
+@import '../../shared/components/page-layout.css';
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+	color-scheme: light;
+	--background: #faf9f6;
+	--foreground: #2d2630;
+	--card: #fffefa;
+	--card-foreground: #2d2630;
+	--popover: #fffefa;
+	--popover-foreground: #2d2630;
+	--primary: #684252;
+	--primary-foreground: #fff8fb;
+	--secondary: #efe9e9;
+	--secondary-foreground: #684252;
+	--muted: #f0ede9;
+	--muted-foreground: #817a7e;
+	--subtle: #93888e;
+	--accent: #e9dde3;
+	--accent-foreground: #684252;
+	--destructive: #a65050;
+	--border: #e7e2dd;
+	--input: #d9d0d4;
+	--ring: #927080;
+	--success: #597b69;
+	--success-soft: #eef2ec;
+	--peach: #946a43;
+	--peach-soft: #f6eee2;
+	--radius: 0.5rem;
+}
+
+:root[data-theme='night'] {
+	color-scheme: dark;
+	--background: #242027;
+	--foreground: #f0e9e9;
+	--card: #2b252e;
+	--card-foreground: #f0e9e9;
+	--popover: #2b252e;
+	--popover-foreground: #f0e9e9;
+	--primary: #ceb1c2;
+	--primary-foreground: #30232f;
+	--secondary: #39303a;
+	--secondary-foreground: #e4bfd2;
+	--muted: #211c24;
+	--muted-foreground: #b4a7b0;
+	--subtle: #aa99a5;
+	--accent: #44313e;
+	--accent-foreground: #e4bfd2;
+	--destructive: #e3a39d;
+	--border: #3c333e;
+	--input: #5b4755;
+	--ring: #c39fb7;
+	--success: #a7bfad;
+	--success-soft: #2a3630;
+	--peach: #d6b27f;
+	--peach-soft: #3b3128;
+}
+
+@theme inline {
+	--font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+	* {
+		box-sizing: border-box;
+		border-color: var(--border);
+	}
+	/* The desktop window never scrolls; each content pane owns its scroll. */
+	html,
+	body,
+	#root {
+		width: 100%;
+		height: 100%;
+		min-height: 0;
+		overflow: clip;
+		overscroll-behavior: none;
+	}
+	body {
+		margin: 0;
+		background: var(--background);
+		color: var(--foreground);
+		font: 13px/1.5 var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+	}
+	button {
+		cursor: pointer;
+	}
+	button:disabled {
+		cursor: default;
+	}
+	button,
+	input {
+		-webkit-tap-highlight-color: transparent;
+	}
+	button:focus-visible,
+	input:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 3px;
+	}
+	::selection {
+		background: var(--accent);
+		color: var(--accent-foreground);
+	}
+}

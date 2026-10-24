@@ -4,9 +4,9 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SubscriptionStore, type Cipher } from '../src/main/subscription-store';
-import { SubscriptionsService } from '../src/main/subscriptions-service';
-import { TaskCancelledError, type PythonTaskHost } from '../src/main/python-host';
+import { SubscriptionStore, type Cipher } from '../src/main/features/subscriptions/subscription-store';
+import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
+import { TaskCancelledError, type PythonTaskHost } from '../src/main/platform/python/python-host';
 import type { EntryInput, FollowCandidate, Subscription } from '@shared/subscriptions';
 
 const cipher: Cipher = {

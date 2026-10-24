@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DEFAULT_PREFERENCES, preferencesSchema, querySourcesSchema } from '@shared/subscriptions';
 import { DEFAULT_QUERY_SOURCES } from '@shared/sources';
-import { SubscriptionStore } from '../src/main/subscription-store';
-import { SubscriptionsService } from '../src/main/subscriptions-service';
+import { SubscriptionStore } from '../src/main/features/subscriptions/subscription-store';
+import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
 
 test('旧设置补齐默认查询来源，空选择保留且只接受已登记的资料来源', () => {
 	const { querySources: _old, ...legacy } = DEFAULT_PREFERENCES;

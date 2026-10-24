@@ -1,5 +1,5 @@
-import { PythonTaskHost } from '../src/main/python-host.ts';
-import { pythonLayout } from '../src/main/python-layout.ts';
+import { PythonTaskHost } from '../src/main/platform/python/python-host.ts';
+import { pythonLayout } from '../src/main/platform/python/python-layout.ts';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';

@@ -1,0 +1,22 @@
+.metadata-source-picker {
+	border-top: 1px solid var(--border);
+	padding: 8px 16px;
+}
+.metadata-source-picker summary {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.metadata-source-picker .query-source-row {
+	border: 0;
+	padding: 10px 0;
+	max-height: 240px;
+	overflow-y: auto;
+	flex-wrap: wrap;
+}
+.metadata-source-picker .source-chip {
+	max-width: 100%;
+	white-space: normal;
+	text-align: left;
+}

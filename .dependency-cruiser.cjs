@@ -1,53 +1,102 @@
+const renderer = '^src/renderer/';
+const features = ['work-query', 'library', 'subscriptions', 'updates', 'settings'];
+const entities = ['work', 'subscription', 'update'];
+const mainFeatures = ['metadata', 'library', 'magnets', 'subscriptions'];
+const platforms = ['python', 'network', 'diagnostics', 'lifecycle'];
+
+function publicModules(root, names) {
+	return names.map((name) => ({
+		name: `${root.replaceAll('/', '-')}-${name}-public-interface`,
+		severity: 'error',
+		from: { path: '^src/', pathNot: `^${root}/${name}/` },
+		to: { path: `^${root}/${name}/`, pathNot: `^${root}/${name}/index\\.ts$` },
+	}));
+}
+
+function independentFeatures(root, names) {
+	return names.map((name) => ({
+		name: `${root.replaceAll('/', '-')}-${name}-independent`,
+		severity: 'error',
+		from: { path: `^${root}/${name}/` },
+		to: { path: `^${root}/`, pathNot: `^${root}/${name}/` },
+	}));
+}
+
 module.exports = {
 	forbidden: [
 		{ name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
-		{
-			name: 'state-public-interface',
-			severity: 'error',
-			from: { path: '^src/renderer/src/', pathNot: '^src/renderer/src/state/' },
-			to: { path: '^src/renderer/src/state/', pathNot: '^src/renderer/src/state/index\\.ts$' },
-		},
 		{ name: 'no-unresolved', severity: 'error', from: {}, to: { couldNotResolve: true } },
+		{
+			name: 'desktop-owns-renderer-data-libraries',
+			severity: 'error',
+			from: { path: '^src/', pathNot: '^src/renderer/shared/desktop/' },
+			to: { path: '^node_modules/(zustand|@tanstack/(react-query|query-core))/' },
+		},
+		{
+			name: 'desktop-public-interface',
+			severity: 'error',
+			from: { path: renderer, pathNot: '^src/renderer/shared/desktop/' },
+			to: { path: '^src/renderer/shared/desktop/', pathNot: '^src/renderer/shared/desktop/index\\.ts$' },
+		},
 		{
 			name: 'shared-is-platform-independent',
 			severity: 'error',
 			from: { path: '^src/shared/' },
 			to: { path: '^src/(main|preload|renderer)/|^(node:|electron$|node_modules/electron/)' },
 		},
-		{ name: 'renderer-is-sandboxed', severity: 'error', from: { path: '^src/renderer/' }, to: { path: '^src/(main|preload)/|^(node:|electron$|node_modules/electron/)' } },
-		{ name: 'renderer-has-no-node-builtins', severity: 'error', from: { path: '^src/renderer/' }, to: { dependencyTypes: ['core'] } },
+		{ name: 'renderer-is-sandboxed', severity: 'error', from: { path: renderer }, to: { path: '^src/(main|preload)/|^(node:|electron$|node_modules/electron/)' } },
+		{ name: 'renderer-has-no-node-builtins', severity: 'error', from: { path: renderer }, to: { dependencyTypes: ['core'] } },
 		{ name: 'shared-has-no-node-builtins', severity: 'error', from: { path: '^src/shared/' }, to: { dependencyTypes: ['core'] } },
-		{ name: 'main-has-no-ui', severity: 'error', from: { path: '^src/(main|preload)/' }, to: { path: '^src/renderer/' } },
+		{ name: 'main-has-no-ui', severity: 'error', from: { path: '^src/(main|preload)/' }, to: { path: renderer } },
 		{
-			name: 'state-has-no-view-dependencies',
+			name: 'renderer-shared-has-no-business-dependencies',
 			severity: 'error',
-			from: { path: '^src/renderer/src/state/' },
-			to: { path: '^src/renderer/src/(app|components|metadata|works|library|subscriptions|updates|settings|prototype)/' },
+			from: { path: '^src/renderer/shared/' },
+			to: { path: '^src/renderer/(app|features|entities|demo)/' },
 		},
 		{
-			name: 'ui-primitives-have-no-business-dependencies',
+			name: 'ui-primitives-have-no-desktop-dependencies',
 			severity: 'error',
-			from: { path: '^src/renderer/src/components/' },
-			to: { path: '^src/renderer/src/(app|state|metadata|works|library|subscriptions|updates|settings|prototype)/' },
+			from: { path: '^src/renderer/shared/(ui|components)/' },
+			to: { path: '^src/renderer/shared/desktop/' },
+		},
+		{
+			name: 'entities-have-no-feature-dependencies',
+			severity: 'error',
+			from: { path: '^src/renderer/entities/' },
+			to: { path: '^src/renderer/(features|app|demo)/' },
+		},
+		{
+			name: 'features-have-no-app-dependencies',
+			severity: 'error',
+			from: { path: '^src/renderer/features/' },
+			to: { path: '^src/renderer/(app|demo)/' },
 		},
 		{
 			name: 'production-does-not-import-demo',
 			severity: 'error',
-			from: { path: '^src/renderer/src/', pathNot: '^src/renderer/src/(prototype/|app/Workspace\\.tsx$|styles\\.css$)' },
-			to: { path: '^src/renderer/src/prototype/' },
+			from: { path: renderer, pathNot: '^src/renderer/(demo/|app/ui/Workspace\\.tsx$|app/styles/)' },
+			to: { path: '^src/renderer/demo/' },
 		},
 		{
-			name: 'pages-do-not-import-other-pages',
+			name: 'main-platform-has-no-business-dependencies',
 			severity: 'error',
-			from: { path: '^src/renderer/src/(metadata|works|library|subscriptions|updates|settings)/' },
-			to: { path: '^src/renderer/src/(metadata/MetadataWorkspace|library/LibraryPage|subscriptions/SubscriptionsPage|settings/SettingsPage|updates/UpdatesPage)\\.tsx$' },
+			from: { path: '^src/main/platform/' },
+			to: { path: '^src/main/(features/|index\\.ts$)' },
 		},
 		{
-			name: 'work-presentation-does-not-import-pages',
+			name: 'main-features-have-no-entry-dependencies',
 			severity: 'error',
-			from: { path: '^src/renderer/src/works/' },
-			to: { path: '^src/renderer/src/(metadata|library|subscriptions|updates|settings)/' },
+			from: { path: '^src/main/features/' },
+			to: { path: '^src/main/index\\.ts$' },
 		},
+		...publicModules('src/renderer/features', features),
+		...publicModules('src/renderer/entities', entities),
+		...publicModules('src/renderer', ['demo']),
+		...publicModules('src/main/features', mainFeatures),
+		...publicModules('src/main/platform', platforms),
+		...independentFeatures('src/renderer/features', features),
+		...independentFeatures('src/main/features', mainFeatures),
 	],
 	options: {
 		doNotFollow: { path: 'node_modules' },

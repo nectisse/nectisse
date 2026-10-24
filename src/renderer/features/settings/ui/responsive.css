@@ -1,0 +1,11 @@
+@media (prefers-reduced-motion: reduce) {
+	.settings-switch > span {
+		transition: none;
+	}
+}
+@media (max-width: 1100px) {
+	.settings-row {
+		gap: 14px;
+		padding: 16px;
+	}
+}

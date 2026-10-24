@@ -1,0 +1,128 @@
+.live-routing {
+	margin-left: auto;
+	font-size: 10px;
+	color: var(--muted-foreground);
+}
+.live-welcome {
+	padding: 64px 20px;
+	text-align: center;
+	color: var(--muted-foreground);
+}
+.live-welcome-icon {
+	width: 66px;
+	height: 66px;
+	margin: 0 auto 25px;
+	display: grid;
+	place-items: center;
+	border-radius: 22px;
+	background: var(--secondary);
+	color: var(--primary);
+}
+.live-welcome-icon svg {
+	width: 27px;
+	height: 27px;
+}
+.live-welcome h2 {
+	margin: 12px 0;
+	font-size: 23px;
+	font-weight: 500;
+	color: var(--foreground);
+}
+.live-welcome > p:not(.eyebrow) {
+	font-size: 13px;
+	line-height: 1.9;
+}
+.live-examples {
+	display: flex;
+	justify-content: center;
+	gap: 14px;
+	align-items: center;
+	margin-top: 26px;
+	font-size: 11px;
+}
+.live-examples button {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	color: var(--primary);
+}
+.live-message {
+	margin: 18px 0;
+}
+.live-initialization-recovery {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+.live-initialization-recovery > button {
+	flex-shrink: 0;
+}
+.live-task-progress,
+.live-floating-task {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+	margin: 24px 0;
+	padding: 17px;
+	background: var(--secondary);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	font-size: 12px;
+}
+.live-task-progress > svg,
+.live-floating-task > svg {
+	width: 17px;
+	flex-shrink: 0;
+	color: var(--primary);
+}
+.live-task-progress > div {
+	flex: 1;
+}
+.live-task-progress p {
+	font-size: 11px;
+	color: var(--muted-foreground);
+	margin-top: 5px;
+}
+.live-floating-task {
+	position: sticky;
+	bottom: 16px;
+	margin: 0 32px 20px;
+	box-shadow: 0 4px 20px #0001;
+}
+.live-floating-task button {
+	margin-left: auto;
+}
+.live-source-status {
+	display: grid;
+	gap: 10px;
+	margin-top: 28px;
+	padding: 18px 0;
+	border-top: 1px solid var(--border);
+}
+.live-source-status > div {
+	display: flex;
+	gap: 15px;
+	font-size: 11px;
+	align-items: baseline;
+}
+.live-source-status strong {
+	min-width: 100px;
+	font-weight: 500;
+}
+.live-source-status span {
+	flex: 1;
+	color: var(--muted-foreground);
+}
+.live-source-status small {
+	color: var(--muted-foreground);
+}
+.source-problem,
+.live-source-status .source-problem {
+	color: var(--peach);
+}
+.live-result-grid {
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+}

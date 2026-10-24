@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { MagnetService } from '../src/main/magnet-service';
-import type { PythonTaskHost } from '../src/main/python-host';
-import { TaskCancelledError } from '../src/main/python-host';
+import { MagnetService } from '../src/main/features/magnets/magnet-service';
+import type { PythonTaskHost } from '../src/main/platform/python/python-host';
+import { TaskCancelledError } from '../src/main/platform/python/python-host';
 import { DEFAULT_MAGNET_SETTINGS, magnetResultSchema, type MagnetSettings } from '@shared/magnets';
 import { DEFAULT_PREFERENCES, preferencesSchema } from '@shared/subscriptions';
 

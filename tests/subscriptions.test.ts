@@ -5,9 +5,9 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
-import { SubscriptionStore, type Cipher } from '../src/main/subscription-store';
-import { SubscriptionsService } from '../src/main/subscriptions-service';
-import { PythonTaskHost, TaskCancelledError } from '../src/main/python-host';
+import { SubscriptionStore, type Cipher } from '../src/main/features/subscriptions/subscription-store';
+import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
+import { PythonTaskHost, TaskCancelledError } from '../src/main/platform/python/python-host';
 import type { FollowCandidate } from '@shared/subscriptions';
 const candidate: FollowCandidate = {
 	provider: 'fanbox',
@@ -376,7 +376,7 @@ test('演员候选头像随关注保存，本机缓存可读且检查复用；�
 	const root = await directory(t);
 	const store = new SubscriptionStore(root, cipher);
 	const actor: FollowCandidate = { ...candidate, provider: 'javdb', ref: 'A123', url: 'https://javdb.com/actors/A123', avatarUrl: 'https://c0.jdbstatic.com/avatars/a/A123.jpg' };
-	const bytes = await readFile(new URL('../src/renderer/src/prototype/assets/editorial-sheet.png', import.meta.url));
+	const bytes = await readFile(new URL('../src/renderer/demo/assets/editorial-sheet.png', import.meta.url));
 	const asset = { sha256: createHash('sha256').update(bytes).digest('hex'), width: 128, height: 128, bytes: bytes.length, format: 'PNG', quality: 'small' };
 	let images = 0;
 

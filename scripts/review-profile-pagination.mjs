@@ -17,7 +17,7 @@ let app;
 const errors = [], reports = [];
 try {
 	execFileSync(process.execPath, ['--import', 'tsx', join(root, 'scripts/seed-workspace-fixtures.ts'), profile], { cwd: root, stdio: 'pipe' });
-	const seed = `import { SubscriptionStore } from './src/main/subscription-store.ts';
+	const seed = `import { SubscriptionStore } from './src/main/features/subscriptions/subscription-store.ts';
 	const store = new SubscriptionStore(process.argv[1], {available:()=>false,encrypt:()=>Buffer.alloc(0),decrypt:()=>''});
 	const actor = store.subscriptions().find(sub=>sub.provider==='javdb');
 	const other = store.follow({provider:'javdb',ref:'second-actor',name:'另一位演员（分页样本）',url:'https://example.invalid/actors/second',aliases:[],recordType:'演员',bio:'',evidence:'本地测试'});

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { SubscriptionStore } from '../src/main/subscription-store';
+import { SubscriptionStore } from '../src/main/features/subscriptions/subscription-store';
 import { DEFAULT_PREFERENCES } from '@shared/subscriptions';
 import { metadataRecordSchema, type ImageAsset, type QueryTask } from '@shared/metadata';
 
@@ -9,7 +9,7 @@ const root = process.argv[2];
 if (!root || !basename(root).startsWith('nectisse-workspace-review-')) {
 	throw new Error('仅允许写入本次视觉检查的临时目录');
 }
-const imagePath = new URL('../src/renderer/src/prototype/assets/editorial-sheet.png', import.meta.url);
+const imagePath = new URL('../src/renderer/demo/assets/editorial-sheet.png', import.meta.url);
 const bytes = await readFile(imagePath);
 const hash = createHash('sha256').update(bytes).digest('hex');
 const asset: ImageAsset = { sha256: hash, width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20), bytes: bytes.length, format: 'PNG', quality: 'standard' };
