@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { Arch, build, Platform } from 'electron-builder';
 import { command, unsignedMode } from './command';
 import { archiveNames, fileChecksum, readReleaseMetadata, verifyReleaseFiles } from './metadata';
-import { nativeBinaries, notarize, signingIdentity, verifyMacApp, verifyNotarizedApp } from './app';
+import { nativeBinaries, notarize, signingIdentity, stapler, verifyMacApp } from './app';
 
 if (process.platform !== 'darwin' || process.arch !== 'arm64') {
 	throw new Error('首版安装包构建需要 macOS arm64');
@@ -78,8 +78,7 @@ try {
 		const submission = join(staging, 'notarization.zip');
 		await command('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, submission]);
 		await notarize(submission, keychain);
-		await command('xcrun', ['stapler', 'staple', app]);
-		await verifyNotarizedApp(app);
+		await stapler('staple', app);
 	}
 	const [dmgName, zipName] = archiveNames(metadata.version) as [string, string];
 	const zip = join(staging, zipName);
@@ -94,9 +93,7 @@ try {
 	if (!unsigned) {
 		await command('codesign', ['--sign', identity!, '--keychain', keychain, '--timestamp', dmg]);
 		await notarize(dmg, keychain);
-		await command('xcrun', ['stapler', 'staple', dmg]);
-		await command('xcrun', ['stapler', 'validate', dmg]);
-		await command('spctl', ['--assess', '--type', 'open', '--context', 'context:primary-signature', dmg]);
+		await stapler('staple', dmg);
 	}
 	await command('hdiutil', ['verify', dmg]);
 	await mkdir(metadata.directory, { recursive: true });
