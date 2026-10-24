@@ -101,7 +101,7 @@ export function EntryList({
 							presentation={presentation}
 							itemId={entry.id}
 							className="real-feed-entry"
-							title={feedTitle(entry)}
+							title={entry.provider === 'x' ? undefined : feedTitle(entry)}
 							accessibleTitle={entry.title || '来源未提供标题'}
 							summary={entry.summary || (entry.restricted ? '来源未提供可见摘要' : '来源未提供摘要')}
 							author={entry.name}
@@ -146,7 +146,7 @@ export function EntryList({
 			<UpdateDetailDialog
 				open={!!selected}
 				onClose={() => setSelected(undefined)}
-				title={selected?.title || '来源内容'}
+				title={selected?.provider === 'x' ? undefined : selected?.title || '来源内容'}
 				author={selected?.name || ''}
 				avatar={selected && <IdentityAvatar identity={state.subscriptions.find((sub) => sub.id === selected.subscriptionId) ?? { name: selected.name }} small />}
 				source={selected ? providerName(selected.provider) : ''}

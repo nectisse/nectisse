@@ -18,7 +18,7 @@ export function FeedImage({ src, unavailable = '来源无图', alt }: { src?: st
 
 export function FeedItem({
 	title,
-	accessibleTitle = title,
+	accessibleTitle = title ?? '来源内容',
 	summary,
 	author,
 	source,
@@ -37,7 +37,7 @@ export function FeedItem({
 	itemId,
 	presentation = 'list',
 }: {
-	title: string;
+	title?: string;
 	accessibleTitle?: string;
 	summary: string;
 	author: string;
@@ -91,12 +91,20 @@ export function FeedItem({
 					))}
 					<span className="feed-item-read-dot" aria-hidden="true" />
 				</div>
-				<h2 className="feed-item-heading">
-					<Button variant="text" size="text" className="feed-item-title" onClick={onOpen} aria-label={accessibleTitle}>
-						<span>{title}</span>
+				{title ? (
+					<>
+						<h2 className="feed-item-heading">
+							<Button variant="text" size="text" className="feed-item-title" onClick={onOpen} aria-label={accessibleTitle}>
+								<span>{title}</span>
+							</Button>
+						</h2>
+						<p className="feed-item-summary">{summary}</p>
+					</>
+				) : (
+					<Button variant="text" size="text" className="feed-item-summary" onClick={onOpen} aria-label={accessibleTitle}>
+						{summary}
 					</Button>
-				</h2>
-				<p className="feed-item-summary">{summary}</p>
+				)}
 				{presentation === 'cards' && thumbnail}
 				<div className="feed-item-footer">
 					<div className="feed-item-dates">
