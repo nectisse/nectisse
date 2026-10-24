@@ -175,9 +175,6 @@ export class SubscriptionStore {
 			value.bio = candidate.bio;
 		}
 		if (candidate.avatarUrl) {
-			if (value.avatarUrl !== candidate.avatarUrl) {
-				delete value.avatarAsset;
-			}
 			value.avatarUrl = candidate.avatarUrl;
 			if (candidate.avatarAsset) {
 				value.avatarAsset = candidate.avatarAsset;
@@ -285,6 +282,7 @@ export class SubscriptionStore {
 	}
 
 	dropImage(url: string, evicted = false): void {
+		const asset = this.image(url);
 		this.db.prepare('DELETE FROM follow_images WHERE url=?').run(url);
 		for (const entry of this.imageEntries(url)) {
 			if (entry.imageAsset) {
@@ -293,8 +291,9 @@ export class SubscriptionStore {
 				this.db.prepare('UPDATE entries SET value=? WHERE id=?').run(JSON.stringify(entry), entry.id);
 			}
 		}
+		// 头像 URL 可能已更新，按实际显示图片的哈希处理失效。
 		for (const sub of this.subscriptions()) {
-			if (sub.avatarUrl === url && sub.avatarAsset) {
+			if (sub.avatarAsset && (asset ? sub.avatarAsset.sha256 === asset.sha256 : sub.avatarUrl === url)) {
 				delete sub.avatarAsset;
 				this.saveSubscription(sub);
 			}

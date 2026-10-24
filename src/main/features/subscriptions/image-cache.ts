@@ -118,14 +118,20 @@ export class ImageCache {
 
 	async prune(): Promise<void> {
 		const images = this.store.images();
-		const assets = new Map(images.map((row) => [row.asset.sha256, row.asset.bytes]));
+		const subscriptions = this.store.subscriptions();
+		const avatarHashes = new Set(subscriptions.flatMap((sub) => (sub.avatarAsset ? [sub.avatarAsset.sha256] : [])));
+		// 人物头像长期保留，不占动态封面的缓存额度；同一文件的其他 URL 也受保护。
+		const assets = new Map(images.filter((row) => !avatarHashes.has(row.asset.sha256)).map((row) => [row.asset.sha256, row.asset.bytes]));
 		let bytes = [...assets.values()].reduce((sum, size) => sum + size, 0);
-		const referenced = new Set([...this.store.entries().map((entry) => entry.thumbnailUrl), ...this.store.subscriptions().map((sub) => sub.avatarUrl)]);
+		const referenced = new Set([...this.store.entries().map((entry) => entry.thumbnailUrl), ...subscriptions.map((sub) => sub.avatarUrl)]);
 		// Eviction is terminal until explicit retry, preventing automatic refetch loops.
 		images.sort((a, b) => Number(referenced.has(a.url)) - Number(referenced.has(b.url)));
 		for (const row of images) {
 			if (bytes <= 64 * 1024 * 1024) {
 				break;
+			}
+			if (avatarHashes.has(row.asset.sha256)) {
+				continue;
 			}
 			this.store.dropImage(row.url, true);
 			if (!this.store.images().some((item) => item.asset.sha256 === row.asset.sha256)) {

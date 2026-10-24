@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SubscriptionStore, type Cipher } from '../src/main/features/subscriptions/subscription-store';
 import { SubscriptionsService } from '../src/main/features/subscriptions/subscriptions-service';
+import { ImageCache } from '../src/main/features/subscriptions/image-cache';
 import { TaskCancelledError, type PythonTaskHost } from '../src/main/platform/python/python-host';
 import type { EntryInput, FollowCandidate, Subscription, SubscriptionsState } from '@shared/subscriptions';
 
@@ -549,10 +550,7 @@ test('缓存按真实文件哈希计量，容量淘汰不会触发自动反复�
 	// All indexed rows now refer to visible entries, forcing terminal eviction.
 	for (let index = 2; index <= 11; index++) {
 		store.upsertEntry(sub, image(index));
-		store.saveImage(
-			store.entries().find((entry) => entry.externalId === String(index))!,
-			{ ...large, sha256: String(index - 2).repeat(64) },
-		);
+		store.saveImage(store.entries().find((entry) => entry.externalId === String(index))!, { ...large, sha256: String(index - 2).repeat(64) });
 	}
 	store.upsertEntry(sub, image(12));
 	await service.tick();
@@ -566,6 +564,58 @@ test('缓存按真实文件哈希计量，容量淘汰不会触发自动反复�
 	assert.equal(store.images().length, cached);
 	await service.stop();
 	store.close();
+});
+
+test('人物头像不占封面额度且不被容量清理，暂停与取消关注后仍离线保留', async (t) => {
+	const { root, store, sub } = await setup(t, 0);
+	const host = {
+		run: async () => {
+			throw new Error('Retained avatars must not refetch');
+		},
+	};
+	const cache = new ImageCache(store, host, async () => '');
+	await cache.prepare();
+	const avatarUrl = 'https://c0.jdbstatic.com/avatars/a/A123.jpg';
+	const actor = store.follow({ ...candidate, provider: 'javdb', ref: 'A123', url: 'https://javdb.com/actors/A123', avatarUrl, avatarAsset: asset });
+	store.cacheImage(avatarUrl, asset);
+	await writeFile(join(root, 'cache/subscription-covers', `${asset.sha256}.image`), bytes);
+	const unusedUrl = 'https://pixiv.pximg.net/unused.jpg';
+	const unused = { ...asset, sha256: 'f'.repeat(64), bytes: 8 * 1024 * 1024 };
+	store.cacheImage(unusedUrl, unused);
+	for (let index = 1; index <= 8; index++) {
+		store.upsertEntry(sub, image(index));
+		store.saveImage(store.entries().find((entry) => entry.externalId === String(index))!, {
+			...asset,
+			sha256: createHash('sha256').update(`cover-${index}`).digest('hex'),
+			bytes: 8 * 1024 * 1024,
+		});
+	}
+	store.upsertEntry(sub, image(99));
+	store.saveImage(store.entries().find((entry) => entry.externalId === '99')!, asset);
+	await cache.prune();
+	assert.equal(store.subscription(actor.id)?.avatarAsset?.sha256, asset.sha256);
+	assert.deepEqual((await cache.read(asset.sha256))?.bytes, bytes);
+	assert.equal(store.image(unusedUrl), undefined);
+	assert.ok(
+		store.entries().every((entry) => entry.imageAsset),
+		'Avatars leave the full 64 MiB available for covers, including shared files',
+	);
+	actor.following = false;
+	actor.enabled = false;
+	store.saveSubscription(actor);
+	store.cacheImage(unusedUrl, unused);
+	await cache.prune();
+	assert.equal(store.subscription(actor.id)?.avatarAsset?.sha256, asset.sha256);
+	store.close();
+	const restored = new SubscriptionStore(root, cipher);
+	try {
+		const offline = new ImageCache(restored, host, async () => '');
+		await offline.prepare();
+		assert.equal(restored.subscription(actor.id)?.avatarAsset?.sha256, asset.sha256);
+		assert.deepEqual((await offline.read(asset.sha256))?.bytes, bytes);
+	} finally {
+		restored.close();
+	}
 });
 
 test('本机写入失败停止其余图片，保留正文并报告失败，避免继续无效下载', async (t) => {
