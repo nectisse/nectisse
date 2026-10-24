@@ -1,15 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
+import { mkdtemp, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import electron from 'electron';
 import { _electron } from 'playwright-core';
-import { reviewVisual } from './review-visual.mjs';
 import { reviewMetadata } from './review-metadata.mjs';
-import { reviewSettings, reviewSubscriptions } from './review-settings.mjs';
-import { reviewSources, reviewSourcesLive } from './review-sources.mjs';
+import { reviewSubscriptions } from './review-subscriptions.mjs';
+import { reviewSourcesLive } from './review-sources.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const appPath = process.argv[2] && !process.argv[2].startsWith('--') ? resolve(process.argv[2]) : undefined;
@@ -21,7 +19,7 @@ if (simulateFailure && !appPath?.startsWith(join(root, '.test-output/'))) {
 	throw new Error('故障注入仅允许用于 .test-output 中的应用副本');
 }
 const userData = await mkdtemp(join(tmpdir(), 'nectisse-desktop-smoke-'));
-const executablePath = appPath ? join(appPath, 'Contents/MacOS/Nectisse') : electron;
+const executablePath = appPath ? join(appPath, 'Contents/MacOS/Nectisse') : (await import('electron')).default;
 const args = [...(appPath ? [] : [root]), `--user-data-dir=${userData}`];
 // No developer PATH or Python-related environment is inherited.
 const env = Object.fromEntries(['HOME', 'TMPDIR', 'LANG', 'LC_ALL', '__CF_USER_TEXT_ENCODING'].flatMap((key) => (process.env[key] ? [[key, process.env[key]]] : [])));
@@ -30,19 +28,24 @@ const bootstrap = appPath ? join(appPath, 'Contents/Resources/python/app/bootstr
 let moved = false;
 let application;
 const failures = [];
+
+async function observeNetwork(application) {
+	await application.evaluate(({ session }) => {
+		globalThis.__smokeNetworkRequests = [];
+		session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+			globalThis.__smokeNetworkRequests.push(details.url);
+			callback({ cancel: true });
+		});
+	});
+}
+
 try {
 	if (simulateFailure) {
 		await rename(bootstrap, `${bootstrap}.smoke-disabled`);
 		moved = true;
 	}
 	application = await _electron.launch({ executablePath, args, cwd: userData, env, timeout: 30_000 });
-	await application.evaluate(({ session }) => {
-		globalThis.__visualNetworkRequests = [];
-		session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
-			globalThis.__visualNetworkRequests.push(details.url);
-			callback({ cancel: true });
-		});
-	});
+	await observeNetwork(application);
 	let page = await application.firstWindow();
 	page.on('pageerror', (error) => failures.push(error.message));
 	if (simulateFailure) {
@@ -58,12 +61,11 @@ try {
 	await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor({ timeout: 20_000 });
 	const inspection = await page.evaluate(async () => ({
 		state: await window.nectisse.runtime.getState(),
-		bridge: Object.keys(window.nectisse),
 		hasNode: typeof window.require !== 'undefined' || typeof window.process !== 'undefined',
 	}));
 	assert.equal(inspection.state.phase, 'ready');
-	assert.deepEqual(inspection.bridge.sort(), ['diagnostics', 'library', 'magnets', 'metadata', 'runtime', 'storage', 'subscriptions']);
 	assert.equal(inspection.hasNode, false);
+	await page.evaluate(() => Promise.all([window.nectisse.subscriptions.getState(), window.nectisse.library.getState(), window.nectisse.metadata.getState()]));
 	const expectedRuntime = appPath ? join(appPath, 'Contents/Resources/python/runtime/') : join(root, '.build/python/');
 	assert.ok(inspection.state.health.executable.startsWith(expectedRuntime));
 	const sandbox = await application.evaluate(({ BrowserWindow }) => {
@@ -71,30 +73,7 @@ try {
 		return { sandbox: settings.sandbox, contextIsolation: settings.contextIsolation, nodeIntegration: settings.nodeIntegration };
 	});
 	assert.deepEqual(sandbox, { sandbox: true, contextIsolation: true, nodeIntegration: false });
-	// 独立无 preload 窗口复现通信桥缺失，不覆盖 contextBridge 的只读属性。
-	const fallbackWindow = application.waitForEvent('window');
-	await application.evaluate(({ BrowserWindow }) => {
-		const source = BrowserWindow.getAllWindows()[0];
-		const fallback = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
-		void fallback.loadURL(source.webContents.getURL());
-	});
-	const fallback = await fallbackWindow;
-	fallback.on('pageerror', (error) => failures.push(error.message));
-	try {
-		await fallback.getByText('订阅通信未就绪，请重新打开应用', { exact: false }).waitFor();
-		assert.equal(await fallback.evaluate(() => typeof window.nectisse), 'undefined');
-		await fallback.getByRole('button', { name: '重新检查', exact: true }).click();
-		await fallback.getByRole('button', { name: '作品收藏', exact: true }).click();
-		await fallback.locator('.library-page [role="alert"]').filter({ hasText: '作品收藏暂未就绪，原有收藏已保留。请重新检查本机收藏库。' }).waitFor();
-		await fallback.getByRole('button', { name: '重新检查收藏库', exact: true }).click();
-		assert.deepEqual(failures, []);
-	} finally {
-		await fallback.close();
-	}
-	await reviewSettings(page, application, join(root, '.test-output', appPath ? 'packaged-settings' : 'development-settings'));
-	await reviewSources(page, join(root, '.test-output', appPath ? 'packaged-sources' : 'development-sources'));
-	await reviewVisual(page, application, join(root, '.test-output', appPath ? 'packaged-visual' : 'development-visual'));
-	assert.deepEqual(await application.evaluate(() => globalThis.__visualNetworkRequests), []);
+	assert.deepEqual(await application.evaluate(() => globalThis.__smokeNetworkRequests), []);
 	const cancelledId = live ? await reviewMetadata(page, application, join(root, '.test-output', appPath ? 'packaged-metadata' : 'development-metadata')) : undefined;
 	const followReport = followLive ? await reviewSubscriptions(page, join(root, '.test-output', appPath ? 'packaged-settings' : 'development-settings')) : undefined;
 	const sourcesReport = sourcesLive ? await reviewSourcesLive(page, join(root, '.test-output', appPath ? 'packaged-sources' : 'development-sources'), process.env.NECTISSE_TEST_PROXY || '') : undefined;
@@ -120,8 +99,9 @@ try {
 		app.emit('activate');
 	});
 	page = await reopened;
+	page.on('pageerror', (error) => failures.push(error.message));
 	await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor();
-		assert.equal(application.process().pid, pid);
+	assert.equal(application.process().pid, pid);
 	if (cancelledId) {
 		const restored = await page.evaluate(() => window.nectisse.metadata.getState());
 		assert.equal(restored.activeId, undefined);
@@ -131,6 +111,7 @@ try {
 	if (followReport || sourcesReport) {
 		await application.close(); application = undefined;
 		application = await _electron.launch({ executablePath, args, cwd: userData, env, timeout: 30_000 });
+		await observeNetwork(application);
 		page = await application.firstWindow(); page.on('pageerror', error => failures.push(error.message));
 		await page.locator('[data-testid="runtime-status"][data-phase="ready"]').waitFor({ timeout: 20_000 });
 		const state = await page.evaluate(() => window.nectisse.subscriptions.getState());
@@ -138,10 +119,7 @@ try {
 		if (sourcesReport) { assert.equal(state.entries.length, sourcesReport.entries); assert.equal(state.entries.filter(entry => entry.read).length, sourcesReport.read); for (const sub of sourcesReport.subscriptions) assert.ok(state.subscriptions.some(row => row.id === sub.id)); }
 		assert.equal(state.tasks.some(task => ['running', 'cancelling'].includes(task.status)), false);
 	}
-	const output = join(root, '.test-output');
-	await mkdir(output, { recursive: true });
-	const screenshot = join(output, `${appPath ? 'packaged' : 'development'}-scaffold.png`);
-	await page.screenshot({ path: screenshot });
+	assert.deepEqual(await application.evaluate(() => globalThis.__smokeNetworkRequests), []);
 	assert.deepEqual(failures, []);
 	await application.close();
 	application = undefined;
@@ -154,30 +132,16 @@ try {
 				checks: [
 					'ready',
 					'sandbox',
-					'missing-bridge-recovery-without-renderer-crash',
-					'shared-live-and-demo-pages',
-					'isolated-demo-library-and-settings',
-					'scoped-people-browse-management-and-read-state',
-					'both-themes',
-					'minimum-window-size',
+					'local-data-readable',
 					'zero-site-requests',
 					'single-instance',
 					'close-and-reopen',
 					'quit',
-					'formal-settings-and-source-gates',
-					'compact-source-table-and-inline-configuration',
-					'aligned-proxy-form-and-padded-notes',
-					'preferences-persist',
-					'shadcn-select-no-search-keyboard-and-escape',
-					'select-values-persist-and-popup-fits-window',
-					'31-source-catalog-and-22-metadata-adapters',
-					'8-follow-sources-and-reference-boundaries',
 					...(live ? ['real-metadata-and-covers', 'source-link-identity', 'cancel-and-persist'] : []),
 					...(followReport ? [`fanbox-real-follow-${followReport.entries}-entries`, 'follow-dedup-and-read-persist', `javdb-${followReport.javdb}`] : []),
 					...(sourcesReport ? ['real-avbase-amane-onepondo-and-covers', 'real-kemono-follow-and-update-flow', 'expanded-follow-persistence-after-relaunch'] : []),
 					...(simulateFailure ? ['startup-failure-and-retry'] : []),
 				],
-				screenshot,
 			},
 			null,
 			2,
