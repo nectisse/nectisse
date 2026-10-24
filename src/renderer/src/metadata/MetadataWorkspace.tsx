@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { SaveWorkButton } from '../library/SaveWorkButton';
-import { coverSource, preferredCover } from '../../../shared/cover-selection';
-import { useSubscriptions } from '../subscriptions/context';
-import { ArrowLeft, Check, ChevronRight, Clock3, Image, Info, LoaderCircle, RefreshCw, Search, Square, X } from 'lucide-react';
+import { useMetadata, useMetadataStatus, useSubscriptions, useDesktopActions, useSubscriptionStatus } from '@/state';
+import { firstAvailableField } from '@/works/fields';
+import { WorkDetail } from '@/works/WorkDetail';
+import { CoverImage } from '@/works/CoverImage';
+import { useEffect, useRef, useState } from 'react';
+import { SaveWorkButton } from '@/library/SaveWorkButton';
+import { preferredCover } from '@shared/cover-selection';
+import { Check, ChevronRight, Clock3, Info, LoaderCircle, RefreshCw, Search, Square, X } from 'lucide-react';
 import { MetadataSourcePicker } from './MetadataSourcePicker';
-import { WorkPeople } from './WorkPeople';
-import { SourceProvenance, metadataSnapshot, differingFields } from './SourceProvenance';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,22 +15,11 @@ import { EmptyState } from '@/components/empty-state';
 import { PageHeader, PageToolbar } from '@/components/page-layout';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
-import { ReviewTabs, QuietButton, StatusBadge } from '../prototype/components';
-import { SOURCE_LABELS, isActiveTask, type SourceId, type QueryTask, type MetadataState, type MetadataRecord, type CoverCandidate } from '../../../shared/metadata';
-import type { MagnetOrigin } from '../../../shared/magnets';
-import { MagnetSearch } from './MagnetSearch';
+import { QuietButton } from '@/components/quiet-button';
+import { StatusBadge } from '@/components/status-badge';
+import { SOURCE_LABELS, isActiveTask, type SourceId, type QueryTask, type MetadataRecord } from '@shared/metadata';
 
 const statusLabels = { running: '查询中', cancelling: '正在取消', cancelled: '已取消', succeeded: '已完成', partial: '部分取得', failed: '未取得', interrupted: '已中断' };
-
-function hasMetadataValue(value: unknown): boolean {
-	return Array.isArray(value) ? value.length > 0 : typeof value === 'string' && !!value.trim();
-}
-
-// 按来源顺序采用首个非空字段，未提供的值继续留空，不从其他字段推断。
-function firstAvailableField<K extends keyof MetadataRecord>(records: MetadataRecord[], name: K): MetadataRecord[K] {
-	return (records.find((record) => hasMetadataValue(record[name])) ?? records[0]!)[name];
-}
 
 function groupRecordsByCode(records: MetadataRecord[], order: readonly SourceId[]): MetadataRecord[][] {
 	const map = new Map<string, MetadataRecord[]>();
@@ -40,27 +30,6 @@ function groupRecordsByCode(records: MetadataRecord[], order: readonly SourceId[
 }
 
 const fetched = (value: string): string => new Date(value).toLocaleString('zh-CN', { hour12: false });
-
-const imageUrl = (cover: CoverCandidate, scope: string): string => `nectisse-cover://${scope}/${cover.asset?.sha256}`;
-
-export function CoverImage({ cover, className, scope = 'image' }: { cover?: CoverCandidate; className?: string; scope?: 'image' | 'library' }): React.JSX.Element {
-	const [broken, setBroken] = useState(false);
-
-	useEffect(() => setBroken(false), [cover?.asset?.sha256]);
-
-	return (
-		<div className={cn('live-cover', className)}>
-			{cover?.asset && !broken ? (
-				<img src={imageUrl(cover, scope)} alt="来源作品封面" loading="lazy" decoding="async" onError={() => setBroken(true)} />
-			) : (
-				<div className="live-cover-placeholder">
-					<Image strokeWidth={1.2} />
-					<span>{cover?.error || (broken ? '本地封面不可用，可重新查询' : scope === 'library' ? '此收藏尚未保存封面' : '封面尚未取得')}</span>
-				</div>
-			)}
-		</div>
-	);
-}
 
 function SourceStatus({ task }: { task: QueryTask }): React.JSX.Element {
 	return (
@@ -90,182 +59,15 @@ function SourceStatus({ task }: { task: QueryTask }): React.JSX.Element {
 	);
 }
 
-export function RealDetail({
-	records,
-	task,
-	onBack,
-	onRefresh,
-	onPerformer,
-	onLibrary,
-	scope = 'image',
-	coverId,
-	backLabel = '返回查询结果',
-	actions,
-	onOpenSource,
-	magnetOrigin,
-}: {
-	onPerformer?: (name: string) => void;
-	records: MetadataRecord[];
-	task?: QueryTask;
-	onBack: () => void;
-	onRefresh?: () => void;
-	onLibrary?: (id: string) => void;
-	scope?: 'image' | 'library';
-	coverId?: string | null;
-	backLabel?: string;
-	actions?: ReactNode;
-	onOpenSource?: (recordId: string) => void;
-	magnetOrigin?: MagnetOrigin;
-}): React.JSX.Element {
-	const [tab, setTab] = useState<'info' | 'sources' | 'magnets'>('info');
-	const origin: MagnetOrigin | undefined = magnetOrigin ?? (task ? { kind: 'query', taskId: task.id, code: records[0]!.code } : undefined);
-	const covers = records.flatMap((record) => record.covers);
-	const selected =
-		(coverId ? (covers.find((cover) => cover.id === coverId && cover.asset) ?? covers.find((cover) => cover.id === coverId)) : undefined) ??
-		preferredCover(covers, task?.coverPriority);
-	const people = firstAvailableField(records, 'people');
-	const title = firstAvailableField(records, 'title') || '标题未取得';
-	const facts = [
-		['作品编号', records[0]!.code],
-		['发行日期', firstAvailableField(records, 'releaseDate') || '未取得'],
-		['厂牌', firstAvailableField(records, 'studio') || '未取得'],
-		['品牌', firstAvailableField(records, 'label') || '未取得'],
-		['系列', firstAvailableField(records, 'series') || '未取得'],
-		['卖家', firstAvailableField(records, 'seller') || '未取得'],
-		...(firstAvailableField(records, 'deliveryDate') ? [['配信开始日', firstAvailableField(records, 'deliveryDate')]] : []),
-	];
-	const snapshots = records.map(metadataSnapshot);
-	const differences = differingFields(snapshots);
-	return (
-		<div className="page detail-page live-detail">
-			<PageHeader
-				title="作品详情"
-				description={`${records[0]!.code} · ${scope === 'library' ? '已收藏的本机资料快照' : '查询资料与来源封面'}`}
-				actions={
-					<>
-						<Button variant="ghost" size="sm" onClick={onBack}>
-							<ArrowLeft />
-							{backLabel}
-						</Button>
-						{onRefresh && (
-							<Button variant="outline" size="sm" onClick={onRefresh} disabled={task && isActiveTask(task)}>
-								<RefreshCw />
-								重新查询这部作品
-							</Button>
-						)}
-						{task && <SaveWorkButton taskId={task.id} code={records[0]!.code} coverId={selected?.id} disabled={isActiveTask(task)} allowUpdate onOpen={onLibrary} />}
-					</>
-				}
-			/>
-			<div className="detail-layout">
-				<section>
-					<CoverImage cover={selected} scope={scope} className="live-cover-main" />
-					<div className="cover-caption">
-						<span>
-							{selected ? SOURCE_LABELS[coverSource(selected)] : '来源封面'}
-							{selected?.asset ? ` · ${selected.asset.width} × ${selected.asset.height}` : ''}
-						</span>
-						<span>{selected?.asset?.quality === 'small' ? '小尺寸原图' : '来源原图'}</span>
-					</div>
-				</section>
-				<section className="work-info">
-					<span className="detail-code">{records[0]!.code}</span>
-					<h2 className="detail-title">{title}</h2>
-					<div className="detail-status">
-						<StatusBadge tone="success">
-							<Check />
-							作品身份已核对
-						</StatusBadge>
-						<StatusBadge>{records.length} 个来源记录</StatusBadge>
-						<StatusBadge>{selected?.asset ? '封面已缓存' : '封面未取得'}</StatusBadge>
-					</div>
-					{actions}
-					<ReviewTabs<'info' | 'sources' | 'magnets'>
-						value={tab}
-						onChange={setTab}
-						label="真实作品详情"
-						items={[
-							{ value: 'info', label: '作品资料' },
-							{ value: 'sources', label: '来源与差异' },
-							...(origin ? [{ value: 'magnets' as const, label: '磁链搜索' }] : []),
-						]}
-					>
-						{tab === 'info' ? (
-							<>
-								<dl className="facts-grid">
-									{facts.map(([label, value]) => (
-										<div key={label}>
-											<dt>{label}</dt>
-											<dd>{value}</dd>
-										</div>
-									))}
-								</dl>
-								{differences.length > 0 && (
-									<Button variant="text" size="text" className="conflict-note" onClick={() => setTab('sources')}>
-										<Info />
-										<span>{differences.length} 个字段存在来源差异，原值均已保留</span>
-										<ChevronRight />
-									</Button>
-								)}
-								<h2 className="summary-title">人物与角色</h2>
-								{people.length ? (
-									<WorkPeople people={people} onPerformer={onPerformer} />
-								) : (
-									<p className="summary-text">来源没有提供人物资料。不会从标题推断人物身份。</p>
-								)}
-								<h2 className="summary-title">标签 · 来源原词</h2>
-								<div className="tag-row">
-									{firstAvailableField(records, 'tags').map((tag, index) => (
-										<StatusBadge key={`${tag}-${index}`}>{tag}</StatusBadge>
-									))}
-								</div>
-								<h2 className="summary-title">作品简介</h2>
-								<p className="summary-text">{firstAvailableField(records, 'description') || '来源未提供可用简介'}</p>
-								<p className="panel-note">
-									{scope === 'library'
-										? '保留收藏时采用的资料顺序及各来源原值。人物、卖家与可关注账号保持各自角色。'
-										: '采用顺序由设置中的资料优先级决定；FC2 独立查询。人物、卖家与可关注账号保持各自角色。'}
-								</p>
-							</>
-						) : tab === 'magnets' && origin ? (
-							<MagnetSearch key={records[0]!.code} origin={origin} code={records[0]!.code} />
-						) : (
-							<SourceProvenance
-								snapshots={snapshots}
-								onOpenSource={(snapshot) => {
-									if (onOpenSource) {
-										onOpenSource(snapshot.id);
-									} else if (task) {
-										void window.nectisse.metadata.openSource(task.id, snapshot.id);
-									}
-								}}
-							/>
-						)}
-					</ReviewTabs>
-					{tab === 'info' &&
-						records
-							.flatMap((record) => record.warnings)
-							.map((warning, index) => (
-								<p key={index} className="panel-note source-problem">
-									{warning}
-								</p>
-							))}
-					<p className="source-footnote">
-						<Clock3 />
-						实际获取于 {fetched(records[0]!.fetchedAt)}
-					</p>
-				</section>
-			</div>
-		</div>
-	);
-}
-
 export default function MetadataWorkspace({
 	seed,
 	onPerformer,
 	onLibrary,
 }: { seed?: { query: string; token: number }; onPerformer?: (name: string) => void; onLibrary?: (id: string) => void } = {}): React.JSX.Element {
-	const { state: subscriptionState } = useSubscriptions();
+	const actions = useDesktopActions();
+	const subscriptionState = useSubscriptions((state) => ({ preferences: state.preferences }));
+	const { invoke } = useDesktopActions();
+	const { reading } = useSubscriptionStatus();
 
 	useEffect(() => {
 		if (seed) {
@@ -274,9 +76,10 @@ export default function MetadataWorkspace({
 		}
 	}, [seed]);
 
-	const [state, setState] = useState<MetadataState>({ revision: 0, tasks: [] });
+	const state = useMetadata((state) => state);
+	const { error: metadataError } = useMetadataStatus();
 	const [query, setQuery] = useState('');
-	const [sources, setSources] = useState<SourceId[]>(['dmm', 'r18dev', 'fc2']);
+	const [savingSources, setSavingSources] = useState(false);
 	const [selectedTaskId, setSelectedTaskId] = useState('');
 	const [selectedCode, setSelectedCode] = useState('');
 
@@ -286,7 +89,7 @@ export default function MetadataWorkspace({
 		}
 	}, [seed, selectedCode]);
 
-	const [initializationError, setInitializationError] = useState(false);
+	const initializationError = !!metadataError;
 	const [submitting, setSubmitting] = useState(false);
 	const [recentOpen, setRecentOpen] = useState(false);
 	const historyTrigger = useRef<HTMLButtonElement | null>(null);
@@ -296,65 +99,46 @@ export default function MetadataWorkspace({
 		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
 	}, [selectedCode]);
 
-	useEffect(() => {
-		let mounted = true;
-		if (!window.nectisse?.metadata) {
-			setInitializationError(true);
-			return;
-		}
-
-		const apply = (next: MetadataState): void => {
-			if (!mounted) {
-				return;
-			}
-			setState((previous) => (next.revision >= previous.revision ? next : previous));
-			setSelectedTaskId((previous) => previous || next.tasks[0]?.id || '');
-			setInitializationError(false);
-		};
-
-		const unsubscribe = window.nectisse.metadata.onState(apply);
-		void window.nectisse.metadata
-			.getState()
-			.then(apply)
-			.catch(() => {
-				if (mounted) {
-					setInitializationError(true);
-				}
-			});
-		return () => {
-			mounted = false;
-			unsubscribe();
-		};
-	}, []);
-
 	const task = state.tasks.find((task) => task.id === selectedTaskId) ?? state.tasks[0];
 	const active = state.tasks.find((task) => task.id === state.activeId);
-	const busy = submitting || !!active;
+	const busy = submitting || !!active || savingSources || reading;
+	const sources = subscriptionState.preferences.querySources;
+	const activeSources = sources.filter((source) => subscriptionState.preferences.enabledSources.includes(source));
 	const currentGroups = groupRecordsByCode(task?.records ?? [], subscriptionState.preferences.metadataPriority);
 	const selectedRecords = currentGroups.find((group) => group[0]?.code === selectedCode);
+
+	const saveSources = async (sources: SourceId[]): Promise<void> => {
+		if (busy) {
+			return;
+		}
+		setSavingSources(true);
+		try {
+			const reply = await invoke({ action: 'query-sources', sources });
+			if (!reply.ok) {
+				toast.error(reply.message || '资料来源未能保存，请重试。', { id: 'query-sources-save' });
+			}
+		} finally {
+			setSavingSources(false);
+		}
+	};
 
 	const retryInitialization = async (): Promise<void> => {
 		setSubmitting(true);
 		try {
-			const next = await window.nectisse.metadata.retry();
-			setState(next);
-			setSelectedTaskId((previous) => previous || next.tasks[0]?.id || '');
-			setInitializationError(false);
-		} catch {
-			setInitializationError(true);
+			await actions.reloadMetadata();
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
 	const submit = async (force = false, value = query): Promise<void> => {
-		if (!value.trim() || !sources.length || busy) {
+		if (!value.trim() || !activeSources.length || busy) {
 			return;
 		}
 		setSubmitting(true);
 		setSelectedCode('');
 		try {
-			const reply = await window.nectisse.metadata.query({ query: value, sources, force });
+			const reply = await actions.metadata.query({ query: value, sources: activeSources, force });
 			if (reply.ok && reply.taskId) {
 				setSelectedTaskId(reply.taskId);
 				if (reply.cached) {
@@ -373,12 +157,29 @@ export default function MetadataWorkspace({
 	if (task && selectedRecords) {
 		return (
 			<>
-				<RealDetail
+				<WorkDetail
 					key={`${task.id}-${selectedCode}`}
 					records={selectedRecords}
 					task={task}
 					onPerformer={onPerformer}
-					onLibrary={onLibrary}
+					onOpenSource={(recordId) => {
+						void actions.metadata.openSource(task.id, recordId);
+					}}
+					headerActions={
+						<SaveWorkButton
+							taskId={task.id}
+							code={selectedRecords[0]!.code}
+							coverId={
+								preferredCover(
+									selectedRecords.flatMap((record) => record.covers),
+									task.coverPriority,
+								)?.id
+							}
+							disabled={isActiveTask(task)}
+							allowUpdate
+							onOpen={onLibrary}
+						/>
+					}
 					onBack={() => setSelectedCode('')}
 					onRefresh={() => {
 						setQuery(selectedCode);
@@ -394,9 +195,7 @@ export default function MetadataWorkspace({
 							size="sm"
 							disabled={active.status === 'cancelling'}
 							onClick={() => {
-								void window.nectisse.metadata
-									.cancel(active.id)
-									.catch(() => toast.error('取消状态保存失败，网络进程已停止。', { id: 'metadata-cancel', duration: 8000 }));
+								void actions.metadata.cancel(active.id).catch(() => toast.error('取消状态保存失败，网络进程已停止。', { id: 'metadata-cancel', duration: 8000 }));
 							}}
 						>
 							取消查询
@@ -436,12 +235,19 @@ export default function MetadataWorkspace({
 						autoComplete="off"
 						spellCheck={false}
 					/>
-					<Button type="submit" size="lg" disabled={busy || query.trim().length < 2 || !sources.length}>
+					<Button type="submit" size="lg" disabled={busy || query.trim().length < 2 || !activeSources.length}>
 						{submitting ? <LoaderCircle className="spin" /> : null}查询资料
 						<ChevronRight />
 					</Button>
 				</div>
-				<MetadataSourcePicker selected={sources} enabled={subscriptionState.preferences.enabledSources} busy={busy} onChange={setSources} />
+				<MetadataSourcePicker
+					selected={sources}
+					enabled={subscriptionState.preferences.enabledSources}
+					busy={busy}
+					onChange={(next) => {
+						void saveSources(next);
+					}}
+				/>
 			</form>
 			<p className="query-caption">
 				<Info />
@@ -485,7 +291,7 @@ export default function MetadataWorkspace({
 						size="sm"
 						disabled={active.status === 'cancelling'}
 						onClick={() => {
-							void window.nectisse.metadata
+							void actions.metadata
 								.cancel(active.id)
 								.catch(() => toast.error('取消状态保存失败，网络进程已停止，请检查应用数据目录。', { id: 'metadata-cancel', duration: 8000 }));
 						}}

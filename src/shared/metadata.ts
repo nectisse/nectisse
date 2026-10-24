@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { METADATA_IDS } from './sources';
-import { COVER_SOURCE_IDS } from './cover-selection';
-export { SOURCE_LABELS } from './sources';
+import { METADATA_IDS } from '@shared/sources';
+import { COVER_SOURCE_IDS } from '@shared/cover-sources';
+export { SOURCE_LABELS } from '@shared/sources';
 
 export const sourceIdSchema = z.enum(METADATA_IDS);
 export type SourceId = z.infer<typeof sourceIdSchema>;

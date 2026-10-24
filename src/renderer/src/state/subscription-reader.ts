@@ -1,5 +1,5 @@
-import type { SubscriptionsBridge, SubscriptionsState } from '../../../shared/subscriptions';
-import { SUBSCRIPTION_READ, subscriptionReadCode, subscriptionReadMessage, type SubscriptionReadCode } from '../../../shared/subscription-read';
+import type { SubscriptionsBridge, SubscriptionsState } from '@shared/subscriptions';
+import { SUBSCRIPTION_READ, subscriptionReadCode, subscriptionReadMessage, type SubscriptionReadCode } from '@shared/subscription-read';
 
 type ReadBridge = Pick<SubscriptionsBridge, 'getState' | 'onState'> & Partial<Pick<SubscriptionsBridge, 'retry'>>;
 interface Callbacks {

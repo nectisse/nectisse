@@ -1,3 +1,4 @@
+import { useDesktopActions } from '@/state';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Check, Copy, FileCheck2, FileText, LoaderCircle, RefreshCw, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -6,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { EmptyState } from '@/components/empty-state';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { DIAGNOSTIC_DESCRIPTIONS, type DiagnosticReport } from '../../../shared/diagnostics';
-import { describeSubscriptionFailure } from '../../../shared/subscription-failure';
+import { DIAGNOSTIC_DESCRIPTIONS, type DiagnosticReport } from '@shared/diagnostics';
+import { describeSubscriptionFailure } from '@shared/subscription-failure';
 
 const localTime = (value: string): string => new Date(value).toLocaleString('zh-CN', { hour12: false });
 
 const phases = { starting: '正在准备', ready: '已就绪', error: '自检失败', stopped: '已停止', unavailable: '暂不可用' };
 
 export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolean; onClose: () => void; returnFocus: RefObject<HTMLButtonElement | null> }): React.JSX.Element {
+	const actions = useDesktopActions();
 	const [report, setReport] = useState<DiagnosticReport>();
 	const [loading, setLoading] = useState(false);
 	const [copying, setCopying] = useState(false);
@@ -27,10 +29,7 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 		setError('');
 		setCopied(false);
 		try {
-			if (!window.nectisse?.diagnostics) {
-				throw new Error('Unavailable');
-			}
-			const next = await window.nectisse.diagnostics.getReport();
+			const next = await actions.diagnostics.getReport();
 			if (generation.current === request) {
 				setReport(next);
 			}
@@ -43,7 +42,7 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 				setLoading(false);
 			}
 		}
-	}, []);
+	}, [actions]);
 
 	useEffect(() => {
 		if (!open) {
@@ -63,7 +62,7 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 		setCopied(false);
 		setError('');
 		try {
-			const reply = await window.nectisse.diagnostics.copyReport();
+			const reply = await actions.diagnostics.copyReport();
 			if (generation.current === request) {
 				if (reply.copied) {
 					setReport(reply.report);

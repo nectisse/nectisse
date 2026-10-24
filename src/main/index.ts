@@ -1,28 +1,28 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, session, shell, safeStorage, type IpcMainInvokeEvent } from 'electron';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { IPC } from '../shared/protocol';
+import { IPC } from '@shared/protocol';
 import { pythonLayout } from './python-layout';
 import { RuntimeService } from './runtime';
 import { MetadataService } from './metadata-service';
 import { proxyFromRules } from './network-route';
-import { METADATA_IPC, queryRequestSchema } from '../shared/metadata';
+import { METADATA_IPC, queryRequestSchema } from '@shared/metadata';
 import { z } from 'zod';
 import { SubscriptionStore } from './subscription-store';
 import { SubscriptionsService } from './subscriptions-service';
-import { SUBS_IPC, followCommandSchema } from '../shared/subscriptions';
+import { SUBS_IPC, followCommandSchema } from '@shared/subscriptions';
 import { SiteGate } from './site-gate';
 import { readSubscriptionState } from './subscription-read';
 import { DiagnosticLog } from './diagnostics';
-import { DIAGNOSTICS_IPC, diagnosticCodeSchema, formatDiagnosticReport } from '../shared/diagnostics';
-import { SUBSCRIPTION_READ } from '../shared/subscription-read';
-import { subscriptionFailureContextSchema, type SubscriptionFailureContext } from '../shared/subscription-failure';
+import { DIAGNOSTICS_IPC, diagnosticCodeSchema, formatDiagnosticReport } from '@shared/diagnostics';
+import { SUBSCRIPTION_READ } from '@shared/subscription-read';
+import { subscriptionFailureContextSchema, type SubscriptionFailureContext } from '@shared/subscription-failure';
 import { InitializationStep } from './initialization-step';
 import { LibraryService } from './library-service';
-import { LIBRARY_IPC, libraryIdSchema, librarySaveSchema } from '../shared/library';
+import { LIBRARY_IPC, libraryIdSchema, librarySaveSchema } from '@shared/library';
 import { sourceCooldownSeconds } from './source-policy';
 import { MagnetService } from './magnet-service';
-import { MAGNET_IPC, magnetRequestSchema, magnetActionSchema } from '../shared/magnets';
+import { DEFAULT_MAGNET_SETTINGS, MAGNET_IPC, magnetRequestSchema, magnetActionSchema } from '@shared/magnets';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const iconPath = app.isPackaged ? join(process.resourcesPath, 'icons/icon-macos.png') : join(app.getAppPath(), 'resources/icons/icon-macos.png');
@@ -190,7 +190,10 @@ if (!app.requestSingleInstanceLock()) {
 				const parsed = diagnosticCodeSchema.extract(Object.values(SUBSCRIPTION_READ)).parse(code);
 				diagnostics!.recordFromRenderer(parsed, subscriptionFailureContextSchema.optional().parse(context));
 			});
-			runtime = new RuntimeService(pythonLayout(app.isPackaged ? process.resourcesPath : app.getAppPath(), app.isPackaged));
+			runtime = new RuntimeService(
+				pythonLayout(app.isPackaged ? process.resourcesPath : app.getAppPath(), app.isPackaged),
+				join(app.getPath('userData'), 'browser-sessions', 'fc2ppvdb'),
+			);
 
 			const resolveProxy = async (url: string): Promise<string> => {
 				const preferences = subscriptionStore!.preferences();
@@ -200,7 +203,7 @@ if (!app.requestSingleInstanceLock()) {
 						? preferences.proxyUrl
 						: proxyFromRules(await session.defaultSession.resolveProxy(url));
 			};
-			magnets = new MagnetService(app.getPath('userData'), runtime.host, resolveProxy);
+			magnets = new MagnetService(app.getPath('userData'), runtime.host, resolveProxy, 2000, () => subscriptionStore?.preferences().magnetSearch ?? DEFAULT_MAGNET_SETTINGS);
 
 			let gate: SiteGate | undefined;
 			localReady = new InitializationStep(async () => {
@@ -275,7 +278,12 @@ if (!app.requestSingleInstanceLock()) {
 			ipcMain.handle(SUBS_IPC.command, async (event, command: unknown) => {
 				trusted(event);
 				await waitLocal();
-				return subscriptions!.command(followCommandSchema.parse(command));
+				const input = followCommandSchema.parse(command);
+				const reply = await subscriptions!.command(input);
+				if (reply.ok && ['preferences', 'preferences-patch', 'source-enabled'].includes(input.action)) {
+					await magnets!.settingsChanged();
+				}
+				return reply;
 			});
 			const observedOutcomes = new Set<string>();
 			metadataReady = new InitializationStep(async () => {
@@ -489,6 +497,7 @@ if (!app.requestSingleInstanceLock()) {
 			});
 			ipcMain.handle(MAGNET_IPC.action, async (event, input: unknown) => {
 				trusted(event);
+				await waitLocal();
 				const command = magnetActionSchema.parse(input);
 				const row = await magnets!.row(command.code, command.id);
 				if (!row || quitting) {

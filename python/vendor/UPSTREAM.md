@@ -28,7 +28,7 @@ r18.dev 额外兼容当前 `images.jacket_image` 的 large / large2 对象形态
 
 Nectisse 自行实现逐请求许可、超时 / 大小 / 域名预算、来源冷却、图片解码与缓存，不复用 Peach 的总 Session 或整体后端。当前图片只标记来源匹配，尚未复用完整图片互证、裁剪及人脸相关处理。
 
-DMM 与 r18.dev 有独立应用的真实成功样本；FC2 仅离线解析通过，在线样本返回 404，不能当作已经验证接通。其余来源及 amane 的提取记录见“来源扩展”。浏览器验证运行时尚未提取。
+DMM 与 r18.dev 有独立应用的真实成功样本；FC2 仅离线解析通过，在线样本返回 404，不能当作已经验证接通。其余来源及 amane 的提取记录见“来源扩展”。FC2PPV-DB 浏览器会话的后续接入见下文。
 
 ## 订阅提取（2026-10-23）
 
@@ -53,7 +53,17 @@ Peach 的 `CurlCffiTransport` 会自动跟随重定向。本应用增加 `follow
 - `metadata/amane.py` 的有界异步客户端将爬虫请求转回 Nectisse Session：保持 curl_cffi 指纹选择、逐跳域名检查、请求预算、取消与失败分类；不使用上游自动重试、下载或渲染器。Prestige 配信开始日单独保存，紧凑编号规范化后与其他来源归到同一作品。
 - Seesaa 提取哈希含必要适配，其纯作品表解析、精确编号与不确定人物警告保留；K-MIB 仅读取用户指定的单片 URL，不引入列表采集或磁盘扫描。
 
-支持矩阵在根目录 `SOURCE_SUPPORT.md`。在线成功样本与尚未完成的验收分开记录；源码存在、导入通过和真实查询成功是不同的验证等级。
+支持矩阵位于仓库的 `docs/SOURCE_SUPPORT.md`。在线成功样本与尚未完成的验收分开记录；源码存在、导入通过和真实查询成功是不同的验证等级。
+
+## FC2PPV-DB 浏览器会话（2026-10-24）
+
+从同一 Peach 0.46.1 快照提取 `browser_transport.py`：实际 Chrome / Edge 查找、独立 profile、CDP WebSocket、页面导航、验证等待与过期 Cookie 重置、年龄确认、交互窗口和空闲回收保持原实现。仅增加可选 CDP 事件回调，供 Nectisse 在请求派发前进行许可与预算校验；原文件及提取哈希记录在 `browser-extraction.json`。同时复用上游浏览器传输的离线回归测试，替换命名空间。
+
+`nectisse_worker/browser_session.py` 提供 FC2PPV-DB 专用适配：限定来源与 Cloudflare 验证域名，拦截导航、重定向及验证 iframe，每次导航向 TS 申请许可；最多 16 次导航、160 个允许的子请求、210 秒采集预算、2 MiB 读回文档。第三方跟踪资源被阻止；新窗口和下载被拒绝。普通 HTTP、curl_cffi 与浏览器会话保持各自真实含义，不以 Electron Chromium 冒充原浏览器。
+
+TS `BrowserSessionHost` 按需创建一个随包 Python 会话工作者，通过私有标准输入输出管道串行处理请求。同一代理配置复用浏览器进程；代理改变时重建浏览器，profile 保留在应用数据目录 `browser-sessions/fc2ppvdb`（权限 0700）。Chrome / Edge 自行管理该独立 profile 的 Cookie，不读取默认浏览器资料，也不自动导入设置中的 Cookie。正常结束导航到空白页；取消、超时、退出和宿主死亡回收拥有的进程组。人工验证阶段进入应用任务状态；手动重新查询允许再次展示验证窗口。
+
+通过 `http://127.0.0.1:7890` 查询 `FC2-PPV-4898837` 已取得标题、卖家、发行日期和 20 个标签。该样本未提供演员栏，不据此宣称取得演员。连续查询复用同一 Python / Chrome PID；正常关闭后重建会话也取得资料。Cookie 可跨启动保留，但站点仍可能要求重新验证；未安装 Chrome / Edge 时明确报告，不自动退化为已验证可用的 HTTP 路径。当前只为 FC2PPV-DB 接通浏览器会话，不把 JAVten 标记为完成。
 
 ## Sukebei 作品磁链查询
 

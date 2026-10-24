@@ -1,10 +1,13 @@
+import { StatusBadge } from '@/components/status-badge';
+import { QuietButton } from '@/components/quiet-button';
+export { StatusBadge } from '@/components/status-badge';
+export { QuietButton } from '@/components/quiet-button';
+export { ContentTabs as ReviewTabs } from '@/components/content-tabs';
 import type { ReactNode, RefObject } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Bookmark, Check, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState as SharedEmptyState, type EmptyStateAction } from '@/components/empty-state';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { creatorFor, type Cover, type Creator, type Site, type Tile, type Work } from './data';
 
@@ -54,65 +57,6 @@ export function SourceMark({ source }: { source: Site | string }): React.JSX.Ele
 		<span aria-hidden="true" className={cn('source-mark', source === 'FANBOX' || source === 'Patreon' ? 'peach' : '')}>
 			{source === 'r18.dev' ? 'r' : source[0]}
 		</span>
-	);
-}
-
-export function StatusBadge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'success' | 'peach' | 'berry' }): React.JSX.Element {
-	return (
-		<Badge variant="secondary" className={cn('status-badge', `tone-${tone}`)}>
-			{children}
-		</Badge>
-	);
-}
-
-export function QuietButton({ children, className, ...props }: React.ComponentProps<typeof Button>): React.JSX.Element {
-	return (
-		<Button variant="ghost" size="sm" className={cn('quiet-button', className)} {...props}>
-			{children}
-		</Button>
-	);
-}
-
-export function ReviewTabs<T extends string>({
-	value,
-	onChange,
-	items,
-	label,
-	children,
-	segmented = false,
-}: {
-	value: T;
-	onChange: (value: T) => void;
-	items: readonly { value: T; label: ReactNode }[];
-	label: string;
-	children?: ReactNode;
-	segmented?: boolean;
-}): React.JSX.Element {
-	return (
-		<Tabs
-			value={value}
-			className="content-tabs"
-			onValueChange={(next) => {
-				const item = items.find((item) => item.value === next);
-
-				if (item) {
-					onChange(item.value);
-				}
-			}}
-		>
-			<TabsList variant={segmented ? 'default' : 'line'} aria-label={label} className={cn('review-tabs', segmented && 'segmented-tabs')}>
-				{items.map((item) => (
-					<TabsTrigger key={item.value} value={item.value}>
-						{item.label}
-					</TabsTrigger>
-				))}
-			</TabsList>
-			{children !== undefined && (
-				<TabsContent value={value} className="review-tab-panel">
-					{children}
-				</TabsContent>
-			)}
-		</Tabs>
 	);
 }
 

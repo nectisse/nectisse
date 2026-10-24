@@ -1,5 +1,5 @@
-import { queryRequestSchema, type QueryPlan, type QueryRequest, type SourceId } from '../shared/metadata';
-import { METADATA_IDS, SOURCE_BY_ID } from '../shared/sources';
+import { queryRequestSchema, type QueryPlan, type QueryRequest, type SourceId } from '@shared/metadata';
+import { METADATA_IDS, SOURCE_BY_ID } from '@shared/sources';
 
 const standardCode = /^(?:\d{3})?[A-Z]{2,8}-\d{2,5}$/;
 
@@ -36,6 +36,13 @@ export function planQuery(value: QueryRequest): QueryPlan {
 				throw new Error('请输入 FC2 作品商品页链接，不是卖家或列表页');
 			}
 			code = `FC2-PPV-${id}`;
+		} else if (host === 'fc2ppv-db.com') {
+			const id = /^\/(?:ja\/|en\/)?videos\/(\d{5,})\/?$/.exec(url.pathname)?.[1];
+			if (!id) {
+				throw new Error('请输入 FC2PPV-DB 的作品页链接');
+			}
+			code = `FC2-PPV-${id}`;
+			specific = 'fc2ppvdb';
 		} else if (['video.dmm.co.jp', 'www.dmm.co.jp', 'www.dmm.com', 'dmm.co.jp', 'dmm.com'].includes(host)) {
 			contentId = url.searchParams.get('id') ?? /\/(?:cid|id)=([a-zA-Z0-9_]+)(?:\/|$)/.exec(url.pathname)?.[1] ?? '';
 			if (!/^[a-zA-Z0-9_]{2,100}$/.test(contentId)) {

@@ -1,8 +1,8 @@
-import type { Preferences } from '../shared/subscriptions';
-import type { AllSource } from '../shared/sources';
+import type { Preferences } from '@shared/preferences';
+import type { AllSource } from '@shared/sources';
 
 /** 查询、头像和封面沿用同一传输设置；逐来源配置优先于旧版专用设置。 */
-export function sourceTransport(source: AllSource, preferences?: Preferences): 'httpx' | 'fingerprint' {
+export function sourceTransport(source: AllSource, preferences?: Preferences): 'httpx' | 'fingerprint' | 'browser' {
 	const configured = preferences?.sourceTransports[source];
 	if (configured) {
 		return configured;
@@ -12,6 +12,9 @@ export function sourceTransport(source: AllSource, preferences?: Preferences): '
 	}
 	if (source === 'javdb') {
 		return preferences?.javdbTransport ?? 'httpx';
+	}
+	if (source === 'fc2ppvdb') {
+		return 'browser';
 	}
 	return ['dmm', 'r18dev', 'fc2'].includes(source) ? 'httpx' : 'fingerprint';
 }

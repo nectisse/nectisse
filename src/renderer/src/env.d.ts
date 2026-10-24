@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { DesktopBridge } from '../../shared/protocol';
+import type { DesktopBridge } from '@shared/protocol';
 
 declare global {
 	interface Window {

@@ -1,9 +1,10 @@
+import { useMetadata, useDesktopActions } from '@/state';
 // App-hosted visual review of the existing four-page design. This is an
 // in-memory prototype, deliberately separate from future source adapters.
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Archive, Check, ChevronRight, LoaderCircle, Moon, Search, Settings2, Sparkles, Sun, Users, WifiOff } from 'lucide-react';
-import type { RuntimeState } from '../../../shared/protocol';
+import type { RuntimeState } from '@shared/protocol';
 import { Button } from '@/components/ui/button';
 import { FeedImage } from '@/components/feed-item';
 import { UpdateDetailDialog } from '@/components/update-detail-dialog';
@@ -16,7 +17,6 @@ import { Avatar, CoverChoice, Photo, Poster, QuietButton, ReviewDialog, StatusBa
 import { CreatorPage, UpdatesPage, type Frequency } from './creator-pages';
 import { creators, creatorFor, firstCreator, firstWork, initialReadIds, posts, type Creator, type Post, type Route, type Site, type Work } from './data';
 import { QueryPage, WorkDetail, type DateOverride } from './work-pages';
-import type { MetadataState, QueryTask } from '../../../shared/metadata';
 
 type Dialog = { kind: 'source' | 'preview' | 'compare' | 'about' | 'settings' } | { kind: 'post'; post: Post };
 type DateChoice = 'primary' | 'mirror' | 'manual';
@@ -28,30 +28,9 @@ const navigation = [
 ] as const;
 
 export default function VisualPrototype({ runtime, bridgeError, onRetry }: { runtime: RuntimeState; bridgeError: boolean; onRetry: () => void }): React.JSX.Element {
+	const actions = useDesktopActions();
 	const [route, setRoute] = useState<Route>({ page: 'query' });
-	const [activeMetadata, setActiveMetadata] = useState<QueryTask>();
-	const metadataRevision = useRef(-1);
-
-	useEffect(() => {
-		if (!window.nectisse?.metadata) {
-			return;
-		}
-
-		const apply = (state: MetadataState): void => {
-			if (state.revision < metadataRevision.current) {
-				return;
-			}
-			metadataRevision.current = state.revision;
-			setActiveMetadata(state.tasks.find((task) => task.id === state.activeId));
-		};
-
-		const unsubscribe = window.nectisse.metadata.onState(apply);
-		void window.nectisse.metadata
-			.getState()
-			.then(apply)
-			.catch(() => {});
-		return unsubscribe;
-	}, []);
+	const activeMetadata = useMetadata((state) => state.tasks.find((task) => task.id === state.activeId));
 
 	const [work, setWork] = useState<Work>(firstWork);
 	const [creator, setCreator] = useState<Creator>(firstCreator);
@@ -580,7 +559,7 @@ export default function VisualPrototype({ runtime, bridgeError, onRetry }: { run
 								size="text"
 								disabled={activeMetadata.status === 'cancelling'}
 								onClick={() => {
-									void window.nectisse.metadata.cancel(activeMetadata.id).catch(() => notify('网络进程已停止，请检查查询状态与应用数据目录。'));
+									void actions.metadata.cancel(activeMetadata.id).catch(() => notify('网络进程已停止，请检查查询状态与应用数据目录。'));
 								}}
 							>
 								取消

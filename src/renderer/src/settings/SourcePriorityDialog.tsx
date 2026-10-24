@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { OptionSelect } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SOURCE_LABELS, type AllSource } from '../../../shared/sources';
+import { SOURCE_LABELS, type AllSource } from '@shared/sources';
 
 const labels = {
 	cover: {

@@ -1,55 +1,13 @@
 import { z } from 'zod';
-import { imageAssetSchema } from './metadata';
-import { ALL_IDS, DEFAULT_ENABLED, DEFAULT_METADATA_ORDER, FOLLOW_IDS, METADATA_IDS } from './sources';
-import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY } from './cover-selection';
-export { SOURCES } from './sources';
+import { imageAssetSchema } from '@shared/metadata';
+import { ALL_IDS, FOLLOW_IDS } from '@shared/sources';
+import { preferencesSchema, preferencesPatchSchema, querySourcesSchema } from '@shared/preferences';
+export { DEFAULT_PREFERENCES, preferencesSchema, querySourcesSchema, type Preferences } from '@shared/preferences';
+export { SOURCES } from '@shared/sources';
 export const providerSchema = z.enum(FOLLOW_IDS);
 export type FollowProvider = z.infer<typeof providerSchema>;
 export const allSourceSchema = z.enum(ALL_IDS);
 export type AllSource = z.infer<typeof allSourceSchema>;
-export const preferencesSchema = z.object({
-	enabledSources: z
-		.array(allSourceSchema)
-		.max(ALL_IDS.length)
-		.refine((items) => new Set(items).size === items.length),
-
-	metadataPriority: z
-		.array(z.enum(METADATA_IDS))
-		.min(3)
-		.max(METADATA_IDS.length)
-		.refine((items) => new Set(items).size === items.length)
-		.transform((items) => [...items, ...DEFAULT_METADATA_ORDER.filter((id) => !items.includes(id))]),
-
-	coverPriority: z
-		.array(z.enum(COVER_SOURCE_IDS))
-		.max(COVER_SOURCE_IDS.length)
-		.refine((items) => new Set(items).size === items.length)
-		.default(DEFAULT_COVER_PRIORITY),
-	automatic: z.boolean(),
-	creatorMinutes: z.number().int().min(15).max(10080),
-	performerMinutes: z.number().int().min(360).max(10080),
-	proxyMode: z.enum(['system', 'direct', 'custom']),
-	proxyUrl: z.string().max(500),
-	fanboxTransport: z.enum(['httpx', 'fingerprint']),
-	javdbTransport: z.enum(['httpx', 'fingerprint']),
-	sourceTransports: z.partialRecord(allSourceSchema, z.enum(['httpx', 'fingerprint'])).default({}),
-	theme: z.enum(['cream', 'night']),
-});
-export type Preferences = z.infer<typeof preferencesSchema>;
-export const DEFAULT_PREFERENCES: Preferences = {
-	enabledSources: [...DEFAULT_ENABLED],
-	metadataPriority: [...DEFAULT_METADATA_ORDER],
-	coverPriority: [...DEFAULT_COVER_PRIORITY],
-	automatic: false,
-	creatorMinutes: 60,
-	performerMinutes: 360,
-	proxyMode: 'system',
-	proxyUrl: '',
-	fanboxTransport: 'httpx',
-	javdbTransport: 'httpx',
-	sourceTransports: {},
-	theme: 'cream',
-};
 export const candidateSchema = z.object({
 	provider: providerSchema,
 	ref: z.string().min(1).max(256),
@@ -152,7 +110,10 @@ export const subscriptionsStateSchema = z.object({
 });
 export type SubscriptionsState = z.infer<typeof subscriptionsStateSchema>;
 export const followCommandSchema = z.discriminatedUnion('action', [
+	z.object({ action: z.literal('query-sources'), sources: querySourcesSchema }),
 	z.object({ action: z.literal('preferences'), value: preferencesSchema }),
+	z.object({ action: z.literal('preferences-patch'), patch: preferencesPatchSchema }),
+	z.object({ action: z.literal('source-enabled'), source: allSourceSchema, enabled: z.boolean() }),
 	z.object({ action: z.literal('credential'), provider: allSourceSchema, cookie: z.string().max(12000) }),
 	z.object({ action: z.literal('lookup'), provider: providerSchema, query: z.string().trim().min(1).max(500) }),
 	z.object({ action: z.literal('follow'), taskId: z.string().uuid(), ref: z.string().max(256) }),

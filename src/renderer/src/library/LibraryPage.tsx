@@ -1,3 +1,4 @@
+import { useDesktopActions, useLibrary, useLibraryStatus } from '@/state';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Bookmark, Images, LoaderCircle, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,16 @@ import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { OptionSelect } from '@/components/ui/select';
-import { ReviewTabs } from '../prototype/components';
-import { CoverImage, RealDetail } from '../metadata/MetadataWorkspace';
-import type { SavedWork } from '../../../shared/library';
-import { useLibrary } from './context';
+import { ContentTabs } from '@/components/content-tabs';
+import { CoverImage } from '@/works/CoverImage';
+import { WorkDetail } from '@/works/WorkDetail';
+import type { SavedWork } from '@shared/library';
 
 export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: number }; onQuery: (code: string) => void }): React.JSX.Element {
-	const { state, loading, error, reload } = useLibrary();
+	const actions = useDesktopActions();
+	const state = useLibrary((state) => state);
+	const { loading, error } = useLibraryStatus();
+	const { reloadLibrary: reload } = useDesktopActions();
 	const [view, setView] = useState<'cards' | 'wall'>('cards');
 	const [search, setSearch] = useState('');
 	const [sort, setSort] = useState('saved');
@@ -45,7 +49,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 		}
 		let live = true;
 		setDetailError('');
-		void window.nectisse.library
+		void actions.library
 			.getWork(selected)
 			.then((next) => {
 				if (live) {
@@ -71,7 +75,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 		}
 		setRemoving(true);
 		try {
-			const reply = await window.nectisse.library.remove(work.id);
+			const reply = await actions.library.remove(work.id);
 			if (reply.ok) {
 				setSelected('');
 				setConfirm(false);
@@ -90,7 +94,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 		return (
 			<>
 				{work?.id === selected ? (
-					<RealDetail
+					<WorkDetail
 						key={work.updatedAt}
 						records={work.records}
 						scope="library"
@@ -100,7 +104,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 						onBack={() => setSelected('')}
 						onRefresh={() => onQuery(work.code)}
 						onOpenSource={(recordId) => {
-							void window.nectisse.library.openSource(work.id, recordId).catch(() => {
+							void actions.library.openSource(work.id, recordId).catch(() => {
 								toast.error('原文链接暂时无法打开。', { duration: 8000 });
 							});
 						}}
@@ -236,7 +240,7 @@ export function LibraryPage({ seed, onQuery }: { seed?: { id: string; token: num
 					</>
 				}
 			>
-				<ReviewTabs
+				<ContentTabs
 					value={view}
 					onChange={setView}
 					label="收藏视图"

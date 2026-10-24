@@ -43,6 +43,20 @@ class MagnetTests(unittest.TestCase):
         self.assertEqual(len(values), 20)
         self.assertEqual(values[-1]['id'], f'{20:040x}')
 
+    def test_configured_result_limit_and_transport_reach_session(self):
+        body = table(*(row(i) for i in range(1, 31)))
+        for limit in (5, 10, 20):
+            self.assertEqual(len(parse_search(body, 'TIKB-220', limit)), limit)
+        with patch('nectisse_worker.magnets.NetworkSession') as factory:
+            factory.return_value.get.return_value = Page('https://sukebei.nyaa.si/', body.encode())
+            factory.return_value.count = 1
+            result = job({'code': 'TIKB-220', 'maxResults': 5, 'transport': 'fingerprint'}, threading.Event(), lambda *args: None)
+            self.assertEqual(len(result['items']), 5)
+            self.assertTrue(factory.call_args.kwargs['fingerprint'])
+        for limit in (0, 21, True):
+            with self.assertRaises(ValueError):
+                job({'code': 'TIKB-220', 'maxResults': limit}, threading.Event(), lambda *args: None)
+
     def test_empty_changed_page_invalid_hash_and_no_date(self):
         self.assertEqual(parse_search(table(), 'TIKB-220'), [])
         self.assertEqual(parse_search('<h3>No results found</h3><div class="pagination-page-info">Displaying results 0-0 out of 0 results.</div>', 'TIKB-220'), [])

@@ -1,20 +1,19 @@
+import { useMetadata, useLibrary, useSubscriptions, useDesktopActions, useSubscriptionStatus } from '@/state';
 import { useEffect, useRef, useState } from 'react';
 import { Bookmark, Check, Database, LoaderCircle, Search, Settings2, Sparkles, Users, WifiOff } from 'lucide-react';
-import type { RuntimeState } from '../../../shared/protocol';
-import type { QueryTask } from '../../../shared/metadata';
-import type { FollowProvider } from '../../../shared/subscriptions';
+import type { RuntimeState } from '@shared/protocol';
+import type { FollowProvider } from '@shared/subscriptions';
 import { Button } from '@/components/ui/button';
 import { WorkspaceToolbar } from '@/components/workspace-toolbar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import MetadataWorkspace from '../metadata/MetadataWorkspace';
-import VisualPrototype from '../prototype/VisualPrototype';
-import { SettingsPage, type SettingsSection } from './SettingsPage';
-import { SubscriptionsPage, UpdatesPage } from './SubscriptionsPage';
-import { AddFollowDialog, type FollowDialogSeed } from './AddFollowDialog';
-import { useSubscriptions } from './context';
-import { IdentityAvatar } from './IdentityAvatar';
-import { LibraryPage } from '../library/LibraryPage';
-import { useLibrary } from '../library/context';
+import MetadataWorkspace from '@/metadata/MetadataWorkspace';
+import VisualPrototype from '@/prototype/VisualPrototype';
+import { SettingsPage, type SettingsSection } from '@/settings/SettingsPage';
+import { SubscriptionsPage } from '@/subscriptions/SubscriptionsPage';
+import { UpdatesPage } from '@/updates/UpdatesPage';
+import { AddFollowDialog, type FollowDialogSeed } from '@/subscriptions/AddFollowDialog';
+import { IdentityAvatar } from '@/subscriptions/IdentityAvatar';
+import { LibraryPage } from '@/library/LibraryPage';
 
 type Page = 'query' | 'library' | 'creators' | 'updates' | 'settings';
 const nav = [
@@ -25,9 +24,12 @@ const nav = [
 ] as const;
 
 export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeState; bridgeError: boolean; onRetry: () => void }): React.JSX.Element {
-	const { state: libraryState } = useLibrary();
+	const actions = useDesktopActions();
+	const { invoke, reloadSubscriptions: reload } = actions;
+	const libraryCount = useLibrary((state) => state.works.length);
 	const [librarySeed, setLibrarySeed] = useState<{ id: string; token: number }>();
-	const { state, invoke, error, reading, reload } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ unread: state.entries.filter((entry) => !entry.read).length, notice: state.notice, theme: state.preferences.theme }));
+	const { error, reading } = useSubscriptionStatus();
 	const [page, setPage] = useState<Page>('query');
 	const [demo, setDemo] = useState(false);
 	const [settingsSection, setSettingsSection] = useState<SettingsSection>('sources');
@@ -36,7 +38,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 	const followTrigger = useRef<HTMLElement | null>(null);
 	const followSequence = useRef(0);
 	const [workSeed, setWorkSeed] = useState<{ query: string; token: number }>();
-	const [metadataTask, setMetadataTask] = useState<QueryTask>();
+	const metadataTask = useMetadata((state) => state.tasks.find((task) => task.id === state.activeId));
 
 	useEffect(() => {
 		const open = (): void => {
@@ -44,7 +46,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 			setPage('settings');
 		};
 
-		const unsubscribe = window.nectisse?.subscriptions?.onSettings(open);
+		const unsubscribe = actions.onSettings(open);
 
 		const key = (event: KeyboardEvent): void => {
 			if ((event.metaKey || event.ctrlKey) && event.key === ',') {
@@ -62,29 +64,14 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 			unsubscribe?.();
 			window.removeEventListener('keydown', key);
 		};
-	}, [demo]);
+	}, [demo, actions]);
 
 	useEffect(() => {
 		if (!demo) {
-			document.documentElement.dataset.theme = state.preferences.theme;
-			document.documentElement.classList.toggle('dark', state.preferences.theme === 'night');
+			document.documentElement.dataset.theme = state.theme;
+			document.documentElement.classList.toggle('dark', state.theme === 'night');
 		}
-	}, [state.preferences.theme, demo]);
-
-	useEffect(() => {
-		if (!window.nectisse?.metadata) {
-			return;
-		}
-
-		const apply = (next: Awaited<ReturnType<typeof window.nectisse.metadata.getState>>): void => setMetadataTask(next.tasks.find((task) => task.id === next.activeId));
-
-		const unsubscribe = window.nectisse.metadata.onState(apply);
-		void window.nectisse.metadata
-			.getState()
-			.then(apply)
-			.catch(() => {});
-		return unsubscribe;
-	}, []);
+	}, [state.theme, demo]);
 
 	useEffect(() => {
 		document.querySelector('.page-scroll')?.scrollTo(0, 0);
@@ -117,8 +104,8 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 		}
 	};
 
-	const followed = state.subscriptions.filter((sub) => sub.following);
-	const active = state.tasks.find((task) => ['running', 'cancelling'].includes(task.status));
+	const followed = useSubscriptions((state) => state.subscriptions.filter((sub) => sub.following));
+	const active = useSubscriptions((state) => state.tasks.find((task) => ['running', 'cancelling'].includes(task.status)));
 	const exitDemo = (): void => {
 		setDemo(false);
 		requestAnimationFrame(() => document.getElementById('open-visual-demo')?.focus());
@@ -164,13 +151,13 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 							<span>{item.label}</span>
 							{item.page === 'query' ? (
 								<kbd>⌘ K</kbd>
-							) : item.page === 'updates' && state.entries.some((entry) => !entry.read) ? (
+							) : item.page === 'updates' && state.unread > 0 ? (
 								<span className="unread-count" aria-hidden="true">
-									{state.entries.filter((entry) => !entry.read).length}
+									{state.unread}
 								</span>
 							) : item.page === 'library' ? (
 								<span className="nav-count" aria-hidden="true">
-									{libraryState.works.length}
+									{libraryCount}
 								</span>
 							) : item.page === 'creators' ? (
 								<span className="nav-count" aria-hidden="true">
@@ -226,13 +213,13 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 			<section className="app-main">
 				<WorkspaceToolbar
 					page={page === 'query' ? '资料查询' : page === 'library' ? '作品收藏' : page === 'creators' ? '演员与创作者' : page === 'updates' ? '更新' : '设置'}
-					theme={state.preferences.theme}
+					theme={state.theme}
 					onQuery={() => {
 						setPage('query');
 						setWorkSeed({ query: '', token: Date.now() });
 					}}
 					onTheme={() => {
-						void invoke({ action: 'preferences', value: { ...state.preferences, theme: state.preferences.theme === 'cream' ? 'night' : 'cream' } });
+						void actions.updatePreferences({ theme: state.theme === 'cream' ? 'night' : 'cream' });
 					}}
 				/>
 				<main className="page-scroll">
@@ -278,7 +265,7 @@ export function Workspace({ runtime, bridgeError, onRetry }: { runtime: RuntimeS
 						{metadataTask && (
 							<button
 								onClick={() => {
-									void window.nectisse.metadata.cancel(metadataTask.id);
+									void actions.metadata.cancel(metadataTask.id);
 								}}
 							>
 								取消资料查询

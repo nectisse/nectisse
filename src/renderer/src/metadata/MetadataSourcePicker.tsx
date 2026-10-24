@@ -3,8 +3,8 @@ import { Check, ChevronDown, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { METADATA_IDS, SOURCE_LABELS } from '../../../shared/sources';
-import type { AllSource, SourceId } from '../../../shared/sources';
+import { METADATA_IDS, SOURCE_LABELS } from '@shared/sources';
+import type { AllSource, SourceId } from '@shared/sources';
 
 export function MetadataSourcePicker({
 	selected,

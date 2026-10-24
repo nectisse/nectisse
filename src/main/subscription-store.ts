@@ -1,14 +1,12 @@
+import { DEFAULT_PREFERENCES, preferencesSchema, type Preferences } from '@shared/preferences';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ImageAsset } from '../shared/metadata';
+import type { ImageAsset } from '@shared/metadata';
 import {
-	DEFAULT_PREFERENCES,
-	preferencesSchema,
 	subscriptionSchema,
 	followTaskSchema,
-	type Preferences,
 	type FollowCandidate,
 	type Subscription,
 	type FeedEntry,
@@ -16,7 +14,7 @@ import {
 	type FollowTask,
 	type AllSource,
 	type ImageCache,
-} from '../shared/subscriptions';
+} from '@shared/subscriptions';
 
 export interface Cipher {
 	available: () => boolean;

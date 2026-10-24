@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SOURCES } from '../src/shared/sources';
-import { allowedSourceUrl } from '../src/shared/source-identity';
-import { DEFAULT_PREFERENCES } from '../src/shared/subscriptions';
+import { SOURCES } from '@shared/sources';
+import { allowedSourceUrl } from '@shared/source-identity';
+import { DEFAULT_PREFERENCES } from '@shared/subscriptions';
 import { sourceCooldownSeconds, sourceTransport } from '../src/main/source-policy';
 
 test('来源页面覆盖完整登记目录，独立图床按图片域名清单校验', () => {

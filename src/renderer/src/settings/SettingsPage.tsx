@@ -1,5 +1,7 @@
+import { usePreferences, useDesktopActions } from '@/state';
+import type { PreferencesPatch, Preferences } from '@shared/preferences';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Bell, Check, FileText, Globe2, HardDrive, Monitor, Network, Palette } from 'lucide-react';
+import { Bell, Check, FileText, Globe2, HardDrive, Magnet, Monitor, Network, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { PageHeader } from '@/components/page-layout';
@@ -9,9 +11,8 @@ import { Label } from '@/components/ui/label';
 import { OptionSelect } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { FollowProvider, Preferences } from '../../../shared/subscriptions';
-import { StatusBadge } from '../prototype/components';
-import { useSubscriptions } from './context';
+import type { FollowProvider } from '@shared/subscriptions';
+import { StatusBadge } from '@/components/status-badge';
 import { SourceCatalog } from './SourceCatalog';
 import { DiagnosticsDialog } from './DiagnosticsDialog';
 
@@ -30,6 +31,7 @@ function SettingRow({ label, description, children }: { label: string; descripti
 const sections = [
 	{ value: 'sources', label: '来源与账号', icon: Globe2 },
 	{ value: 'subscriptions', label: '订阅管理', icon: Bell },
+	{ value: 'magnets', label: '磁链搜索', icon: Magnet },
 	{ value: 'network', label: '网络与存储', icon: Network },
 	{ value: 'general', label: '外观与应用', icon: Palette },
 ] as const;
@@ -47,18 +49,18 @@ export function SettingsPage({
 	section: SettingsSection;
 	onSectionChange: (section: SettingsSection) => void;
 }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
-	const [proxy, setProxy] = useState(state.preferences.proxyUrl);
+	const preferences = usePreferences((state) => state);
+	const { updatePreferences } = useDesktopActions();
+	const [proxy, setProxy] = useState(preferences.proxyUrl);
 	const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 	const diagnosticsTrigger = useRef<HTMLButtonElement | null>(null);
-	const preferences = state.preferences;
 
 	useEffect(() => {
 		setProxy(preferences.proxyUrl);
 	}, [preferences.proxyUrl]);
 
-	const save = async (patch: Partial<Preferences>): Promise<void> => {
-		const reply = await invoke({ action: 'preferences', value: { ...preferences, ...patch } });
+	const save = async (patch: PreferencesPatch): Promise<void> => {
+		const reply = await updatePreferences(patch);
 		if (reply.ok) {
 			toast.success('设置已保存', { id: 'settings-save' });
 		} else {
@@ -89,6 +91,65 @@ export function SettingsPage({
 				</TabsList>
 				<TabsContent value="sources">
 					<SourceCatalog onAdd={onAdd} save={save} />
+				</TabsContent>
+				<TabsContent value="magnets">
+					<section className="settings-section settings-preferences" aria-labelledby="magnet-source-heading">
+						<div className="settings-section-heading">
+							<h2 id="magnet-source-heading">搜索来源</h2>
+							<p>仅在作品详情中按作品编号查询。</p>
+						</div>
+						<Card className="settings-card gap-0 py-0 ring-0">
+							<SettingRow label="Sukebei" description="https://sukebei.nyaa.si/">
+								<Switch
+									aria-label="启用磁链搜索"
+									checked={preferences.magnetSearch.enabled}
+									onCheckedChange={(enabled) => {
+										void save({ magnetSearch: { enabled } });
+									}}
+								/>
+							</SettingRow>
+						</Card>
+					</section>
+					<section className="settings-section settings-preferences" aria-labelledby="magnet-options-heading">
+						<div className="settings-section-heading">
+							<h2 id="magnet-options-heading">查询策略</h2>
+						</div>
+						<Card className="settings-card gap-0 py-0 ring-0">
+							<SettingRow label="每次结果上限" description="按站点顺序取首页匹配结果。">
+								<OptionSelect
+									aria-label="磁链结果上限"
+									value={preferences.magnetSearch.maxResults}
+									disabled={!preferences.magnetSearch.enabled}
+									onValueChange={(maxResults) => {
+										void save({ magnetSearch: { maxResults } });
+									}}
+									options={[
+										{ value: 5, label: '5 条' },
+										{ value: 10, label: '10 条' },
+										{ value: 20, label: '20 条' },
+									]}
+								/>
+							</SettingRow>
+							<SettingRow label="连接方式">
+								<OptionSelect
+									aria-label="磁链连接方式"
+									value={preferences.magnetSearch.transport}
+									disabled={!preferences.magnetSearch.enabled}
+									onValueChange={(transport) => {
+										void save({ magnetSearch: { transport } });
+									}}
+									options={[
+										{ value: 'httpx', label: '标准连接' },
+										{ value: 'fingerprint', label: '浏览器指纹' },
+									]}
+								/>
+							</SettingRow>
+							<div className="settings-card-note">
+								<Network size={14} />
+								<p>代理沿用“网络与存储”中的设置。更改查询配置会停止正在进行的磁链查询。</p>
+							</div>
+						</Card>
+					</section>
 				</TabsContent>
 				<TabsContent value="subscriptions">
 					<section className="settings-section settings-preferences">

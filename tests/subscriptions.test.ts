@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { SubscriptionStore, type Cipher } from '../src/main/subscription-store';
 import { SubscriptionsService } from '../src/main/subscriptions-service';
 import { PythonTaskHost, TaskCancelledError } from '../src/main/python-host';
-import type { FollowCandidate } from '../src/shared/subscriptions';
+import type { FollowCandidate } from '@shared/subscriptions';
 const candidate: FollowCandidate = {
 	provider: 'fanbox',
 	ref: 'testcreator',

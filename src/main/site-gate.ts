@@ -1,5 +1,5 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import { SOURCE_BY_ID, SOURCES, type AllSource } from '../shared/sources';
+import { SOURCE_BY_ID, SOURCES, type AllSource } from '@shared/sources';
 import type { SubscriptionStore } from './subscription-store';
 
 /** 资料和订阅共用同一站点闸门；同主机的三份 Wiki 共用间隔与冷却。 */

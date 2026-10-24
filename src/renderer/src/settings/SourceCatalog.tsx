@@ -1,7 +1,9 @@
+import { useSubscriptions, useDesktopActions } from '@/state';
+import { toast } from '@/components/ui/sonner';
+import type { PreferencesPatch } from '@shared/preferences';
 import { Fragment, useRef, useState } from 'react';
 import { ChevronDown, ExternalLink, Image, KeyRound, ListFilter, ListOrdered, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/sonner';
 import { EmptyState } from '@/components/empty-state';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,15 +11,15 @@ import { Label } from '@/components/ui/label';
 import { OptionSelect } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DEFAULT_METADATA_ORDER, SOURCES, isFollowProvider, type SourceSpec } from '../../../shared/sources';
-import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY } from '../../../shared/cover-selection';
-import type { AllSource, FollowProvider, Preferences } from '../../../shared/subscriptions';
-import { StatusBadge } from '../prototype/components';
-import { useSubscriptions } from './context';
+import { DEFAULT_METADATA_ORDER, SOURCES, isFollowProvider, type SourceSpec } from '@shared/sources';
+import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY } from '@shared/cover-selection';
+import type { AllSource, FollowProvider } from '@shared/subscriptions';
+import { StatusBadge } from '@/components/status-badge';
 import { SourcePriorityDialog } from './SourcePriorityDialog';
 
 function Credential({ provider }: { provider: AllSource }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ encryptionAvailable: state.encryptionAvailable, sources: state.sources }));
+	const { invoke } = useDesktopActions();
 	const [cookie, setCookie] = useState('');
 	const [busy, setBusy] = useState(false);
 	const present = state.sources.find((row) => row.id === provider)?.credentialPresent;
@@ -92,9 +94,10 @@ function SourceDetail({
 }: {
 	source: SourceSpec;
 	onAdd: (provider?: FollowProvider) => void;
-	save: (patch: Partial<Preferences>) => Promise<void>;
+	save: (patch: PreferencesPatch) => Promise<void>;
 }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ preferences: state.preferences, sources: state.sources }));
+	const { invoke } = useDesktopActions();
 	const preferences = state.preferences;
 	const status = state.sources.find((row) => row.id === source.id);
 	const transport =
@@ -105,7 +108,9 @@ function SourceDetail({
 				? preferences.javdbTransport
 				: ['dmm', 'r18dev', 'fc2'].includes(source.id)
 					? 'httpx'
-					: 'fingerprint');
+					: source.id === 'fc2ppvdb'
+						? 'browser'
+						: 'fingerprint');
 	return (
 		<div className="source-detail" id={`source-detail-${source.id}`}>
 			<div className="source-detail-about">
@@ -114,7 +119,17 @@ function SourceDetail({
 				<dl className="source-detail-facts">
 					<div>
 						<dt>账号</dt>
-						<dd>{!source.available ? '前置条件见来源说明' : source.credential ? (status?.credentialPresent ? 'Cookie 已保存' : '未配置 Cookie') : '公开资料连接'}</dd>
+						<dd>
+							{transport === 'browser'
+								? '独立浏览器会话，验证后自动保留'
+								: !source.available
+									? '前置条件见来源说明'
+									: source.credential
+										? status?.credentialPresent
+											? 'Cookie 已保存'
+											: '未配置 Cookie'
+										: '公开资料连接'}
+						</dd>
 					</div>
 					<div>
 						<dt>最近访问</dt>
@@ -162,16 +177,21 @@ function SourceDetail({
 							className="w-full"
 							value={transport}
 							onValueChange={(value) => {
-								void save({ sourceTransports: { ...preferences.sourceTransports, [source.id]: value as 'httpx' | 'fingerprint' } });
+								void save({ sourceTransports: { [source.id]: value as 'httpx' | 'fingerprint' | 'browser' } });
 							}}
 							options={[
+								...(source.id === 'fc2ppvdb' ? [{ value: 'browser', label: '浏览器会话（推荐）' }] : []),
 								{ value: 'httpx', label: '标准连接' },
 								{ value: 'fingerprint', label: '浏览器指纹' },
 							]}
 						/>
-						<p className="source-detail-note">沿用全局代理；浏览器指纹不等于完成登录或验证。</p>
+						<p className="source-detail-note">
+							{source.id === 'fc2ppvdb' && transport === 'browser'
+								? '使用本机 Chrome / Edge 的独立会话，沿用全局代理；验证后自动复用，无需粘贴 Cookie。'
+								: '沿用全局代理；浏览器指纹不等于完成登录或验证。'}
+						</p>
 					</div>
-					{source.credential && <Credential key={source.id} provider={source.id} />}
+					{source.credential && transport !== 'browser' && <Credential key={source.id} provider={source.id} />}
 				</div>
 			)}
 		</div>
@@ -189,8 +209,9 @@ const capabilities = (source: SourceSpec): string =>
 
 const statusLabel = (value: string | undefined): string => (value?.includes('尚未验证') ? '待验证' : value === '最近访问成功' ? '最近成功' : value || '未检查');
 
-export function SourceCatalog({ onAdd, save }: { onAdd: (provider?: FollowProvider) => void; save: (patch: Partial<Preferences>) => Promise<void> }): React.JSX.Element {
-	const { state } = useSubscriptions();
+export function SourceCatalog({ onAdd, save }: { onAdd: (provider?: FollowProvider) => void; save: (patch: PreferencesPatch) => Promise<void> }): React.JSX.Element {
+	const state = useSubscriptions((state) => ({ preferences: state.preferences, sources: state.sources }));
+	const { invoke } = useDesktopActions();
 	const [filter, setFilter] = useState('all');
 	const [selected, setSelected] = useState<AllSource | null>(null);
 	const [priorityOpen, setPriorityOpen] = useState<'cover' | 'metadata' | null>(null);
@@ -286,11 +307,13 @@ export function SourceCatalog({ onAdd, save }: { onAdd: (provider?: FollowProvid
 												aria-label={`启用 ${source.name}`}
 												disabled={!source.available}
 												checked={preferences.enabledSources.includes(source.id)}
-												onCheckedChange={(checked) => {
-													void save({
-														enabledSources: checked
-															? [...preferences.enabledSources, source.id]
-															: preferences.enabledSources.filter((id) => id !== source.id),
+												onCheckedChange={(enabled) => {
+													void invoke({ action: 'source-enabled', source: source.id, enabled }).then((reply) => {
+														if (reply.ok) {
+															toast.success('设置已保存', { id: 'settings-save' });
+														} else {
+															toast.error(reply.message || '设置未保存', { id: 'settings-save' });
+														}
 													});
 												}}
 											/>

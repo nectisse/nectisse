@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { LibraryService } from '../src/main/library-service';
-import { metadataRecordSchema, type ImageAsset } from '../src/shared/metadata';
+import { metadataRecordSchema, type ImageAsset } from '@shared/metadata';
 
 const bytes = Buffer.from('independently validated source image fixture');
 const asset: ImageAsset = { sha256: createHash('sha256').update(bytes).digest('hex'), width: 2184, height: 1468, bytes: bytes.length, format: 'JPEG', quality: 'standard' };

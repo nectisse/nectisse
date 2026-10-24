@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BellPlus, Check, ExternalLink, LoaderCircle, Pause, Play, RefreshCw, Sparkles, Users, X } from 'lucide-react';
+import { useSubscriptions, useDesktopActions } from '@/state';
+import { feedDate, formatTimestamp as date } from '@/lib/format-date';
+import { EntryList } from '@/updates/EntryList';
+import { TaskProgress } from './TaskProgress';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, BellPlus, ExternalLink, Pause, Play, RefreshCw, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { EmptyState } from '@/components/empty-state';
@@ -8,46 +12,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { OptionSelect } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
-import { FeedImage, FeedItem } from '@/components/feed-item';
-import { UpdateDetailDialog } from '@/components/update-detail-dialog';
-import { ReviewTabs, StatusBadge } from '../prototype/components';
-import type { FollowProvider, Subscription, FeedEntry } from '../../../shared/subscriptions';
-import { useSubscriptions } from './context';
+
+import { ContentTabs } from '@/components/content-tabs';
+import { StatusBadge } from '@/components/status-badge';
+import type { FollowProvider, Subscription } from '@shared/subscriptions';
 import { IdentityAvatar } from './IdentityAvatar';
-import { FOLLOW_IDS, SOURCE_LABELS } from '../../../shared/sources';
+import { SOURCE_LABELS } from '@shared/sources';
 
 const providerName = (value: FollowProvider): string => SOURCE_LABELS[value];
 
-const date = (value: string): string => (value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '尚未检查');
-
-export function TaskProgress(): React.JSX.Element | null {
-	const { state, invoke } = useSubscriptions();
-	const active = state.tasks.find((task) => task.kind !== 'lookup' && ['running', 'cancelling'].includes(task.status));
-
-	return active ? (
-		<div className="live-task-progress" role="status">
-			<LoaderCircle className="spin" />
-			<div>
-				<strong>{active.phase}</strong>
-				<p>{active.kind === 'covers' ? '自动补齐已收录条目的封面；查询操作优先，取消后需手动重试。' : '限当前来源与对象；停止后保留已取得资料。'}</p>
-			</div>
-			<Button
-				size="sm"
-				variant="outline"
-				disabled={active.status === 'cancelling'}
-				onClick={() => {
-					void invoke({ action: 'cancel', id: active.id });
-				}}
-			>
-				<X />
-				取消任务
-			</Button>
-		</div>
-	) : null;
-}
-
 function SubscriptionRow({ subscription: sub, onOpen }: { subscription: Subscription; onOpen?: (id: string) => void }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ preferences: state.preferences, tasks: state.tasks }));
+	const { invoke } = useDesktopActions();
 	const busy = state.tasks.some((task) => task.kind !== 'covers' && ['running', 'cancelling'].includes(task.status));
 
 	const update = async (value: Parameters<typeof invoke>[0]): Promise<void> => {
@@ -215,7 +191,7 @@ export function SubscriptionList({
 	kind?: SubscriptionKind;
 	onKindChange?: (kind: SubscriptionKind) => void;
 }): React.JSX.Element {
-	const { state } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ subscriptions: state.subscriptions }));
 	const [localKind, setLocalKind] = useState<SubscriptionKind>('actors');
 	const [archived, setArchived] = useState(false);
 	const kind = controlledKind ?? localKind;
@@ -249,7 +225,7 @@ export function SubscriptionList({
 					</Label>
 				}
 			>
-				<ReviewTabs
+				<ContentTabs
 					segmented
 					value={kind}
 					onChange={setKind}
@@ -290,7 +266,7 @@ export function SubscriptionsPage({
 	onSettings: () => void;
 	onWork: (code: string) => void;
 }): React.JSX.Element {
-	const { state } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ subscriptions: state.subscriptions }));
 	const [selected, setSelected] = useState('');
 	const [kind, setKind] = useState<SubscriptionKind>('actors');
 	useEffect(() => {
@@ -341,7 +317,7 @@ export function SubscriptionsPage({
 }
 
 function CollectedEntries({ subscriptionId, onWork }: { subscriptionId: string; onWork: (code: string) => void }): React.JSX.Element {
-	const { state } = useSubscriptions();
+	const state = useSubscriptions((state) => ({ entries: state.entries }));
 	const entries = state.entries.filter((entry) => entry.subscriptionId === subscriptionId);
 	const [page, setPage] = useState(1);
 	const pageSize = 20;
@@ -376,321 +352,5 @@ function CollectedEntries({ subscriptionId, onWork }: { subscriptionId: string; 
 				</footer>
 			)}
 		</section>
-	);
-}
-
-function feedDate(value: string, dateOnly = false): string {
-	if (!value) {
-		return '未提供';
-	}
-	if (dateOnly) {
-		const calendarDate = value.match(/^(\d{4})[-./](\d{2})[-./](\d{2})/);
-		if (calendarDate) {
-			return `${calendarDate[1]}/${calendarDate[2]}/${calendarDate[3]}`;
-		}
-	}
-	const parsed = new Date(value);
-	return Number.isNaN(parsed.valueOf())
-		? '未提供'
-		: parsed.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', ...(!dateOnly && { hour: '2-digit', minute: '2-digit' }), hour12: false });
-}
-
-function feedTitle(entry: FeedEntry): string {
-	const title = entry.title || '来源未提供标题';
-	if (entry.code && title.startsWith(entry.code) && /^[\s·|:：-]/.test(title.slice(entry.code.length))) {
-		return title.slice(entry.code.length).replace(/^[\s·|:：-]+/, '') || title;
-	}
-	return title;
-}
-
-function entryCategory(entry: FeedEntry): string {
-	return entry.provider === 'javdb'
-		? '演员新作'
-		: ['kemono', 'pawchive', 'coomer'].includes(entry.provider)
-			? '归档收录'
-			: entry.provider === 'rule34video'
-				? '作者关联发布'
-				: '创作者动态';
-}
-
-function EntryImage({ entry }: { entry: FeedEntry }): React.JSX.Element {
-	const { state } = useSubscriptions();
-	const sub = state.subscriptions.find((sub) => sub.id === entry.subscriptionId);
-	const status = entry.imageCache?.status;
-	const paused = !sub?.following || !sub.enabled || sub.autoPaused || !state.preferences.enabledSources.includes(entry.provider);
-	const cooling = state.sources.some((source) => source.id === entry.provider && source.cooldownUntil > Date.now());
-	const unavailable = !entry.thumbnailUrl
-		? '来源无图'
-		: status === 'failed'
-			? '封面未取得'
-			: status === 'cancelled'
-				? '缓存已取消'
-				: status === 'evicted'
-					? '缓存已清理'
-					: paused
-						? '缓存已暂停'
-						: status === 'loading'
-							? '正在缓存'
-							: status === 'retry' || cooling
-								? '等待重试'
-								: '排队缓存';
-	return (
-		<FeedImage
-			key={`${entry.imageAsset?.sha256 ?? ''}:${status ?? ''}`}
-			src={entry.imageAsset ? `nectisse-cover://updates/${entry.imageAsset.sha256}` : undefined}
-			unavailable={unavailable}
-			alt={`${entry.title || '来源内容'} · 来源封面`}
-		/>
-	);
-}
-
-export function EntryList({ entries, onWork }: { entries: FeedEntry[]; onWork: (code: string) => void }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
-	const [selection, setSelected] = useState<FeedEntry>();
-	const selected = state.entries.find((entry) => entry.id === selection?.id) ?? selection;
-	const returnFocus = useRef<HTMLElement | null>(null);
-
-	const open = (entry: FeedEntry): void => {
-		returnFocus.current = document.activeElement as HTMLElement;
-		setSelected(entry);
-		void invoke({ action: 'read', ids: [entry.id], read: true });
-	};
-
-	return (
-		<>
-			{entries.length ? (
-				<div className="feed-items real-feed-list">
-					{entries.map((entry) => (
-						<FeedItem
-							key={entry.id}
-							itemId={entry.id}
-							className="real-feed-entry"
-							title={feedTitle(entry)}
-							accessibleTitle={entry.title || '来源未提供标题'}
-							summary={entry.summary || (entry.restricted ? '来源未提供可见摘要' : '来源未提供摘要')}
-							author={entry.name}
-							source={providerName(entry.provider)}
-							category={entryCategory(entry)}
-							code={entry.code}
-							flags={[...(entry.initial ? [{ label: '初次收录' }] : []), ...(entry.restricted ? [{ label: '正文受限', warning: true }] : [])]}
-							read={entry.read}
-							image={<EntryImage entry={entry} />}
-							published={
-								<span
-									title={
-										entry.publishedAt
-											? `${entry.provider === 'javdb' ? '发行日期' : '发布时间'}：${entry.publishedPrecision === 'date' || entry.provider === 'javdb' ? feedDate(entry.publishedAt, true) : date(entry.publishedAt)}${entry.publishedPrecision === 'approximate' ? '（估算）' : ''}`
-											: '来源未提供日期'
-									}
-								>
-									{entry.provider === 'javdb' ? '发行' : '发布'}{' '}
-									<time dateTime={entry.publishedAt || undefined}>
-										{feedDate(entry.publishedAt, entry.provider === 'javdb' || entry.publishedPrecision === 'date')}
-									</time>
-									{entry.publishedPrecision === 'approximate' ? '（约）' : ''}
-								</span>
-							}
-							discovered={
-								<span title={`发现时间：${date(entry.firstSeenAt)}`}>
-									发现 <time dateTime={entry.firstSeenAt}>{feedDate(entry.firstSeenAt)}</time>
-								</span>
-							}
-							onOpen={() => open(entry)}
-							onRead={() => {
-								void invoke({ action: 'read', ids: [entry.id], read: !entry.read });
-							}}
-							onCode={() => onWork(entry.code)}
-						/>
-					))}
-				</div>
-			) : (
-				<EmptyState icon={Sparkles} title="还没有可显示的内容" description="关注并完成检查后，来源实际提供的动态或目录会出现在这里。" />
-			)}
-			<UpdateDetailDialog
-				open={!!selected}
-				onClose={() => setSelected(undefined)}
-				title={selected?.title || '来源内容'}
-				author={selected?.name || ''}
-				avatar={selected && <IdentityAvatar identity={state.subscriptions.find((sub) => sub.id === selected.subscriptionId) ?? { name: selected.name }} small />}
-				source={selected ? providerName(selected.provider) : ''}
-				category={selected ? entryCategory(selected) : ''}
-				code={selected?.code}
-				image={selected && <EntryImage key={selected.id} entry={selected} />}
-				details={
-					selected
-						? [
-								{
-									label: selected.provider === 'javdb' ? '发行日期' : '发布时间',
-									value: (
-										<time dateTime={selected.publishedAt || undefined}>
-											{feedDate(selected.publishedAt, selected.provider === 'javdb' || selected.publishedPrecision === 'date')}
-											{selected.publishedPrecision === 'approximate' ? '（估算）' : ''}
-										</time>
-									),
-								},
-								{ label: '来源页面', value: <span title={selected.url}>{new URL(selected.url).hostname}</span> },
-								{ label: '发现时间', value: <time dateTime={selected.firstSeenAt}>{date(selected.firstSeenAt)}</time> },
-							]
-						: []
-				}
-				summary={selected?.provider === 'javdb' ? '' : selected?.summary || ''}
-				notice={
-					selected?.provider === 'javdb'
-						? undefined
-						: selected?.restricted
-							? '仅显示来源公开提供的内容。'
-							: selected?.partial
-								? '完整正文尚未取得，可查看原文。'
-								: undefined
-				}
-				onOpenSource={() => {
-					if (selected) {
-						void invoke({ action: 'open', kind: 'entry', id: selected.id });
-					}
-				}}
-				onWork={
-					selected?.code
-						? () => {
-								onWork(selected.code);
-								setSelected(undefined);
-							}
-						: undefined
-				}
-				returnFocus={returnFocus}
-			/>
-		</>
-	);
-}
-
-export function UpdatesPage({ onWork, onAdd }: { onWork: (code: string) => void; onAdd: () => void }): React.JSX.Element {
-	const { state, invoke } = useSubscriptions();
-	const [filter, setFilter] = useState<'unread' | 'all'>('unread');
-	const [kind, setKind] = useState('all');
-	const [page, setPage] = useState(1);
-	const pageSize = 20;
-	const entries = state.entries.filter(
-		(entry) =>
-			(filter === 'all' || !entry.read) &&
-			(kind === 'all' || (kind === 'creators' && entry.provider !== 'javdb') || (kind === 'actors' && entry.provider === 'javdb') || entry.provider === kind),
-	);
-	const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
-	const currentPage = Math.min(page, pageCount);
-	const start = (currentPage - 1) * pageSize;
-	const pageEntries = entries.slice(start, start + pageSize);
-
-	// Reading the last unread items can remove a page while its detail dialog remains open.
-	useEffect(() => {
-		setPage((value) => Math.min(value, pageCount));
-	}, [pageCount]);
-
-	const changePage = (value: number, focusHeading = true): void => {
-		setPage(Math.min(Math.max(value, 1), pageCount));
-		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
-		if (focusHeading) {
-			document.getElementById('page-heading')?.focus({ preventScroll: true });
-		}
-	};
-
-	const readPage = async (): Promise<void> => {
-		const ids = pageEntries.filter((entry) => !entry.read).map((entry) => entry.id);
-
-		if (!ids.length) {
-			return;
-		}
-		const reply = await invoke({ action: 'read', ids, read: true });
-		if (reply.ok) {
-			toast.success(`已将本页 ${ids.length} 条更新标为已读`, { id: 'updates-read-page' });
-		} else {
-			toast.error(reply.message || '已读状态未能保存', { id: 'updates-read-page', duration: 8000 });
-		}
-	};
-
-	return (
-		<div className="page real-updates">
-			<PageHeader
-				title="更新"
-				description={`${state.entries.filter((entry) => !entry.read).length} 条未读，来自演员新作与创作者动态。`}
-				actions={
-					<Button variant="outline" size="sm" onClick={onAdd}>
-						<Users />
-						管理关注
-					</Button>
-				}
-			/>
-			<TaskProgress />
-			<PageToolbar
-				label="更新工具栏"
-				className="updates-toolbar"
-				actions={
-					<>
-						<Button
-							variant="ghost"
-							size="sm"
-							disabled={
-								!state.entries.some(
-									(entry) => entry.thumbnailUrl && !entry.imageAsset && ['failed', 'cancelled', 'evicted', 'retry'].includes(entry.imageCache?.status ?? ''),
-								)
-							}
-							onClick={() => {
-								void invoke({ action: 'retry-images' });
-							}}
-						>
-							<RefreshCw />
-							重试未缓存封面
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							disabled={!pageEntries.some((entry) => !entry.read)}
-							onClick={() => {
-								void readPage();
-							}}
-						>
-							<Check />
-							本页全部已读
-						</Button>
-					</>
-				}
-			>
-				<ReviewTabs
-					segmented
-					value={filter}
-					onChange={(value) => {
-						setFilter(value);
-						changePage(1, false);
-					}}
-					label="阅读状态"
-					items={[
-						{ value: 'unread', label: '未读' },
-						{ value: 'all', label: '全部' },
-					]}
-				/>
-				<OptionSelect
-					className="update-type"
-					aria-label="更新类型"
-					value={kind}
-					onValueChange={(value) => {
-						setKind(value);
-						changePage(1, false);
-					}}
-					options={[
-						{ value: 'all', label: '所有类型' },
-						{ value: 'actors', label: '演员新作' },
-						{ value: 'creators', label: '创作者动态' },
-						...FOLLOW_IDS.map((id) => ({ value: id, label: SOURCE_LABELS[id] })),
-					]}
-				/>
-				<span className="page-toolbar-count">{entries.length} 条更新</span>
-			</PageToolbar>
-			<EntryList entries={pageEntries} onWork={onWork} />
-			{entries.length > 0 && (
-				<footer className="updates-pagination">
-					<p role="status" aria-live="polite">
-						第 {start + 1}–{start + pageEntries.length} 条，共 {entries.length} 条<span>每页 {pageSize} 条</span>
-					</p>
-					<Pagination page={currentPage} pageCount={pageCount} onPageChange={changePage} />
-				</footer>
-			)}
-		</div>
 	);
 }

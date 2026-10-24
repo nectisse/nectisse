@@ -1,29 +1,8 @@
-import { SOURCE_BY_ID, type AllSource } from './sources';
-import type { CoverCandidate } from './metadata';
+import { SOURCE_BY_ID, type AllSource } from '@shared/sources';
+import type { CoverCandidate } from '@shared/metadata';
 
-export const COVER_SOURCE_IDS = [
-	'dmm',
-	'mgstage',
-	'prestige',
-	'faleno',
-	'dahlia',
-	'1pondo',
-	'fc2',
-	'duga',
-	'kmib',
-	'javbus',
-	'avbase',
-	'fc2cmadb',
-	'fc2ppvdb',
-	'javten',
-	'javarchive',
-	'avsox',
-	'fc2club',
-	'freejavbt',
-	'airav',
-] as const;
-export type CoverSource = (typeof COVER_SOURCE_IDS)[number];
-export const DEFAULT_COVER_PRIORITY: CoverSource[] = ['dmm'];
+export { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY, type CoverSource } from '@shared/cover-sources';
+import { COVER_SOURCE_IDS, DEFAULT_COVER_PRIORITY, type CoverSource } from '@shared/cover-sources';
 
 export function coverSource(cover: Pick<CoverCandidate, 'source' | 'url'>): AllSource {
 	let host: string;

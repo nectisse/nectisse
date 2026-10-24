@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { coverSchema, metadataRecordSchema, type MetadataRecord } from './metadata';
+import { coverSchema, metadataRecordSchema, type MetadataRecord } from '@shared/metadata';
 
 export const libraryIdSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const savedWorkSchema = z.object({

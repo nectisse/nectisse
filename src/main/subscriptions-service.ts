@@ -1,3 +1,4 @@
+import { mergePreferences } from '@shared/preferences';
 import { EventEmitter } from 'node:events';
 import { randomUUID, createHash } from 'node:crypto';
 import { mkdir, rm, readFile, rename, chmod, stat, readdir } from 'node:fs/promises';
@@ -19,13 +20,13 @@ import {
 	type Subscription,
 	type FollowCandidate,
 	type FeedEntry,
-} from '../shared/subscriptions';
-import { imageAssetSchema, type ImageAsset } from '../shared/metadata';
-import { ALL_IDS, SOURCE_BY_ID } from '../shared/sources';
-import { allowedSourceUrl, canonicalFollow as canonical, validFollowEntry } from '../shared/source-identity';
+} from '@shared/subscriptions';
+import { imageAssetSchema, type ImageAsset } from '@shared/metadata';
+import { ALL_IDS, SOURCE_BY_ID } from '@shared/sources';
+import { allowedSourceUrl, canonicalFollow as canonical, validFollowEntry } from '@shared/source-identity';
 import { readSubscriptionPart } from './subscription-read';
 import { InitializationStep } from './initialization-step';
-import { subscriptionFailureContext } from '../shared/subscription-failure';
+import { subscriptionFailureContext } from '@shared/subscription-failure';
 import { sourceCooldownSeconds, sourceTransport } from './source-policy';
 
 const outcomeSchema = z.object({
@@ -177,47 +178,46 @@ export class SubscriptionsService extends EventEmitter {
 				throw new Error('应用正在退出');
 			}
 			// Background images yield their worker to an explicit user operation.
-			if (['lookup', 'follow', 'check', 'credential', 'preferences'].includes(command.action)) {
+			if (['lookup', 'follow', 'check', 'credential', 'preferences', 'preferences-patch', 'source-enabled'].includes(command.action)) {
 				await this.yieldImages();
 			}
-			if (command.action === 'preferences') {
-				if (command.value.proxyMode === 'custom') {
-					const url = new URL(command.value.proxyUrl);
-					if (
-						!['http:', 'https:', 'socks5:', 'socks5h:'].includes(url.protocol) ||
-						!url.hostname ||
-						url.username ||
-						url.password ||
-						url.pathname !== '/' ||
-						url.search ||
-						url.hash
-					) {
-						throw new Error('请输入不含账号密码的 HTTP / HTTPS / SOCKS 代理地址');
-					}
-				}
+			if (command.action === 'query-sources') {
+				this.store.savePreferences({ ...this.store.preferences(), querySources: command.sources });
+			} else if (command.action === 'preferences' || command.action === 'preferences-patch' || command.action === 'source-enabled') {
 				const previous = this.store.preferences();
-				this.store.savePreferences(command.value);
-				if (previous.creatorMinutes !== command.value.creatorMinutes || previous.performerMinutes !== command.value.performerMinutes) {
+				const patch =
+					command.action === 'preferences'
+						? command.value
+						: command.action === 'preferences-patch'
+							? command.patch
+							: {
+									enabledSources: command.enabled
+										? [...new Set([...previous.enabledSources, command.source])]
+										: previous.enabledSources.filter((id) => id !== command.source),
+								};
+				const next = command.action === 'preferences' ? mergePreferences(command.value, {}) : mergePreferences(previous, patch);
+				this.store.savePreferences(next);
+				if (previous.creatorMinutes !== next.creatorMinutes || previous.performerMinutes !== next.performerMinutes) {
 					for (const sub of this.store.subscriptions()) {
 						if (sub.lastCheckedAt && sub.intervalMinutes === null) {
-							const minutes = sub.provider === 'javdb' ? command.value.performerMinutes : command.value.creatorMinutes;
+							const minutes = sub.provider === 'javdb' ? next.performerMinutes : next.creatorMinutes;
 							sub.nextCheckAt = new Date(Math.max(Date.parse(sub.lastCheckedAt) + minutes * 60_000, this.store.source(sub.provider).cooldownUntil)).toISOString();
 							this.store.saveSubscription(sub);
 						}
 					}
 				}
 				if (
-					previous.proxyMode !== command.value.proxyMode ||
-					previous.proxyUrl !== command.value.proxyUrl ||
-					previous.fanboxTransport !== command.value.fanboxTransport ||
-					previous.javdbTransport !== command.value.javdbTransport ||
-					JSON.stringify(previous.sourceTransports) !== JSON.stringify(command.value.sourceTransports)
+					previous.proxyMode !== next.proxyMode ||
+					previous.proxyUrl !== next.proxyUrl ||
+					previous.fanboxTransport !== next.fanboxTransport ||
+					previous.javdbTransport !== next.javdbTransport ||
+					JSON.stringify(previous.sourceTransports) !== JSON.stringify(next.sourceTransports)
 				) {
 					for (const provider of ALL_IDS) {
 						this.store.saveSource(provider, { ...this.store.source(provider), cooldownUntil: 0, state: '连接设置已更改，尚未验证', message: '' });
 					}
 				}
-				if (this.active && !command.value.enabledSources.includes(this.active.task.provider)) {
+				if (this.active && !next.enabledSources.includes(this.active.task.provider)) {
 					await this.cancel(this.active.task.id);
 				}
 			} else if (command.action === 'credential') {
