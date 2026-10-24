@@ -136,6 +136,29 @@
 	font-size: 11px;
 	line-height: 18px;
 }
+.query-history-footer-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+}
+.query-history-confirm[data-slot='dialog-content'] {
+	width: min(400px, calc(100vw - 48px));
+	gap: 12px;
+	padding: 20px;
+}
+.query-history-confirm h2 {
+	font-size: 16px;
+	font-weight: 550;
+}
+.query-history-confirm p {
+	color: var(--muted-foreground);
+	font-size: 12px;
+	line-height: 1.8;
+}
+.query-history-confirm .query-history-footer-actions {
+	margin-top: 8px;
+}
 @media (max-width: 1100px) {
 	.live-routing {
 		display: none;

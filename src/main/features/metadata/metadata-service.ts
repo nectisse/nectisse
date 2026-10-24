@@ -52,6 +52,7 @@ export class MetadataService extends EventEmitter {
 	private execution: Promise<void> | undefined;
 	private disposed = false;
 	private storageError = '';
+	private clearingHistory = false;
 	private readonly directory: string;
 	private readonly cache: string;
 
@@ -210,6 +211,9 @@ export class MetadataService extends EventEmitter {
 		if (this.store.activeId) {
 			return { ok: false, message: '已有查询正在进行，请先取消或等待完成' };
 		}
+		if (this.clearingHistory) {
+			return { ok: false, message: '正在清空查询记录，请稍后再查询' };
+		}
 		let plan;
 		try {
 			plan = planQuery(request);
@@ -265,6 +269,29 @@ export class MetadataService extends EventEmitter {
 			this.emit('state', this.getState());
 		});
 		return { ok: true, taskId: task.id, cached: false };
+	}
+
+	async clearHistory(): Promise<QueryReply> {
+		if (this.disposed || this.storageError) {
+			return { ok: false, message: this.storageError || '应用正在退出' };
+		}
+		if (this.store.activeId || this.clearingHistory) {
+			return { ok: false, message: '请先等待当前操作完成，或取消正在进行的查询' };
+		}
+		this.clearingHistory = true;
+		const previous = this.store.tasks;
+		this.store.tasks = [];
+		try {
+			await this.commit();
+			return { ok: true };
+		} catch {
+			this.store.tasks = previous;
+			this.store.revision++;
+			this.emit('state', this.getState());
+			return { ok: false, message: '查询记录未能清空，原有记录已保留，请检查本地存储。' };
+		} finally {
+			this.clearingHistory = false;
+		}
 	}
 
 	async cancel(id: string): Promise<void> {

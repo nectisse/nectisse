@@ -3,7 +3,7 @@ import { firstAvailableField, WorkDetail, CoverImage } from '@/entities/work';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { preferredCover } from '@shared/cover-selection';
 import type { FollowProvider } from '@shared/subscriptions';
-import { Check, ChevronRight, Clock3, Info, LoaderCircle, RefreshCw, Search, Square, X } from 'lucide-react';
+import { Check, ChevronRight, Clock3, Eraser, Info, LoaderCircle, RefreshCw, Search, Square, Trash2, X } from 'lucide-react';
 import { MetadataSourcePicker } from './MetadataSourcePicker';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -69,10 +69,12 @@ function SourceStatus({ task }: { task: QueryTask }): React.JSX.Element {
 
 export default function MetadataWorkspace({
 	seed,
+	onClear,
 	onPerformer,
 	renderSaveAction,
 }: {
 	seed?: { query: string; token: number };
+	onClear?: () => void;
 	onPerformer?: (query: string, provider?: FollowProvider) => void;
 	renderSaveAction?: (input: SaveActionInput) => ReactNode;
 } = {}): React.JSX.Element {
@@ -85,6 +87,7 @@ export default function MetadataWorkspace({
 		if (seed) {
 			setQuery(seed.query);
 			setSelectedCode('');
+			setSelectedTaskId(null);
 		}
 	}, [seed]);
 
@@ -92,18 +95,20 @@ export default function MetadataWorkspace({
 	const { error: metadataError } = useMetadataStatus();
 	const [query, setQuery] = useState('');
 	const [savingSources, setSavingSources] = useState(false);
-	const [selectedTaskId, setSelectedTaskId] = useState('');
+	const [selectedTaskId, setSelectedTaskId] = useState<string | null>('');
 	const [selectedCode, setSelectedCode] = useState('');
+	const [recentOpen, setRecentOpen] = useState(false);
+	const [clearConfirm, setClearConfirm] = useState(false);
+	const [clearingHistory, setClearingHistory] = useState(false);
 
 	useEffect(() => {
-		if (seed && !selectedCode) {
+		if (seed && !selectedCode && !recentOpen) {
 			document.getElementById('work-query')?.focus();
 		}
-	}, [seed, selectedCode]);
+	}, [seed, selectedCode, recentOpen]);
 
 	const initializationError = !!metadataError;
 	const [submitting, setSubmitting] = useState(false);
-	const [recentOpen, setRecentOpen] = useState(false);
 	const historyTrigger = useRef<HTMLButtonElement | null>(null);
 	const historyTitle = useRef<HTMLHeadingElement | null>(null);
 
@@ -111,13 +116,45 @@ export default function MetadataWorkspace({
 		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
 	}, [selectedCode]);
 
-	const task = state.tasks.find((task) => task.id === selectedTaskId) ?? state.tasks[0];
+	const task = selectedTaskId === null ? undefined : (state.tasks.find((task) => task.id === selectedTaskId) ?? state.tasks[0]);
 	const active = state.tasks.find((task) => task.id === state.activeId);
-	const busy = submitting || !!active || savingSources || reading;
+	const busy = submitting || !!active || savingSources || reading || clearingHistory;
 	const sources = subscriptionState.preferences.querySources;
 	const activeSources = sources.filter((source) => subscriptionState.preferences.enabledSources.includes(source));
 	const currentGroups = groupRecordsByCode(task?.records ?? [], subscriptionState.preferences.metadataPriority);
 	const selectedRecords = currentGroups.find((group) => group[0]?.code === selectedCode);
+
+	const clearQuery = (focus = true): void => {
+		setQuery('');
+		setSelectedCode('');
+		setSelectedTaskId(null);
+		onClear?.();
+		document.querySelector('.page-scroll')?.scrollTo({ top: 0, behavior: 'instant' });
+		if (focus) {
+			document.getElementById('work-query')?.focus();
+		}
+	};
+
+	const clearHistory = async (): Promise<void> => {
+		if (busy) {
+			return;
+		}
+		setClearingHistory(true);
+		try {
+			const reply = await actions.metadata.clearHistory();
+			if (reply.ok) {
+				clearQuery(false);
+				setClearConfirm(false);
+				toast.success('查询记录已清空', { id: 'query-history-clear' });
+			} else {
+				toast.error(reply.message || '查询记录未能清空，请重试。', { id: 'query-history-clear', duration: 8000 });
+			}
+		} catch {
+			toast.error('查询服务暂未响应，记录未能清空，请重试。', { id: 'query-history-clear', duration: 8000 });
+		} finally {
+			setClearingHistory(false);
+		}
+	};
 
 	const saveSources = async (sources: SourceId[]): Promise<void> => {
 		if (busy) {
@@ -218,10 +255,24 @@ export default function MetadataWorkspace({
 				title="资料查询"
 				description="查询作品资料与封面，留下每项信息的来处。"
 				actions={
-					<Button ref={historyTrigger} variant="outline" size="sm" onClick={() => setRecentOpen(true)} aria-haspopup="dialog" aria-expanded={recentOpen}>
-						<Clock3 />
-						查询记录
-					</Button>
+					<>
+						<Button
+							variant="outline"
+							size="sm"
+							disabled={busy || (!query && !task)}
+							onClick={() => {
+								clearQuery();
+								toast.success('当前查询已清空', { id: 'metadata-query' });
+							}}
+						>
+							<Eraser />
+							清空查询
+						</Button>
+						<Button ref={historyTrigger} variant="outline" size="sm" onClick={() => setRecentOpen(true)} aria-haspopup="dialog" aria-expanded={recentOpen}>
+							<Clock3 />
+							查询记录
+						</Button>
+					</>
 				}
 			/>
 			<form
@@ -387,9 +438,46 @@ export default function MetadataWorkspace({
 					</div>
 					<footer className="query-history-footer">
 						<span>{state.tasks.length} 条记录</span>
-						<DialogClose render={<Button variant="outline" size="sm" />}>关闭</DialogClose>
+						<div className="query-history-footer-actions">
+							<Button variant="ghost" size="sm" disabled={busy || initializationError || !state.tasks.length} onClick={() => setClearConfirm(true)}>
+								<Trash2 />
+								清空记录
+							</Button>
+							<DialogClose render={<Button variant="outline" size="sm" disabled={clearingHistory} />}>关闭</DialogClose>
+						</div>
 					</footer>
 				</DialogContent>
+				<Dialog
+					open={clearConfirm}
+					onOpenChange={(open) => {
+						if (!clearingHistory) {
+							setClearConfirm(open);
+						}
+					}}
+				>
+					<DialogContent className="query-history-confirm" finalFocus={historyTitle}>
+						<DialogTitle>清空全部查询记录？</DialogTitle>
+						<DialogDescription>
+							将删除全部 {state.tasks.length} 条查询记录及其资料快照，无法撤销。作品收藏、订阅和图片缓存不受影响。
+						</DialogDescription>
+						<div className="query-history-footer-actions">
+							<Button variant="outline" size="sm" disabled={clearingHistory} onClick={() => setClearConfirm(false)}>
+								取消
+							</Button>
+							<Button
+								variant="destructive"
+								size="sm"
+								disabled={busy}
+								onClick={() => {
+									void clearHistory();
+								}}
+							>
+								{clearingHistory ? <LoaderCircle className="spin" /> : <Trash2 />}
+								{clearingHistory ? '正在清空' : '确认清空记录'}
+							</Button>
+						</div>
+					</DialogContent>
+				</Dialog>
 			</Dialog>
 			{task ? (
 				<>

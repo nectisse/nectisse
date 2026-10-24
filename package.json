@@ -33,6 +33,8 @@
 		"test:library": "node scripts/review-library.mjs",
 		"test:storage": "node scripts/review-storage.mjs",
 		"test:queries": "node scripts/review-queries.mjs",
+		"test:query-history": "node scripts/review-query-history.mjs",
+		"test:query-clear": "node scripts/review-query-clear.mjs",
 		"test:diagnostics": "node scripts/review-diagnostics.mjs",
 		"package:mac": "npm run icons:build && npm run build && node scripts/package-mac.mjs",
 		"check:architecture": "node scripts/check-architecture.mjs",

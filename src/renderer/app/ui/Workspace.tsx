@@ -254,6 +254,7 @@ export function Workspace({
 					{page === 'query' ? (
 						<MetadataWorkspace
 							seed={workSeed}
+							onClear={() => setWorkSeed({ query: '', token: Date.now() })}
 							onPerformer={(query, provider = 'javdb') => add(provider, query)}
 							renderSaveAction={(props) => <SaveWorkButton {...props} onOpen={openLibrary} />}
 						/>
