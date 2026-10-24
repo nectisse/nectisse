@@ -124,6 +124,8 @@ const bridge: DesktopBridge = {
 
 		query: async (request) => queryReplySchema.parse(await ipcRenderer.invoke(METADATA_IPC.query, queryRequestSchema.parse(request))),
 
+		clearHistory: async () => queryReplySchema.parse(await ipcRenderer.invoke(METADATA_IPC.clearHistory)),
+
 		cancel: async (id) => {
 			await ipcRenderer.invoke(METADATA_IPC.cancel, id);
 		},

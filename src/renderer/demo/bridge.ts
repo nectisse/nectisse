@@ -226,6 +226,11 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 			getState: metadataChannel.get,
 			retry: metadataChannel.get,
 			onState: metadataChannel.subscribe,
+			clearHistory: async () => {
+				metadata.tasks = [];
+				metadataChannel.publish();
+				return { ok: true };
+			},
 			query: async (input) => {
 				if (!queryRequestSchema.safeParse(input).success) {
 					return { ok: false, message: '请输入至少两个字符并选择资料来源' };

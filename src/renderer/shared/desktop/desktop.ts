@@ -85,6 +85,8 @@ export function createDesktopState(
 		metadata: {
 			query: async (...args: Parameters<DesktopBridge['metadata']['query']>) => required().metadata.query(...args),
 
+			clearHistory: async () => required().metadata.clearHistory(),
+
 			cancel: async (id: string) => required().metadata.cancel(id),
 			openSource: async (taskId: string, recordId: string) => required().metadata.openSource(taskId, recordId),
 		},

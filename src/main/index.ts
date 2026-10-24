@@ -416,6 +416,11 @@ if (!app.requestSingleInstanceLock()) {
 				await waitMetadata();
 				await metadata!.cancel(z.string().uuid().parse(id));
 			});
+			ipcMain.handle(METADATA_IPC.clearHistory, async (event) => {
+				trusted(event);
+				await waitMetadata();
+				return metadata!.clearHistory();
+			});
 			ipcMain.handle(METADATA_IPC.openSource, async (event, input: unknown) => {
 				trusted(event);
 				await waitMetadata();

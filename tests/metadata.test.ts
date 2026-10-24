@@ -1,10 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rename, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { MetadataService } from '../src/main/features/metadata/metadata-service';
+import { LibraryService } from '../src/main/features/library/library-service';
 import { planQuery, codeFromCid } from '../src/main/features/metadata/metadata-input';
 import { proxyFromRules } from '../src/main/platform/network/network-route';
 import { PythonTaskHost, TaskCancelledError } from '../src/main/platform/python/python-host';
@@ -211,6 +213,87 @@ test('查询持久化、来源隔离与缓存命中：同一小时不重复派�
 	assert.equal(calls, 2);
 });
 
+test('清空查询历史持久化到磁盘，保留收藏资料与原图，下一次查询不再命中旧快照', async (t) => {
+	const root = await directory(t);
+	let calls = 0;
+	const run: Run = async (_method, _params, options) => {
+		calls++;
+		options?.onProgress?.({ event: 'record', record: record() });
+		return success;
+	};
+	const service = new MetadataService(root, { run }, undefined, 0);
+	await service.initialize();
+	t.after(() => service.stop());
+	await service.query(request);
+	const task = await finished(service);
+	const library = new LibraryService(root);
+	await library.initialize();
+	t.after(() => library.stop());
+	const bytes = Buffer.from('collection-original');
+	const asset = {
+		sha256: createHash('sha256').update(bytes).digest('hex'),
+		width: 800,
+		height: 541,
+		bytes: bytes.length,
+		format: 'JPEG' as const,
+		quality: 'standard' as const,
+	};
+	const source = record();
+	source.covers = [{ id: 'b'.repeat(64), source: 'dmm', url: 'https://pics.dmm.co.jp/ssis00057pl.jpg', identity: 'source-matched', asset }];
+	const saved = await library.save([source], undefined, false, async () => ({ bytes, asset }));
+	const before = JSON.parse(await readFile(join(root, 'metadata/state.json'), 'utf8'));
+	const clearing = service.clearHistory();
+	assert.equal((await service.query(request)).ok, false, '历史清空写盘期间不派发新查询');
+	assert.equal((await clearing).ok, true);
+	assert.deepEqual(service.getState().tasks, []);
+	assert.equal(service.sourceUrl(task.id, task.records[0]!.id), undefined);
+	const persisted = JSON.parse(await readFile(join(root, 'metadata/state.json'), 'utf8'));
+	assert.deepEqual(persisted.tasks, []);
+	assert.deepEqual(persisted.policies, before.policies, '清空历史不能重置限流与失败退避');
+	assert.deepEqual(library.getWork(saved.id)?.records, saved.records);
+	assert.deepEqual((await library.image(asset.sha256))?.bytes, bytes);
+	await service.stop();
+	const restored = new MetadataService(root, { run }, undefined, 0);
+	await restored.initialize();
+	t.after(() => restored.stop());
+	assert.deepEqual(restored.getState().tasks, []);
+	assert.equal((await restored.query(request)).cached, false);
+	await finished(restored);
+	assert.equal(calls, 2);
+});
+
+test('清空记录写入失败时回滚，内存与重启后的磁盘记录都保留', async (t) => {
+	const root = await directory(t);
+	const service = new MetadataService(
+		root,
+		{
+			run: async (_method, _params, options) => {
+				options?.onProgress?.({ event: 'record', record: record() });
+				return success;
+			},
+		},
+		undefined,
+		0,
+	);
+	await service.initialize();
+	t.after(() => service.stop());
+	await service.query(request);
+	await finished(service);
+	const tasks = service.getState().tasks;
+	await rename(join(root, 'metadata'), join(root, 'metadata-held'));
+	try {
+		assert.equal((await service.clearHistory()).ok, false);
+		assert.deepEqual(service.getState().tasks, tasks);
+	} finally {
+		await rename(join(root, 'metadata-held'), join(root, 'metadata'));
+	}
+	await service.stop();
+	const restored = new MetadataService(root, { run: async () => success });
+	await restored.initialize();
+	t.after(() => restored.stop());
+	assert.deepEqual(restored.getState().tasks, tasks);
+});
+
 test('来源失败保留先到资料，不伪装成完整成功', async (t) => {
 	const root = await directory(t);
 
@@ -291,6 +374,8 @@ test('取消先落盘，拒绝后续请求与迟到结果；重启不会复活�
 	t.after(() => service.stop());
 	const reply = await service.query(request);
 	await ready;
+	assert.equal((await service.clearHistory()).ok, false, '运行中的任务不能通过清空历史丢失取消与恢复状态');
+	assert.equal(service.getState().activeId, reply.taskId);
 	await service.cancel(reply.taskId!);
 	const result = await finished(service);
 	assert.equal(durableStatus, 'cancelling');

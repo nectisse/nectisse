@@ -51,6 +51,18 @@ test('示例查询、收藏、取消关注与恢复都经同一接口完成', as
 	subscriptionsStateSchema.parse(await bridge.subscriptions.getState());
 });
 
+test('演示清空查询记录只影响当前演示，保留收藏和关注', async () => {
+	const first = createDemoBridge();
+	const second = createDemoBridge();
+	const library = await first.library.getState();
+	const subscriptions = await first.subscriptions.getState();
+	assert.equal((await first.metadata.clearHistory()).ok, true);
+	assert.deepEqual((await first.metadata.getState()).tasks, []);
+	assert.deepEqual(await first.library.getState(), library);
+	assert.deepEqual(await first.subscriptions.getState(), subscriptions);
+	assert.ok((await second.metadata.getState()).tasks.length > 0);
+});
+
 test('示例接口不执行原站、凭据、剪贴板或诊断文件操作', async () => {
 	const bridge = createDemoBridge();
 	const state = await bridge.subscriptions.getState();

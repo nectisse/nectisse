@@ -110,6 +110,7 @@ export interface MetadataBridge {
 	getState: () => Promise<MetadataState>;
 	retry: () => Promise<MetadataState>;
 	query: (request: QueryRequest) => Promise<QueryReply>;
+	clearHistory: () => Promise<QueryReply>;
 	cancel: (id: string) => Promise<void>;
 	openSource: (taskId: string, recordId: string) => Promise<void>;
 	onState: (callback: (state: MetadataState) => void) => () => void;
@@ -119,6 +120,7 @@ export const METADATA_IPC = {
 	get: 'nectisse:metadata-get',
 	retry: 'nectisse:metadata-retry',
 	query: 'nectisse:metadata-query',
+	clearHistory: 'nectisse:metadata-clear-history',
 	cancel: 'nectisse:metadata-cancel',
 	openSource: 'nectisse:metadata-open-source',
 	state: 'nectisse:metadata-state',
