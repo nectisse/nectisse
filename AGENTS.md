@@ -1,8 +1,8 @@
-# 代码格式
+# Code style
 
-- TS/TSX 遵循 `.prettierrc.json`。
-- 控制语句补齐大括号；函数、方法和独立回调定义之间空一行。
-- 变量就近声明，一条语句只声明一个变量，循环初始化除外。
-- 类成员按字段、构造函数、公开方法、私有方法排列；相关函数放在一起，保持依赖与 React Hooks 的执行顺序。
-- 语义清晰且等价时，优先使用 `?.`、`??` 和 `?:`，保留 `0`、`false`、空字符串的原有含义。
-- 注释简短，只解释必要的意图与边界。
+- Follow `.prettierrc.json` for TS/TSX files.
+- Use braces for control statements. Leave a blank line between function, method, and standalone callback definitions.
+- Declare variables close to where they are used, with one variable per statement except in loop initializers.
+- Order class members as fields, constructors, public methods, then private methods. Keep related functions together and preserve dependency order and the execution order of React Hooks.
+- Prefer `?.`, `??`, and `?:` when they are clear and semantically equivalent, preserving the meaning of `0`, `false`, and empty strings.
+- Keep comments concise, explaining intent and boundary conditions only where needed.
