@@ -1,123 +1,132 @@
-# Nectisse
+<div align="center">
+  <img src="resources/icons/icon-macos.png" width="128" height="128" alt="Nectisse app icon" />
+  <h1>Nectisse</h1>
+  <p>
+    <a href="README.md"><strong>English</strong></a> · <a href="README.zh-CN.md">简体中文</a>
+  </p>
+  <p>A private home for your collection and the creators you follow.</p>
+  <p>
+    <a href="https://github.com/nectisse/nectisse/releases/latest">Download for macOS</a> ·
+    <a href="#screenshots">Screenshots</a> ·
+    <a href="https://github.com/nectisse/nectisse/issues">Report an issue</a>
+  </p>
+  <p><sub>v0.1.0 · macOS 13+ · Apple Silicon (arm64)</sub></p>
+</div>
 
-把作品资料、喜欢的封面和关注的更新，收进自己的桌面空间。
+Nectisse is a private collection and creator update app for macOS. Look up works, save their metadata and covers, browse your collection as a cover wall, and follow new releases and creator posts in one place.
 
-Nectisse 是一款面向 macOS 的私人作品资料与创作者更新应用。查询作品，收藏资料与封面，用照片墙浏览喜欢的作品，在同一处追踪演员新作和创作者动态。
+## Download and install
 
-**首版 v0.1.0 · macOS 13 及以上 · Apple Silicon（arm64）**
+Download a package from [GitHub Releases](https://github.com/nectisse/nectisse/releases), move `Nectisse.app` to **Applications**, and open it.
 
-## 下载与安装
+The app includes its Python runtime, dependencies, and collection scripts. No separate Python, Node.js, developer tools, or manually started background service is required.
 
-从 [GitHub Releases](https://github.com/nectisse/nectisse/releases) 获取发布包，将 `Nectisse.app` 放入“应用程序”后双击打开。
+## Features
 
-应用已包含 Python 运行时、采集依赖与脚本，无需安装 Python、Node.js 或其他开发工具，也无需手动启动后台服务。
+- **Metadata and covers**: Search by work ID, title keywords, or a supported source URL. View titles, people, studios, series, release dates, tags, and descriptions, along with source links and retrieval times. Search methods and available fields vary by source.
+- **Compare sources**: Compare metadata from multiple sources in a work's detail view. Configure metadata precedence and cover-source priority separately. DMM / FANZA covers are preferred by default, with one selected cover per work.
+- **Your collection**: Save metadata and the selected full-resolution cover. Search by ID, title, people, studio, or tags, and sort by collection date, release date, or ID. After a new lookup, you decide whether to update an existing saved work.
+- **Fullscreen cover wall**: Browse your collection as a collage of varied cover sizes with narrow gaps. Drag, zoom, and search; click to preview a full cover or open a work's details. Your browsing position is preserved when you return.
+- **Follow performers and creators**: Look up identities, review candidates, and confirm follows in a dialog. Keep track of performer releases, creator announcements, and posts. Upload custom profile pictures or restore the source-provided image.
+- **Updates**: Browse performer releases with pagination and creator posts in a masonry layout that adapts to image proportions, ordered by publication time. Filter unread items, mark them as read, check manually or on a schedule, and cancel active tasks.
+- **Magnet search for a work**: Search Sukebei or JavTao from a work's detail view using its ID, with up to 20 results. Copy magnet links or open the original listing. An external shortcut opens Heima Cili for manual searches. The app does not provide playback or download tasks.
+- **Personal settings**: Choose between Cream Archive and Blackberry Night themes. Manage sources, subscriptions, proxies, image storage, and diagnostic logs in Settings.
 
-## 主要功能
+## Screenshots
 
-- **资料查询与封面**：使用作品编号、标题关键词或支持的原站链接查询，查看标题、人物、厂牌、系列、发行日期、标签与简介，以及资料来源和获取时间。检索方式与可取得字段因来源而异。
-- **来源与差异**：在作品详情中对照各来源的资料，在设置中分别管理资料采用顺序和封面优先级；默认优先选择 DMM / FANZA 封面，每部作品只保留选定封面。
-- **作品收藏**：保存作品资料与选定封面原图，按编号、标题、人物、厂牌和标签搜索，按收藏时间、发行日期或编号排序。重新查询后，由你决定是否更新已有收藏。
-- **全屏照片墙**：用大小错落、窄间隙的封面拼贴浏览收藏，支持拖动、缩放与搜索；点击预览完整封面或查看作品资料，返回时保留浏览位置。
-- **演员与创作者关注**：在弹窗中查询身份、核对并确认关注，查看演员新作、创作者公告与动态。支持手动上传头像，也可恢复站点头像。
-- **更新流**：演员新作分页浏览，创作者帖子以自适应图片比例的瀑布流展示，并按发布时间倒序排列。支持未读筛选、已读标记、手动检查、定时检查与任务取消。
-- **作品磁链搜索**：仅在作品详情中，按当前编号查询 Sukebei 或 JavTao，最多展示 20 条匹配结果，支持复制磁链和查看来源页面；也可打开黑马磁力首页自行搜索。应用不提供播放和下载任务。
-- **个性化设置**：提供“奶油档案”和“黑莓夜间”两种主题，集中管理来源、订阅、代理、图片缓存和诊断日志。
+**Your collection** — Browse saved works as cover cards, with search, sorting, and access to their full details.
 
-## 界面预览
-
-**作品收藏**：以资料卡片浏览已收藏作品，搜索、排序并查看完整资料。
-
-![Nectisse 作品收藏：封面资料卡片、搜索与排序](resources/screenshots/1.png)
+![Nectisse collection with cover cards, search, and sorting](resources/screenshots/1.png)
 
 <details>
-<summary>全屏照片墙</summary>
+<summary>Fullscreen cover wall</summary>
 
-大小错落的封面拼贴，支持拖动、缩放与点击查看。
+A cover collage you can drag, zoom, and click to explore.
 
-![Nectisse 全屏照片墙：可拖动与缩放的收藏封面拼贴](resources/screenshots/2.png)
+![Nectisse fullscreen cover wall with a draggable, zoomable collage](resources/screenshots/2.png)
 
 </details>
 
 <details>
-<summary>演员列表与主页</summary>
+<summary>Performers and new releases</summary>
 
-浏览关注的演员，进入主页查看已收录作品、未读新作和更新状态。
+Browse the performers you follow, then open a profile to see collected works, unread releases, and update status.
 
-![Nectisse 演员列表：头像卡片、搜索与未读数量](resources/screenshots/3.png)
+![Nectisse performer browser with profile cards, search, and unread counts](resources/screenshots/3.png)
 
-![Nectisse 演员主页：人物资料与最近新作列表](resources/screenshots/4.png)
-
-</details>
-
-<details>
-<summary>创作者列表与动态</summary>
-
-按姓名或账号查找关注的创作者，在主页以瀑布流浏览图文动态。
-
-![Nectisse 创作者列表：头像、姓名、账号与未读数量](resources/screenshots/5.png)
-
-![Nectisse 创作者主页：人物资料与图文动态瀑布流](resources/screenshots/6.png)
+![Nectisse performer profile with personal details and recent releases](resources/screenshots/4.png)
 
 </details>
 
 <details>
-<summary>来源与账号设置</summary>
+<summary>Creators and posts</summary>
 
-集中管理来源开关与访问状态，分别设置封面优先级和资料采用顺序。
+Find followed creators by name or account, then browse their posts in an image-aware masonry layout.
 
-![Nectisse 来源与账号设置：来源状态、启用开关、封面选择与资料采用顺序](resources/screenshots/7.png)
+![Nectisse creator browser with profile pictures, names, accounts, and unread counts](resources/screenshots/5.png)
+
+![Nectisse creator profile with a masonry feed of text and image posts](resources/screenshots/6.png)
 
 </details>
 
-## 开始使用
+<details>
+<summary>Sources and accounts</summary>
 
-1. **配置来源与连接**：在“设置 → 来源与账号”启用需要的来源。连接有问题时，到“网络与存储”选择系统代理、直接连接或独立代理；独立代理支持 HTTP / SOCKS 地址。
-2. **查询并收藏作品**：在“资料查询”输入编号、关键词或原站链接，打开详情核对资料后点击“收藏作品”。进入“作品收藏”即可浏览资料卡片或全屏照片墙。
-3. **添加关注**：进入“演员与创作者”，点击“添加关注”，选择来源并输入演员名、创作者主页或站点身份，在弹窗内查询、确认关注。
-4. **检查更新**：进入“更新”或人物主页手动检查；需要定时检查时，在“设置 → 订阅管理”开启“自动检查”，再调整默认或单个订阅的频率。自动检查默认关闭。
+Manage enabled sources and access status, with separate controls for cover priority and metadata precedence.
 
-每次启动应用时，资料查询保持空白；之前的结果可以从“查询记录”中主动打开。当前查询和历史记录均可单独清空。
+![Nectisse source settings with access status, source switches, and priority controls](resources/screenshots/7.png)
 
-## 来源与访问范围
+</details>
 
-| 用途               | 已接入来源                                                                                                |
-| ------------------ | --------------------------------------------------------------------------------------------------------- |
-| 作品资料与封面     | DMM / FANZA、r18.dev、JavTao、AVBase、FC2、一本道，以及部分片商官网和其他资料站；各站提供的字段与图片不同 |
-| 演员查询与新作关注 | JavDB、JavTao                                                                                             |
-| 创作者动态         | FANBOX、X、Patreon、Kemono、Pawchive、Coomer                                                              |
-| 作品磁链           | Sukebei、JavTao；黑马磁力提供外部网站入口                                                                 |
+## Getting started
 
-完整来源列表、访问状态和连接选项见“设置 → 来源与账号”。已接入连接器不代表所有站点、作品和网络出口都已验证成功，可取得的内容取决于来源实际返回的数据、账号权限和网络状态。
+1. **Configure sources and connections.** Enable the sources you need in Settings. If connections fail, choose the system proxy, a direct connection, or a custom proxy in the network settings. Custom proxies support HTTP and SOCKS addresses.
+2. **Look up and save a work.** Enter a work ID, keywords, or a source URL in the metadata search page. Open the result, review its details, and save it to your collection. Browse saved works as cards or in the fullscreen cover wall.
+3. **Add a follow.** Open the performer or creator page and choose the add-follow action. Select a source, enter a performer name, creator URL, or site identity, then review and confirm the result in the dialog.
+4. **Check for updates.** Check manually from a person's profile. To schedule checks, enable automatic checking in the subscription settings, then adjust the default or per-subscription frequency. Automatic checking is off by default.
 
-- **X**：通过 FxEmbed 获取公开账号的本人原创帖，无需登录 X；不收录回复、引用和转发，第三方接口可能存在延迟或缺失。
-- **JavDB**：主要读取公开资料与演员目录，部分页面可能受到登录要求或地区限制。
-- **FC2PPV-DB**：浏览器验证使用本机 Chrome / Edge 的独立会话，验证后复用；此来源提供资料与人物，不提供封面。其他来源的浏览器验证支持以设置页说明为准。
-- **订阅覆盖**：检查采用有限范围的增量抓取，来源与检查阶段不同，范围也不同；不会自动抓取全部历史，覆盖情况会在人物主页注明。演员的新收录记录可能包含已发行作品，发行日期与发现时间分别保存。
+Metadata search starts empty whenever you launch the app. Open previous results from query history when you need them. You can clear the current search and saved query history separately.
 
-## 数据与图片缓存
+## Sources and access
 
-收藏、关注、查询记录、帖子摘要和已读状态保存在本机。查询与检查更新会访问所启用的第三方来源。
+| Purpose                           | Connected sources                                                                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Work metadata and covers          | DMM / FANZA, r18.dev, JavTao, AVBase, FC2, 1Pondo, selected studio websites, and other metadata sites. Fields and images vary by source. |
+| Performer lookup and new releases | JavDB, JavTao                                                                                                                            |
+| Creator posts                     | FANBOX, X, Patreon, Kemono, Pawchive, Coomer                                                                                             |
+| Magnet links for a work           | Sukebei and JavTao; Heima Cili is available as an external website shortcut.                                                             |
 
-| 内容                         | 保存方式                                                           |
-| ---------------------------- | ------------------------------------------------------------------ |
-| 作品资料、帖子摘要与已读状态 | 长期保存，不随普通图片缓存清理                                     |
-| 收藏作品                     | 资料与已保存的选定封面原图固定保留，可离线浏览                     |
-| 列表与照片墙图片             | 使用轻量缩略图，优先保留近期、未读和经常查看的图片                 |
-| 普通清晰原图                 | 查看详情时按需获取，纳入有容量上限的缓存                           |
-| 人物头像                     | 随关注信息保留；手动上传会复制到应用数据目录，移动原文件不影响显示 |
+The full source list, access status, and connection options are available in Settings. An integrated connector does not mean every site, work, or network location has been verified. Available content depends on the source response, account permissions, and network conditions.
 
-普通图片缓存默认上限为 **512 MiB**，可在“设置 → 网络与存储”调整或主动清理。设置中分别显示“收藏占用”和“可清理缓存”，清理后会显示释放的空间。
+- **X**: Uses FxEmbed to retrieve public posts authored by the account, without an X login. Replies, quotes, and reposts are excluded. The third-party service may return delayed or incomplete results.
+- **JavDB**: Reads public metadata and performer catalogs. Some pages may require login or be restricted by region.
+- **FC2PPV-DB**: Browser verification uses a separate session in a locally installed Chrome or Edge browser, which the app reuses afterward. This source provides metadata and people, but no covers. For other sources, refer to the verification options described in Settings.
+- **Subscription coverage**: Checks use bounded incremental fetching; the covered range varies by source and check stage. Full history is not fetched automatically. Coverage notes appear on each profile. Newly discovered performer entries may already have been released; release dates and discovery times are stored separately.
 
-图片过期后在查看时尝试刷新，刷新失败仍保留旧图；容量不足时先清理很久没看的原图，再清理旧缩略图。同一图片尽量共用文件。缺图时会尝试单独补取，无需重新查询整部作品或刷新整个订阅；补取仍需来源可访问。
+## Local data and image cache
 
-用户数据保存在 `~/Library/Application Support/Nectisse/`，独立于 `.app` 应用包。备份前请先退出应用，再备份整个数据目录。
+Your collection, follows, query history, post summaries, and read status are stored locally. Lookups and update checks contact the third-party sources you enable.
 
-## 运行与问题反馈
+| Content                                   | Storage policy                                                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Metadata, post summaries, and read status | Kept long-term, independent of ordinary image cache cleanup.                                                                   |
+| Saved works                               | Metadata and the saved, selected full-resolution cover are retained for offline browsing.                                      |
+| List and cover-wall images                | Lightweight thumbnails, prioritizing recent, unread, and frequently viewed images.                                             |
+| Other full-resolution images              | Fetched on demand when opening details, within a size-limited cache.                                                           |
+| Profile pictures                          | Kept with follows. Uploaded images are copied into the app's data directory, so moving the original file does not affect them. |
 
-关闭窗口后，App 仍在后台运行；开启自动检查时，会继续按设置检查订阅。点击 Dock 图标可以唤回窗口，使用 **⌘Q** 退出应用并停止后台任务。
+The ordinary image cache defaults to **512 MiB**. Adjust its limit or clear it manually in the network and storage settings. Collection storage and clearable cache usage are shown separately, and cleanup reports how much space was freed.
 
-遇到启动、资料读取或来源访问问题，可以在“设置 → 外观与应用 → 诊断与排查”查看并复制诊断信息。反馈时请附上复现步骤和应用版本，可通过 [GitHub Issues](https://github.com/nectisse/nectisse/issues) 提交。
+Expired images are refreshed when viewed; a failed refresh keeps the existing image. When space is needed, the app evicts full-resolution images that have not been viewed for a long time before older thumbnails. Identical images share files where possible. Missing images are fetched individually when viewed, without requiring a full work lookup or subscription refresh, provided the source is reachable.
 
-## 致谢
+User data is stored in `~/Library/Application Support/Nectisse/`, separately from the `.app` bundle. Quit the app before backing up the entire data directory.
 
-部分站点连接器、作品身份匹配与封面规则复用自 [Peach](https://github.com/peach-mitao/peach)，部分资料来源通过 amane 桥接。照片墙的矩形拼贴模板经 Peach 适配自 [Folia](https://github.com/chthollyphile/folia-major)。相关第三方许可与复用声明随应用分发。
+## Background operation and support
+
+Closing the window keeps the app running in the background. If automatic checking is enabled, subscription checks continue on schedule. Click the Dock icon to reopen the window, or press **⌘Q** to quit and stop background tasks.
+
+For startup, local data, or source access issues, open the diagnostics section in the appearance and application settings to view and copy a report. Include your app version and reproduction steps when reporting an issue through [GitHub Issues](https://github.com/nectisse/nectisse/issues).
+
+## Acknowledgments
+
+Some site connectors, work identity matching, and cover-selection rules are adapted from [Peach](https://github.com/peach-mitao/peach), with additional metadata sources bridged through amane. The cover wall's rectangular collage templates are adapted via Peach from [Folia](https://github.com/chthollyphile/folia-major). Third-party licenses and attribution are included with the app.
