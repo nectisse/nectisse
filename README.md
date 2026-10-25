@@ -23,6 +23,52 @@ Nectisse 是一款面向 macOS 的私人作品资料与创作者更新应用。�
 - **作品磁链搜索**：仅在作品详情中，按当前编号查询 Sukebei 或 JavTao，最多展示 20 条匹配结果，支持复制磁链和查看来源页面；也可打开黑马磁力首页自行搜索。应用不提供播放和下载任务。
 - **个性化设置**：提供“奶油档案”和“黑莓夜间”两种主题，集中管理来源、订阅、代理、图片缓存和诊断日志。
 
+## 界面预览
+
+**作品收藏**：以资料卡片浏览已收藏作品，搜索、排序并查看完整资料。
+
+![Nectisse 作品收藏：封面资料卡片、搜索与排序](resources/screenshots/1.png)
+
+<details>
+<summary>全屏照片墙</summary>
+
+大小错落的封面拼贴，支持拖动、缩放与点击查看。
+
+![Nectisse 全屏照片墙：可拖动与缩放的收藏封面拼贴](resources/screenshots/2.png)
+
+</details>
+
+<details>
+<summary>演员列表与主页</summary>
+
+浏览关注的演员，进入主页查看已收录作品、未读新作和更新状态。
+
+![Nectisse 演员列表：头像卡片、搜索与未读数量](resources/screenshots/3.png)
+
+![Nectisse 演员主页：人物资料与最近新作列表](resources/screenshots/4.png)
+
+</details>
+
+<details>
+<summary>创作者列表与动态</summary>
+
+按姓名或账号查找关注的创作者，在主页以瀑布流浏览图文动态。
+
+![Nectisse 创作者列表：头像、姓名、账号与未读数量](resources/screenshots/5.png)
+
+![Nectisse 创作者主页：人物资料与图文动态瀑布流](resources/screenshots/6.png)
+
+</details>
+
+<details>
+<summary>来源与账号设置</summary>
+
+集中管理来源开关与访问状态，分别设置封面优先级和资料采用顺序。
+
+![Nectisse 来源与账号设置：来源状态、启用开关、封面选择与资料采用顺序](resources/screenshots/7.png)
+
+</details>
+
 ## 开始使用
 
 1. **配置来源与连接**：在“设置 → 来源与账号”启用需要的来源。连接有问题时，到“网络与存储”选择系统代理、直接连接或独立代理；独立代理支持 HTTP / SOCKS 地址。
