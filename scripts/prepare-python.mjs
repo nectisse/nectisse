@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prunePythonRuntime, runtimeProfile, verifyPythonRuntime } from './python-runtime.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const version = (await readFile(join(root, '.python-version'), 'utf8')).trim();
@@ -21,7 +22,7 @@ const environment = {
 try {
 	const manifest = JSON.parse(await readFile(join(destination, 'manifest.json'), 'utf8'));
 	await access(join(destination, 'runtime', relativePython), constants.X_OK);
-	if (manifest.pythonVersion === version && manifest.requirementsSha256 === lockHash && manifest.target === target) {
+	if (manifest.pythonVersion === version && manifest.requirementsSha256 === lockHash && manifest.target === target && manifest.runtimeProfile === runtimeProfile) {
 		console.log(`随包 Python ${version} 已准备：${target}`);
 		process.exit(0);
 	}
@@ -55,11 +56,16 @@ try {
 		cwd: root,
 		stdio: 'inherit',
 	});
+	if (process.platform === 'darwin') {
+		await prunePythonRuntime(staging, version);
+		await verifyPythonRuntime(staging);
+	}
 	await writeFile(
 		join(staging, 'manifest.json'),
 		JSON.stringify(
 			{
-				schema: 1,
+				schema: 2,
+				runtimeProfile,
 				pythonVersion: version,
 				target,
 				requirementsSha256: lockHash,

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { readReleaseMetadata, verifyReleaseFiles } from './release-metadata.mjs';
 import { releaseCommand, verifySignature, verifySignedDmg, signingIdentity } from './release-signing.mjs';
 import { verifyApplication } from './verify-package.mjs';
+import { verifyDmgLayout } from './dmg.mjs';
 
 const arguments_ = process.argv.slice(2);
 let unsigned = false;
@@ -51,6 +52,7 @@ try {
 	}
 	await releaseCommand('/usr/bin/hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, installer]);
 	mounted = true;
+	await verifyDmgLayout(mount, metadata);
 	const mountedApp = join(mount, 'Nectisse.app');
 	assert.equal(await verifyApplication(mountedApp, { teamId: unsigned ? undefined : manifest.teamId }), digest, 'DMG and updater archive differ.');
 	if (!unsigned) {

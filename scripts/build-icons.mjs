@@ -8,10 +8,14 @@ const pythonRoot = join(root, '.build/python', `darwin-${process.arch}`);
 execFileSync(
 	join(pythonRoot, 'runtime/bin/python3'),
 	[
-		'-I', '-S', '-B', '-c',
-		'import runpy, sys; sys.path.insert(0, sys.argv[1]); runpy.run_path(sys.argv[2], run_name="__main__")',
+		'-I',
+		'-S',
+		'-B',
+		'-c',
+		'import runpy, sys; sys.path.insert(0, sys.argv[1]); [runpy.run_path(path, run_name="__main__") for path in sys.argv[2:]]',
 		join(pythonRoot, 'dependencies'),
 		join(root, 'scripts/build-icons.py'),
+		join(root, 'scripts/build-dmg-background.py'),
 	],
 	{ cwd: root, stdio: 'inherit' },
 );

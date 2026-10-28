@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { nativeBinaries } from './native-binaries.mjs';
+import { verifyPythonRuntime } from './python-runtime.mjs';
 
 const exec = promisify(execFile);
 const bundle = resolve('src-tauri/target/release/bundle');
@@ -42,7 +43,7 @@ export async function verifyApplication(app, { teamId } = {}) {
 	assert.ok(!(await readdir(join(app, 'Contents/Frameworks')).catch(() => [])).some((name) => /electron|chromium/i.test(name)));
 	const python = join(resources, 'python');
 	const binaries = await nativeBinaries(python);
-	assert.ok(binaries.some((file) => file.endsWith('/bin/python3.14')));
+	assert.ok(binaries.some((file) => file.endsWith('/runtime/bin/python3')));
 	assert.ok(binaries.some((file) => file.includes('/curl_cffi/')));
 	for (const file of binaries) {
 		assert.ok((await exec('/usr/bin/lipo', ['-archs', file])).stdout.trim().split(/\s+/).includes('arm64'));
@@ -51,10 +52,7 @@ export async function verifyApplication(app, { teamId } = {}) {
 			assert.ok((await exec('/usr/bin/codesign', ['--display', '--verbose=4', file])).stderr.includes(`TeamIdentifier=${teamId}`));
 		}
 	}
-	const probe = 'import sys; sys.path.insert(0,sys.argv[1]); import httpx,curl_cffi,PIL._imaging,lxml.etree,pydantic_core; print(sys.version.split()[0])';
-	const health = await exec(join(python, 'runtime/bin/python3'), ['-I', '-S', '-B', '-c', probe, join(python, 'dependencies')], {
-		env: { PATH: '/usr/bin:/bin', HOME: process.env.HOME, TMPDIR: process.env.TMPDIR },
-	});
+	const health = await verifyPythonRuntime(python);
 	assert.equal(health.stdout.trim(), (await readFile('.python-version', 'utf8')).trim());
 	for (const name of ['third-party/components.json', 'third-party/folia-wall.json', 'python/app/vendor/PEACH-LICENSE', 'python/app/vendor/amane/LICENSE']) {
 		assert.ok((await readFile(join(resources, name))).length > 0);

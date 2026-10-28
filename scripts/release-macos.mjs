@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rename, rm, readFile, symlink } from 'node:fs/promises';
+import { mkdir, mkdtemp, rename, rm, readFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -8,6 +8,7 @@ import { nativeBinaries } from './native-binaries.mjs';
 import { verifyApplication } from './verify-package.mjs';
 import { readReleaseMetadata, writeReleaseFiles, verifyReleaseFiles } from './release-metadata.mjs';
 import { prepareSigning, releaseCommand, notarize, verifySignature } from './release-signing.mjs';
+import { createDmg } from './dmg.mjs';
 
 const exec = promisify(execFile);
 const unsigned = process.argv.length === 3 && process.argv[2] === '--unsigned';
@@ -99,13 +100,9 @@ try {
 			await releaseCommand('/usr/bin/ditto', ['-c', '-k', '--keepParent', app, zip], buildEnv);
 			await notarize(zip, signing, app);
 		}
-		const installerRoot = join(staging, 'installer');
-		await mkdir(installerRoot);
-		await releaseCommand('/usr/bin/ditto', [app, join(installerRoot, 'Nectisse.app')], buildEnv);
-		await symlink('/Applications', join(installerRoot, 'Applications'));
 		const dmg = join(candidate, metadata.archives[0]);
-		console.log('Creating the final DMG from the stapled application.');
-		await releaseCommand('/usr/bin/hdiutil', ['create', '-volname', 'Nectisse', '-srcfolder', installerRoot, '-format', 'UDZO', '-ov', dmg], buildEnv);
+		console.log('Creating the customized DMG from the stapled application.');
+		await createDmg(app, dmg, metadata, staging, buildEnv);
 		if (signing) {
 			await releaseCommand('/usr/bin/codesign', [
 				'--force',

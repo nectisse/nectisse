@@ -1,7 +1,7 @@
 {
 	"name": "nectisse",
 	"productName": "Nectisse",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"private": true,
 	"description": "私人作品资料与创作者更新桌面应用",
 	"type": "module",
@@ -27,7 +27,7 @@
 		"release:mac": "node scripts/release-macos.mjs",
 		"release:mac:preview": "node scripts/release-macos.mjs --unsigned",
 		"release:verify": "node scripts/verify-release.mjs",
-		"format:check": "prettier --check src/renderer/shared/desktop/tauri-bridge.ts src-tauri/tauri.conf.json scripts/*release*.mjs scripts/*sign*.mjs scripts/native* scripts/verify-package.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
+		"format:check": "prettier --check src/renderer/shared/desktop/tauri-bridge.ts src-tauri/tauri.conf.json scripts/*release*.mjs scripts/*sign*.mjs scripts/native* scripts/python-runtime.mjs scripts/dmg.mjs scripts/build-icons.mjs scripts/prepare-python.mjs scripts/verify-package.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
 		"test:native:release": "npm run build && node scripts/native-e2e.mjs --release",
 		"licenses:generate": "node scripts/third-party-notices.mjs",
 		"licenses:check": "node scripts/third-party-notices.mjs --check",
