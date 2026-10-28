@@ -319,7 +319,7 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 		diagnostics: {
 			getReport: async () => ({
 				generatedAt: new Date().toISOString(),
-				environment: { appVersion: '0.1.0', system: '示例环境', architecture: '', electronVersion: '', pythonVersion: '', runtimePhase: 'ready' },
+				environment: { appVersion: '0.1.0', system: '示例环境', architecture: '', tauriVersion: '', pythonVersion: '', runtimePhase: 'ready' },
 				entries: [],
 				logStatus: 'ready',
 				ignoredLines: 0,

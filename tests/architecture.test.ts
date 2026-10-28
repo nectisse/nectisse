@@ -40,11 +40,6 @@ test('架构检查允许应用组合、功能内部实现及通过公开入口�
 		'src/renderer/shared/ui/button.tsx': 'export const Button = true;',
 		'src/renderer/shared/desktop/index.ts': "export { state } from './private';",
 		'src/renderer/shared/desktop/private.ts': 'export const state = true;',
-		'src/main/index.ts': "import './features/metadata';",
-		'src/main/features/metadata/index.ts': "export { service } from './service';",
-		'src/main/features/metadata/service.ts': "import '../../platform/python'; export const service = true;",
-		'src/main/platform/python/index.ts': "export { host } from './host';",
-		'src/main/platform/python/host.ts': 'export const host = true;',
 	});
 	assert.deepEqual(report.summary.violations, []);
 });
@@ -53,15 +48,6 @@ test('架构检查拒绝功能互引、私有入口、反向业务依赖及绕�
 	const report = await inspect({
 		'src/shared/illegal.ts': "import '../main/index';",
 		'src/main/index.ts': 'export const main = true;',
-		'src/main/platform/network/index.ts': "import '../../features/subscriptions';",
-		'src/main/platform/python/index.ts': "export { host } from './host';",
-		'src/main/platform/python/host.ts': 'export const host = true;',
-		'src/main/features/subscriptions/index.ts': 'export type Store = { name: string };',
-		'src/main/features/subscriptions/image-cache.ts': "import './image-backfill';",
-		'src/main/features/subscriptions/image-backfill.ts': "import './subscription-scheduler';",
-		'src/main/features/subscriptions/subscription-scheduler.ts': "import './subscriptions-service';",
-		'src/main/features/subscriptions/subscriptions-service.ts': 'export const facade = true;',
-		'src/main/features/metadata/illegal.ts': "import '../subscriptions'; import '../../platform/python/host';",
 		'src/renderer/shared/desktop/private.ts': 'export const state = true;',
 		'src/renderer/shared/desktop/illegal.ts': "import type { View } from '../../entities/work/ui/Detail'; export type State = View;",
 		'src/renderer/shared/ui/illegal.tsx': "import '../../shared/desktop/private'; import '../../features/library';",
@@ -91,12 +77,6 @@ test('架构检查拒绝功能互引、私有入口、反向业务依赖及绕�
 		'src-renderer-features-work-query-independent',
 		'src-renderer-features-library-public-interface',
 		'src-renderer-entities-work-public-interface',
-		'main-platform-has-no-business-dependencies',
-		'src-main-platform-python-public-interface',
-		'src-main-features-metadata-independent',
-		'subscription-image-cache-has-no-execution-dependencies',
-		'subscription-runners-have-no-coordination-dependencies',
-		'subscription-scheduler-has-no-facade-dependencies',
 	]) {
 		assert.ok(rules.has(rule), `missing violation: ${rule}; ${JSON.stringify(report.summary.violations)}`);
 	}

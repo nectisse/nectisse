@@ -1,1 +1,0 @@
-export { DiagnosticLog } from './diagnostics';

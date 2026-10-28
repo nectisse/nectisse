@@ -53,7 +53,7 @@ export const diagnosticEnvironmentSchema = z.object({
 	appVersion: z.string().max(100),
 	system: z.string().max(100),
 	architecture: z.string().max(32),
-	electronVersion: z.string().max(100),
+	tauriVersion: z.string().max(100),
 	pythonVersion: z.string().max(100),
 	runtimePhase: z.enum(['starting', 'ready', 'error', 'stopped', 'unavailable']),
 });
@@ -75,7 +75,7 @@ export function formatDiagnosticReport(report: DiagnosticReport): string {
 		`生成时间：${report.generatedAt}`,
 		`应用版本：${env.appVersion}`,
 		`系统：${env.system} (${env.architecture})`,
-		`Electron：${env.electronVersion}`,
+		`Tauri：${env.tauriVersion}`,
 		`Python：${env.pythonVersion || '尚未取得版本'} · ${phase}`,
 		'',
 		report.logStatus === 'unreadable' ? '本地日志文件暂不可访问；以下为当前可取得的记录。' : '最近异常记录（最多 32 条，时间为 UTC）：',

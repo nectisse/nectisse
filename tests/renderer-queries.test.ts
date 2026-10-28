@@ -67,7 +67,7 @@ function harness(t: { after: (cleanup: () => void) => void }) {
 		entries: [],
 		logStatus: 'ready',
 		ignoredLines: 0,
-		environment: { appVersion: '1', system: 'darwin', architecture: 'arm64', electronVersion: '45', pythonVersion: '3.14', runtimePhase: 'ready' },
+		environment: { appVersion: '1', system: 'darwin', architecture: 'arm64', tauriVersion: '45', pythonVersion: '3.14', runtimePhase: 'ready' },
 	});
 	let readReport = async (): Promise<DiagnosticReport> => report();
 	let copyReport: DesktopBridge['diagnostics']['copyReport'] = async () => ({ copied: true, report: report() });

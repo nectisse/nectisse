@@ -2,8 +2,7 @@
 node_modules/
 .venv/
 
-# Electron builds and bundled Python runtime
-/out/
+# Frontend builds and bundled Python runtime
 /dist/
 /.build/
 *.tsbuildinfo
@@ -44,3 +43,9 @@ npm-debug.log*
 /design/
 /.wu
 /docs/
+
+# Tauri and release output
+/src-tauri/target/
+/src-tauri/gen/
+/release/
+/work/

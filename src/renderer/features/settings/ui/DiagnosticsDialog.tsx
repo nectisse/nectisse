@@ -85,7 +85,7 @@ export function DiagnosticsDialog({ open, onClose, returnFocus }: { open: boolea
 						<div>
 							<dt>应用</dt>
 							<dd>Nectisse {report.environment.appVersion}</dd>
-							<small>Electron {report.environment.electronVersion}</small>
+							<small>Tauri {report.environment.tauriVersion}</small>
 						</div>
 						<div>
 							<dt>系统</dt>

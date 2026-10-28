@@ -15,6 +15,8 @@
 
 Nectisse is a private collection and creator update app for macOS. Look up works, save their metadata and covers, browse your collection as a cover wall, and follow new releases and creator posts in one place.
 
+A private collection workspace for macOS, built with Tauri and a Rust backend. No Node.js runtime is required.
+
 ## Download and install
 
 Download a package from [GitHub Releases](https://github.com/nectisse/nectisse/releases), move `Nectisse.app` to **Applications**, and open it.

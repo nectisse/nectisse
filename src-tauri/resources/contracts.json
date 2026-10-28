@@ -1,0 +1,3516 @@
+{
+	"diagnostic": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"at": {
+				"type": "string",
+				"format": "date-time",
+				"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+			},
+			"code": {
+				"type": "string",
+				"enum": [
+					"SUBSCRIPTIONS_UNAVAILABLE",
+					"SUBSCRIPTIONS_STORAGE_READ",
+					"SUBSCRIPTIONS_INVALID_DATA",
+					"SUBSCRIPTIONS_READ_TIMEOUT",
+					"APP_INITIALIZATION_FAILED",
+					"METADATA_INITIALIZATION_FAILED",
+					"LIBRARY_INITIALIZATION_FAILED",
+					"SECURE_STORAGE_CHECK_FAILED",
+					"RUNTIME_START_FAILED",
+					"RUNTIME_WRONG_ARCH",
+					"RUNTIME_WRONG_VERSION",
+					"RUNTIME_TIMEOUT",
+					"RUNTIME_UNEXPECTED_EXIT",
+					"RUNTIME_PROTOCOL_ERROR",
+					"RUNTIME_CHECK_FAILED"
+				]
+			},
+			"context": {
+				"type": "object",
+				"properties": {
+					"stage": {
+						"type": "string",
+						"enum": [
+							"snapshot",
+							"preferences",
+							"subscriptions",
+							"entries",
+							"tasks",
+							"sources",
+							"secure_storage",
+							"validation",
+							"ipc",
+							"renderer"
+						]
+					},
+					"kind": {
+						"type": "string",
+						"enum": [
+							"type_error",
+							"reference_error",
+							"invalid_data",
+							"storage_error",
+							"service_error",
+							"ipc_handler_missing",
+							"ipc_sender_rejected",
+							"ipc_serialization",
+							"ipc_error",
+							"timeout",
+							"unknown"
+						]
+					},
+					"systemCode": {
+						"type": "string",
+						"enum": [
+							"ERR_SQLITE_ERROR",
+							"ERR_SQLITE_CORRUPT",
+							"SQLITE_BUSY",
+							"SQLITE_LOCKED",
+							"ERR_INVALID_STATE",
+							"ERR_INVALID_ARG_TYPE",
+							"ERR_FAILED",
+							"EACCES",
+							"EPERM",
+							"EIO",
+							"ENOENT",
+							"ENOSPC",
+							"EROFS",
+							"EMFILE",
+							"ENFILE"
+						]
+					},
+					"sqliteCode": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 65535
+					}
+				},
+				"required": [
+					"stage",
+					"kind"
+				]
+			}
+		},
+		"required": [
+			"at",
+			"code"
+		]
+	},
+	"failureContext": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"stage": {
+				"type": "string",
+				"enum": [
+					"snapshot",
+					"preferences",
+					"subscriptions",
+					"entries",
+					"tasks",
+					"sources",
+					"secure_storage",
+					"validation",
+					"ipc",
+					"renderer"
+				]
+			},
+			"kind": {
+				"type": "string",
+				"enum": [
+					"type_error",
+					"reference_error",
+					"invalid_data",
+					"storage_error",
+					"service_error",
+					"ipc_handler_missing",
+					"ipc_sender_rejected",
+					"ipc_serialization",
+					"ipc_error",
+					"timeout",
+					"unknown"
+				]
+			},
+			"systemCode": {
+				"type": "string",
+				"enum": [
+					"ERR_SQLITE_ERROR",
+					"ERR_SQLITE_CORRUPT",
+					"SQLITE_BUSY",
+					"SQLITE_LOCKED",
+					"ERR_INVALID_STATE",
+					"ERR_INVALID_ARG_TYPE",
+					"ERR_FAILED",
+					"EACCES",
+					"EPERM",
+					"EIO",
+					"ENOENT",
+					"ENOSPC",
+					"EROFS",
+					"EMFILE",
+					"ENFILE"
+				]
+			},
+			"sqliteCode": {
+				"type": "integer",
+				"minimum": 0,
+				"maximum": 65535
+			}
+		},
+		"required": [
+			"stage",
+			"kind"
+		]
+	},
+	"xSync": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"windowIds": {
+				"maxItems": 100,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"pattern": "^[1-9]\\d{0,24}$"
+				}
+			},
+			"checkedAt": {
+				"type": "string",
+				"format": "date-time",
+				"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+			},
+			"gapSince": {
+				"type": "string",
+				"format": "date-time",
+				"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+			}
+		},
+		"required": [
+			"windowIds",
+			"checkedAt"
+		]
+	},
+	"magnet": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"code": {
+				"type": "string",
+				"minLength": 3,
+				"maxLength": 64,
+				"pattern": "^[A-Z0-9]+(?:[-_][A-Z0-9]+)*$"
+			},
+			"source": {
+				"default": "sukebei",
+				"type": "string",
+				"enum": [
+					"sukebei",
+					"javtao"
+				]
+			},
+			"status": {
+				"type": "string",
+				"enum": [
+					"running",
+					"ready",
+					"failed",
+					"cancelled",
+					"interrupted"
+				]
+			},
+			"items": {
+				"maxItems": 20,
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^[a-f0-9]{40}$"
+						},
+						"title": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 300
+						},
+						"magnet": {
+							"type": "string",
+							"maxLength": 2400,
+							"format": "starts_with",
+							"pattern": "^magnet:\\?.*"
+						},
+						"url": {
+							"type": "string",
+							"pattern": "^https:\\/\\/(?:sukebei\\.nyaa\\.si\\/view\\/\\d+|javtao\\.com\\/[a-z0-9][a-z0-9_-]{1,95})$"
+						},
+						"size": {
+							"type": "string",
+							"maxLength": 40
+						},
+						"uploadedAt": {
+							"anyOf": [
+								{
+									"type": "string",
+									"format": "date-time",
+									"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"sharedAt": {
+							"type": "string",
+							"pattern": "^(?:\\d{4}-\\d{2}-\\d{2})?$"
+						},
+						"seeders": {
+							"anyOf": [
+								{
+									"type": "integer",
+									"minimum": 0,
+									"maximum": 9007199254740991
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"leechers": {
+							"anyOf": [
+								{
+									"type": "integer",
+									"minimum": 0,
+									"maximum": 9007199254740991
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"completed": {
+							"anyOf": [
+								{
+									"type": "integer",
+									"minimum": 0,
+									"maximum": 9007199254740991
+								},
+								{
+									"type": "null"
+								}
+							]
+						}
+					},
+					"required": [
+						"id",
+						"title",
+						"magnet",
+						"url",
+						"size",
+						"uploadedAt",
+						"seeders",
+						"leechers",
+						"completed"
+					]
+				}
+			},
+			"limit": {
+				"default": 20,
+				"anyOf": [
+					{
+						"type": "number",
+						"const": 5
+					},
+					{
+						"type": "number",
+						"const": 10
+					},
+					{
+						"type": "number",
+						"const": 20
+					}
+				]
+			},
+			"checkedAt": {
+				"type": "string",
+				"format": "date-time",
+				"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+			},
+			"message": {
+				"type": "string",
+				"maxLength": 300
+			},
+			"reason": {
+				"default": "",
+				"type": "string",
+				"maxLength": 64
+			},
+			"requests": {
+				"default": 0,
+				"type": "integer",
+				"minimum": 0,
+				"maximum": 8
+			},
+			"retryAfter": {
+				"default": 0,
+				"type": "integer",
+				"minimum": 0,
+				"maximum": 86400
+			}
+		},
+		"required": [
+			"code",
+			"status",
+			"items",
+			"checkedAt",
+			"message"
+		]
+	},
+	"runtime": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"phase": {
+				"type": "string",
+				"enum": [
+					"starting",
+					"ready",
+					"error",
+					"stopped"
+				]
+			},
+			"revision": {
+				"type": "integer",
+				"minimum": 0,
+				"maximum": 9007199254740991
+			},
+			"message": {
+				"type": "string"
+			},
+			"health": {
+				"type": "object",
+				"properties": {
+					"pythonVersion": {
+						"type": "string"
+					},
+					"architecture": {
+						"type": "string"
+					},
+					"pid": {
+						"type": "integer",
+						"exclusiveMinimum": 0,
+						"maximum": 9007199254740991
+					},
+					"executable": {
+						"type": "string"
+					},
+					"httpxVersion": {
+						"type": "string"
+					},
+					"curlCffiVersion": {
+						"type": "string"
+					},
+					"peachVersion": {
+						"type": "string"
+					},
+					"transportSha256": {
+						"type": "string",
+						"pattern": "^[a-f0-9]{64}$"
+					},
+					"identityProbe": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"pythonVersion",
+					"architecture",
+					"pid",
+					"executable",
+					"httpxVersion",
+					"curlCffiVersion",
+					"peachVersion",
+					"transportSha256",
+					"identityProbe"
+				]
+			},
+			"errorCode": {
+				"type": "string",
+				"enum": [
+					"RUNTIME_START_FAILED",
+					"RUNTIME_WRONG_ARCH",
+					"RUNTIME_WRONG_VERSION",
+					"RUNTIME_TIMEOUT",
+					"RUNTIME_UNEXPECTED_EXIT",
+					"RUNTIME_PROTOCOL_ERROR",
+					"RUNTIME_CHECK_FAILED"
+				]
+			}
+		},
+		"required": [
+			"phase",
+			"revision",
+			"message"
+		]
+	},
+	"record": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"id": {
+				"type": "string",
+				"pattern": "^[a-f0-9]{64}$"
+			},
+			"source": {
+				"type": "string",
+				"enum": [
+					"dmm",
+					"r18dev",
+					"1pondo",
+					"fc2",
+					"fc2ppvdb",
+					"javten",
+					"javarchive",
+					"avbase",
+					"javbus",
+					"javdb",
+					"javtao",
+					"sougouwiki",
+					"av_neme",
+					"av_name",
+					"makers",
+					"prestige",
+					"faleno",
+					"dahlia",
+					"mgstage",
+					"avsox",
+					"freejavbt",
+					"airav",
+					"fc2club",
+					"kmib",
+					"fc2cmadb"
+				]
+			},
+			"parser": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"parserVersion": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"code": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"contentId": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"sourceUrl": {
+				"type": "string",
+				"maxLength": 2000,
+				"format": "uri"
+			},
+			"fetchedAt": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"title": {
+				"type": "string",
+				"maxLength": 1000
+			},
+			"titleLanguage": {
+				"type": "string",
+				"enum": [
+					"ja",
+					"en",
+					"ko",
+					"unknown"
+				]
+			},
+			"people": {
+				"maxItems": 42,
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"name": {
+							"type": "string",
+							"maxLength": 200
+						},
+						"role": {
+							"type": "string",
+							"enum": [
+								"performer",
+								"director",
+								"seller"
+							]
+						},
+						"sourceIdentity": {
+							"type": "string",
+							"maxLength": 1000
+						}
+					},
+					"required": [
+						"name",
+						"role",
+						"sourceIdentity"
+					]
+				}
+			},
+			"studio": {
+				"type": "string",
+				"maxLength": 500
+			},
+			"label": {
+				"type": "string",
+				"maxLength": 500
+			},
+			"seller": {
+				"type": "string",
+				"maxLength": 200
+			},
+			"sellerUrl": {
+				"type": "string",
+				"maxLength": 1000
+			},
+			"series": {
+				"type": "string",
+				"maxLength": 500
+			},
+			"releaseDate": {
+				"type": "string",
+				"maxLength": 32
+			},
+			"deliveryDate": {
+				"default": "",
+				"type": "string",
+				"maxLength": 32
+			},
+			"description": {
+				"type": "string",
+				"maxLength": 4000
+			},
+			"tags": {
+				"maxItems": 60,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"maxLength": 100
+				}
+			},
+			"covers": {
+				"maxItems": 3,
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^[a-f0-9]{64}$"
+						},
+						"url": {
+							"type": "string",
+							"maxLength": 2000,
+							"format": "uri"
+						},
+						"source": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav",
+								"fc2club",
+								"kmib",
+								"fc2cmadb"
+							]
+						},
+						"identity": {
+							"type": "string",
+							"const": "source-matched"
+						},
+						"asset": {
+							"type": "object",
+							"properties": {
+								"sha256": {
+									"type": "string",
+									"pattern": "^[a-f0-9]{64}$"
+								},
+								"width": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"height": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"format": {
+									"type": "string",
+									"enum": [
+										"JPEG",
+										"PNG",
+										"WEBP"
+									]
+								},
+								"bytes": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 12582912
+								},
+								"quality": {
+									"type": "string",
+									"enum": [
+										"standard",
+										"small"
+									]
+								}
+							},
+							"required": [
+								"sha256",
+								"width",
+								"height",
+								"format",
+								"bytes",
+								"quality"
+							]
+						},
+						"probe": {
+							"type": "object",
+							"properties": {
+								"width": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"height": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"format": {
+									"type": "string",
+									"enum": [
+										"JPEG",
+										"PNG",
+										"WEBP"
+									]
+								}
+							},
+							"required": [
+								"width",
+								"height",
+								"format"
+							]
+						},
+						"error": {
+							"type": "string",
+							"maxLength": 500
+						}
+					},
+					"required": [
+						"id",
+						"url",
+						"source",
+						"identity"
+					]
+				}
+			},
+			"warnings": {
+				"maxItems": 20,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"maxLength": 500
+				}
+			}
+		},
+		"required": [
+			"id",
+			"source",
+			"parser",
+			"parserVersion",
+			"code",
+			"contentId",
+			"sourceUrl",
+			"fetchedAt",
+			"title",
+			"titleLanguage",
+			"people",
+			"studio",
+			"label",
+			"seller",
+			"sellerUrl",
+			"series",
+			"releaseDate",
+			"description",
+			"tags",
+			"covers",
+			"warnings"
+		]
+	},
+	"metadata": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"revision": {
+				"type": "integer",
+				"minimum": 0,
+				"maximum": 9007199254740991
+			},
+			"activeId": {
+				"type": "string",
+				"format": "uuid",
+				"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+			},
+			"tasks": {
+				"maxItems": 20,
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"format": "uuid",
+							"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+						},
+						"status": {
+							"type": "string",
+							"enum": [
+								"running",
+								"cancelling",
+								"cancelled",
+								"succeeded",
+								"partial",
+								"failed",
+								"interrupted"
+							]
+						},
+						"phase": {
+							"type": "string",
+							"maxLength": 500
+						},
+						"plan": {
+							"type": "object",
+							"properties": {
+								"kind": {
+									"type": "string",
+									"enum": [
+										"code",
+										"title",
+										"url"
+									]
+								},
+								"query": {
+									"type": "string",
+									"maxLength": 500
+								},
+								"code": {
+									"type": "string",
+									"maxLength": 100
+								},
+								"contentId": {
+									"type": "string",
+									"maxLength": 100
+								},
+								"sourceUrl": {
+									"type": "string",
+									"maxLength": 2000
+								},
+								"sources": {
+									"maxItems": 22,
+									"type": "array",
+									"items": {
+										"type": "string",
+										"enum": [
+											"dmm",
+											"r18dev",
+											"1pondo",
+											"fc2",
+											"fc2ppvdb",
+											"javten",
+											"javarchive",
+											"avbase",
+											"javbus",
+											"javdb",
+											"javtao",
+											"sougouwiki",
+											"av_neme",
+											"av_name",
+											"makers",
+											"prestige",
+											"faleno",
+											"dahlia",
+											"mgstage",
+											"avsox",
+											"freejavbt",
+											"airav"
+										]
+									}
+								}
+							},
+							"required": [
+								"kind",
+								"query",
+								"code",
+								"contentId",
+								"sources"
+							]
+						},
+						"coverPriority": {
+							"maxItems": 17,
+							"type": "array",
+							"items": {
+								"type": "string",
+								"enum": [
+									"dmm",
+									"mgstage",
+									"prestige",
+									"faleno",
+									"dahlia",
+									"1pondo",
+									"fc2",
+									"duga",
+									"javbus",
+									"avbase",
+									"javtao",
+									"fc2ppvdb",
+									"javten",
+									"javarchive",
+									"avsox",
+									"freejavbt",
+									"airav"
+								]
+							}
+						},
+						"startedAt": {
+							"type": "string"
+						},
+						"finishedAt": {
+							"type": "string"
+						},
+						"cancelRequestedAt": {
+							"type": "string"
+						},
+						"records": {
+							"maxItems": 30,
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string",
+										"pattern": "^[a-f0-9]{64}$"
+									},
+									"source": {
+										"type": "string",
+										"enum": [
+											"dmm",
+											"r18dev",
+											"1pondo",
+											"fc2",
+											"fc2ppvdb",
+											"javten",
+											"javarchive",
+											"avbase",
+											"javbus",
+											"javdb",
+											"javtao",
+											"sougouwiki",
+											"av_neme",
+											"av_name",
+											"makers",
+											"prestige",
+											"faleno",
+											"dahlia",
+											"mgstage",
+											"avsox",
+											"freejavbt",
+											"airav",
+											"fc2club",
+											"kmib",
+											"fc2cmadb"
+										]
+									},
+									"parser": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"parserVersion": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"code": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"contentId": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"sourceUrl": {
+										"type": "string",
+										"maxLength": 2000,
+										"format": "uri"
+									},
+									"fetchedAt": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"title": {
+										"type": "string",
+										"maxLength": 1000
+									},
+									"titleLanguage": {
+										"type": "string",
+										"enum": [
+											"ja",
+											"en",
+											"ko",
+											"unknown"
+										]
+									},
+									"people": {
+										"maxItems": 42,
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"name": {
+													"type": "string",
+													"maxLength": 200
+												},
+												"role": {
+													"type": "string",
+													"enum": [
+														"performer",
+														"director",
+														"seller"
+													]
+												},
+												"sourceIdentity": {
+													"type": "string",
+													"maxLength": 1000
+												}
+											},
+											"required": [
+												"name",
+												"role",
+												"sourceIdentity"
+											]
+										}
+									},
+									"studio": {
+										"type": "string",
+										"maxLength": 500
+									},
+									"label": {
+										"type": "string",
+										"maxLength": 500
+									},
+									"seller": {
+										"type": "string",
+										"maxLength": 200
+									},
+									"sellerUrl": {
+										"type": "string",
+										"maxLength": 1000
+									},
+									"series": {
+										"type": "string",
+										"maxLength": 500
+									},
+									"releaseDate": {
+										"type": "string",
+										"maxLength": 32
+									},
+									"deliveryDate": {
+										"default": "",
+										"type": "string",
+										"maxLength": 32
+									},
+									"description": {
+										"type": "string",
+										"maxLength": 4000
+									},
+									"tags": {
+										"maxItems": 60,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"maxLength": 100
+										}
+									},
+									"covers": {
+										"maxItems": 3,
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string",
+													"pattern": "^[a-f0-9]{64}$"
+												},
+												"url": {
+													"type": "string",
+													"maxLength": 2000,
+													"format": "uri"
+												},
+												"source": {
+													"type": "string",
+													"enum": [
+														"dmm",
+														"r18dev",
+														"1pondo",
+														"fc2",
+														"fc2ppvdb",
+														"javten",
+														"javarchive",
+														"avbase",
+														"javbus",
+														"javdb",
+														"javtao",
+														"sougouwiki",
+														"av_neme",
+														"av_name",
+														"makers",
+														"prestige",
+														"faleno",
+														"dahlia",
+														"mgstage",
+														"avsox",
+														"freejavbt",
+														"airav",
+														"fc2club",
+														"kmib",
+														"fc2cmadb"
+													]
+												},
+												"identity": {
+													"type": "string",
+													"const": "source-matched"
+												},
+												"asset": {
+													"type": "object",
+													"properties": {
+														"sha256": {
+															"type": "string",
+															"pattern": "^[a-f0-9]{64}$"
+														},
+														"width": {
+															"type": "integer",
+															"exclusiveMinimum": 0,
+															"maximum": 9007199254740991
+														},
+														"height": {
+															"type": "integer",
+															"exclusiveMinimum": 0,
+															"maximum": 9007199254740991
+														},
+														"format": {
+															"type": "string",
+															"enum": [
+																"JPEG",
+																"PNG",
+																"WEBP"
+															]
+														},
+														"bytes": {
+															"type": "integer",
+															"minimum": 1,
+															"maximum": 12582912
+														},
+														"quality": {
+															"type": "string",
+															"enum": [
+																"standard",
+																"small"
+															]
+														}
+													},
+													"required": [
+														"sha256",
+														"width",
+														"height",
+														"format",
+														"bytes",
+														"quality"
+													]
+												},
+												"probe": {
+													"type": "object",
+													"properties": {
+														"width": {
+															"type": "integer",
+															"exclusiveMinimum": 0,
+															"maximum": 9007199254740991
+														},
+														"height": {
+															"type": "integer",
+															"exclusiveMinimum": 0,
+															"maximum": 9007199254740991
+														},
+														"format": {
+															"type": "string",
+															"enum": [
+																"JPEG",
+																"PNG",
+																"WEBP"
+															]
+														}
+													},
+													"required": [
+														"width",
+														"height",
+														"format"
+													]
+												},
+												"error": {
+													"type": "string",
+													"maxLength": 500
+												}
+											},
+											"required": [
+												"id",
+												"url",
+												"source",
+												"identity"
+											]
+										}
+									},
+									"warnings": {
+										"maxItems": 20,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"maxLength": 500
+										}
+									}
+								},
+								"required": [
+									"id",
+									"source",
+									"parser",
+									"parserVersion",
+									"code",
+									"contentId",
+									"sourceUrl",
+									"fetchedAt",
+									"title",
+									"titleLanguage",
+									"people",
+									"studio",
+									"label",
+									"seller",
+									"sellerUrl",
+									"series",
+									"releaseDate",
+									"description",
+									"tags",
+									"covers",
+									"warnings"
+								]
+							}
+						},
+						"outcomes": {
+							"maxItems": 25,
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"source": {
+										"type": "string",
+										"enum": [
+											"dmm",
+											"r18dev",
+											"1pondo",
+											"fc2",
+											"fc2ppvdb",
+											"javten",
+											"javarchive",
+											"avbase",
+											"javbus",
+											"javdb",
+											"javtao",
+											"sougouwiki",
+											"av_neme",
+											"av_name",
+											"makers",
+											"prestige",
+											"faleno",
+											"dahlia",
+											"mgstage",
+											"avsox",
+											"freejavbt",
+											"airav",
+											"fc2club",
+											"kmib",
+											"fc2cmadb"
+										]
+									},
+									"status": {
+										"type": "string",
+										"enum": [
+											"success",
+											"partial",
+											"error",
+											"cached"
+										]
+									},
+									"reason": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"message": {
+										"type": "string",
+										"maxLength": 500
+									},
+									"retryAfter": {
+										"type": "integer",
+										"minimum": 0,
+										"maximum": 86400
+									},
+									"requests": {
+										"type": "integer",
+										"minimum": 0,
+										"maximum": 24
+									},
+									"warnings": {
+										"maxItems": 20,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"maxLength": 500
+										}
+									}
+								},
+								"required": [
+									"source",
+									"status",
+									"reason",
+									"message",
+									"retryAfter",
+									"requests",
+									"warnings"
+								]
+							}
+						},
+						"requests": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 24
+						}
+					},
+					"required": [
+						"id",
+						"status",
+						"phase",
+						"plan",
+						"startedAt",
+						"records",
+						"outcomes",
+						"requests"
+					]
+				}
+			},
+			"notice": {
+				"type": "string",
+				"maxLength": 500
+			}
+		},
+		"required": [
+			"revision",
+			"tasks"
+		]
+	},
+	"candidate": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"provider": {
+				"type": "string",
+				"enum": [
+					"fanbox",
+					"javdb",
+					"javtao",
+					"x",
+					"patreon",
+					"kemono",
+					"pawchive",
+					"coomer"
+				]
+			},
+			"ref": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 256
+			},
+			"handle": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_]{1,15}$"
+			},
+			"name": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 200
+			},
+			"url": {
+				"type": "string",
+				"maxLength": 1000,
+				"format": "uri"
+			},
+			"aliases": {
+				"maxItems": 12,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"maxLength": 200
+				}
+			},
+			"recordType": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"bio": {
+				"type": "string",
+				"maxLength": 1000
+			},
+			"evidence": {
+				"type": "string",
+				"maxLength": 500
+			},
+			"avatarUrl": {
+				"type": "string",
+				"maxLength": 2000
+			},
+			"avatarAsset": {
+				"type": "object",
+				"properties": {
+					"sha256": {
+						"type": "string",
+						"pattern": "^[a-f0-9]{64}$"
+					},
+					"width": {
+						"type": "integer",
+						"exclusiveMinimum": 0,
+						"maximum": 9007199254740991
+					},
+					"height": {
+						"type": "integer",
+						"exclusiveMinimum": 0,
+						"maximum": 9007199254740991
+					},
+					"format": {
+						"type": "string",
+						"enum": [
+							"JPEG",
+							"PNG",
+							"WEBP"
+						]
+					},
+					"bytes": {
+						"type": "integer",
+						"minimum": 1,
+						"maximum": 12582912
+					},
+					"quality": {
+						"type": "string",
+						"enum": [
+							"standard",
+							"small"
+						]
+					}
+				},
+				"required": [
+					"sha256",
+					"width",
+					"height",
+					"format",
+					"bytes",
+					"quality"
+				]
+			}
+		},
+		"required": [
+			"provider",
+			"ref",
+			"name",
+			"url",
+			"aliases",
+			"recordType",
+			"bio",
+			"evidence"
+		]
+	},
+	"entry": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"externalId": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 100
+			},
+			"title": {
+				"type": "string",
+				"maxLength": 1000
+			},
+			"summary": {
+				"type": "string",
+				"maxLength": 3000
+			},
+			"author": {
+				"type": "string",
+				"maxLength": 200
+			},
+			"authorRef": {
+				"type": "string",
+				"pattern": "^[1-9]\\d{0,24}$"
+			},
+			"authorHandle": {
+				"type": "string",
+				"pattern": "^[A-Za-z0-9_]{1,15}$"
+			},
+			"postKind": {
+				"type": "string",
+				"const": "original"
+			},
+			"publishedAt": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"publishedPrecision": {
+				"default": "unknown",
+				"type": "string",
+				"enum": [
+					"exact",
+					"date",
+					"approximate",
+					"unknown"
+				]
+			},
+			"url": {
+				"type": "string",
+				"maxLength": 2000,
+				"format": "uri"
+			},
+			"thumbnailUrl": {
+				"type": "string",
+				"maxLength": 2000
+			},
+			"code": {
+				"type": "string",
+				"maxLength": 100
+			},
+			"restricted": {
+				"type": "boolean"
+			},
+			"partial": {
+				"type": "boolean"
+			}
+		},
+		"required": [
+			"externalId",
+			"title",
+			"summary",
+			"author",
+			"publishedAt",
+			"url",
+			"thumbnailUrl",
+			"code",
+			"restricted",
+			"partial"
+		]
+	},
+	"subscriptions": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"revision": {
+				"type": "integer",
+				"minimum": -9007199254740991,
+				"maximum": 9007199254740991
+			},
+			"preferences": {
+				"type": "object",
+				"properties": {
+					"querySources": {
+						"default": [
+							"dmm",
+							"r18dev",
+							"fc2"
+						],
+						"maxItems": 22,
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav"
+							]
+						}
+					},
+					"enabledSources": {
+						"maxItems": 31,
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav",
+								"fanbox",
+								"x",
+								"patreon",
+								"kemono",
+								"pawchive",
+								"coomer",
+								"f95zone",
+								"simpcity",
+								"duga"
+							]
+						}
+					},
+					"metadataPriority": {
+						"minItems": 3,
+						"maxItems": 22,
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav"
+							]
+						}
+					},
+					"coverPriority": {
+						"default": [
+							"dmm"
+						],
+						"maxItems": 17,
+						"type": "array",
+						"items": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"mgstage",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"1pondo",
+								"fc2",
+								"duga",
+								"javbus",
+								"avbase",
+								"javtao",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avsox",
+								"freejavbt",
+								"airav"
+							]
+						}
+					},
+					"automatic": {
+						"type": "boolean"
+					},
+					"creatorMinutes": {
+						"type": "integer",
+						"minimum": 15,
+						"maximum": 10080
+					},
+					"performerMinutes": {
+						"type": "integer",
+						"minimum": 360,
+						"maximum": 10080
+					},
+					"proxyMode": {
+						"type": "string",
+						"enum": [
+							"system",
+							"direct",
+							"custom"
+						]
+					},
+					"proxyUrl": {
+						"type": "string",
+						"maxLength": 500
+					},
+					"fanboxTransport": {
+						"type": "string",
+						"enum": [
+							"httpx",
+							"fingerprint"
+						]
+					},
+					"javdbTransport": {
+						"type": "string",
+						"enum": [
+							"httpx",
+							"fingerprint"
+						]
+					},
+					"sourceTransports": {
+						"default": {},
+						"type": "object",
+						"propertyNames": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav",
+								"fanbox",
+								"x",
+								"patreon",
+								"kemono",
+								"pawchive",
+								"coomer",
+								"f95zone",
+								"simpcity",
+								"duga"
+							]
+						},
+						"additionalProperties": {
+							"type": "string",
+							"enum": [
+								"httpx",
+								"fingerprint",
+								"browser"
+							]
+						}
+					},
+					"theme": {
+						"type": "string",
+						"enum": [
+							"cream",
+							"night"
+						]
+					},
+					"imageCacheMiB": {
+						"default": 512,
+						"type": "integer",
+						"minimum": 64,
+						"maximum": 8192
+					},
+					"magnetSearch": {
+						"default": {
+							"enabled": true,
+							"source": "sukebei",
+							"maxResults": 20,
+							"transport": "httpx"
+						},
+						"type": "object",
+						"properties": {
+							"enabled": {
+								"type": "boolean"
+							},
+							"source": {
+								"default": "sukebei",
+								"type": "string",
+								"enum": [
+									"sukebei",
+									"javtao"
+								]
+							},
+							"maxResults": {
+								"anyOf": [
+									{
+										"type": "number",
+										"const": 5
+									},
+									{
+										"type": "number",
+										"const": 10
+									},
+									{
+										"type": "number",
+										"const": 20
+									}
+								]
+							},
+							"transport": {
+								"type": "string",
+								"enum": [
+									"httpx",
+									"fingerprint"
+								]
+							}
+						},
+						"required": [
+							"enabled",
+							"maxResults",
+							"transport"
+						]
+					}
+				},
+				"required": [
+					"enabledSources",
+					"metadataPriority",
+					"automatic",
+					"creatorMinutes",
+					"performerMinutes",
+					"proxyMode",
+					"proxyUrl",
+					"fanboxTransport",
+					"javdbTransport",
+					"theme"
+				]
+			},
+			"subscriptions": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"provider": {
+							"type": "string",
+							"enum": [
+								"fanbox",
+								"javdb",
+								"javtao",
+								"x",
+								"patreon",
+								"kemono",
+								"pawchive",
+								"coomer"
+							]
+						},
+						"ref": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 256
+						},
+						"handle": {
+							"type": "string",
+							"pattern": "^[A-Za-z0-9_]{1,15}$"
+						},
+						"name": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 200
+						},
+						"url": {
+							"type": "string",
+							"maxLength": 1000,
+							"format": "uri"
+						},
+						"aliases": {
+							"maxItems": 12,
+							"type": "array",
+							"items": {
+								"type": "string",
+								"maxLength": 200
+							}
+						},
+						"recordType": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"bio": {
+							"type": "string",
+							"maxLength": 1000
+						},
+						"evidence": {
+							"type": "string",
+							"maxLength": 500
+						},
+						"avatarUrl": {
+							"type": "string",
+							"maxLength": 2000
+						},
+						"avatarAsset": {
+							"type": "object",
+							"properties": {
+								"sha256": {
+									"type": "string",
+									"pattern": "^[a-f0-9]{64}$"
+								},
+								"width": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"height": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"format": {
+									"type": "string",
+									"enum": [
+										"JPEG",
+										"PNG",
+										"WEBP"
+									]
+								},
+								"bytes": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 12582912
+								},
+								"quality": {
+									"type": "string",
+									"enum": [
+										"standard",
+										"small"
+									]
+								}
+							},
+							"required": [
+								"sha256",
+								"width",
+								"height",
+								"format",
+								"bytes",
+								"quality"
+							]
+						},
+						"id": {
+							"type": "string",
+							"format": "uuid",
+							"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+						},
+						"manualAvatarAsset": {
+							"type": "object",
+							"properties": {
+								"sha256": {
+									"type": "string",
+									"pattern": "^[a-f0-9]{64}$"
+								},
+								"width": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"height": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"format": {
+									"type": "string",
+									"enum": [
+										"JPEG",
+										"PNG",
+										"WEBP"
+									]
+								},
+								"bytes": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 12582912
+								},
+								"quality": {
+									"type": "string",
+									"enum": [
+										"standard",
+										"small"
+									]
+								}
+							},
+							"required": [
+								"sha256",
+								"width",
+								"height",
+								"format",
+								"bytes",
+								"quality"
+							]
+						},
+						"kind": {
+							"type": "string",
+							"enum": [
+								"creator_posts",
+								"performer_releases"
+							]
+						},
+						"following": {
+							"type": "boolean"
+						},
+						"enabled": {
+							"type": "boolean"
+						},
+						"autoPaused": {
+							"type": "boolean"
+						},
+						"intervalMinutes": {
+							"anyOf": [
+								{
+									"type": "integer",
+									"minimum": 15,
+									"maximum": 10080
+								},
+								{
+									"type": "null"
+								}
+							]
+						},
+						"createdAt": {
+							"type": "string"
+						},
+						"initialized": {
+							"type": "boolean"
+						},
+						"lastCheckedAt": {
+							"type": "string"
+						},
+						"nextCheckAt": {
+							"type": "string"
+						},
+						"lastError": {
+							"type": "string"
+						},
+						"coverage": {
+							"type": "string"
+						},
+						"failureCount": {
+							"type": "number"
+						},
+						"unread": {
+							"type": "integer",
+							"minimum": -9007199254740991,
+							"maximum": 9007199254740991
+						},
+						"collected": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 9007199254740991
+						},
+						"latestEntry": {
+							"type": "object",
+							"properties": {
+								"externalId": {
+									"type": "string",
+									"minLength": 1,
+									"maxLength": 100
+								},
+								"title": {
+									"type": "string",
+									"maxLength": 1000
+								},
+								"summary": {
+									"type": "string",
+									"maxLength": 3000
+								},
+								"author": {
+									"type": "string",
+									"maxLength": 200
+								},
+								"authorRef": {
+									"type": "string",
+									"pattern": "^[1-9]\\d{0,24}$"
+								},
+								"authorHandle": {
+									"type": "string",
+									"pattern": "^[A-Za-z0-9_]{1,15}$"
+								},
+								"postKind": {
+									"type": "string",
+									"const": "original"
+								},
+								"publishedAt": {
+									"type": "string",
+									"maxLength": 100
+								},
+								"publishedPrecision": {
+									"default": "unknown",
+									"type": "string",
+									"enum": [
+										"exact",
+										"date",
+										"approximate",
+										"unknown"
+									]
+								},
+								"url": {
+									"type": "string",
+									"maxLength": 2000,
+									"format": "uri"
+								},
+								"thumbnailUrl": {
+									"type": "string",
+									"maxLength": 2000
+								},
+								"code": {
+									"type": "string",
+									"maxLength": 100
+								},
+								"restricted": {
+									"type": "boolean"
+								},
+								"partial": {
+									"type": "boolean"
+								},
+								"id": {
+									"type": "string"
+								},
+								"subscriptionId": {
+									"type": "string",
+									"format": "uuid",
+									"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+								},
+								"provider": {
+									"type": "string",
+									"enum": [
+										"fanbox",
+										"javdb",
+										"javtao",
+										"x",
+										"patreon",
+										"kemono",
+										"pawchive",
+										"coomer"
+									]
+								},
+								"name": {
+									"type": "string"
+								},
+								"firstSeenAt": {
+									"type": "string"
+								},
+								"read": {
+									"type": "boolean"
+								},
+								"initial": {
+									"type": "boolean"
+								},
+								"imageAsset": {
+									"type": "object",
+									"properties": {
+										"sha256": {
+											"type": "string",
+											"pattern": "^[a-f0-9]{64}$"
+										},
+										"width": {
+											"type": "integer",
+											"exclusiveMinimum": 0,
+											"maximum": 9007199254740991
+										},
+										"height": {
+											"type": "integer",
+											"exclusiveMinimum": 0,
+											"maximum": 9007199254740991
+										},
+										"format": {
+											"type": "string",
+											"enum": [
+												"JPEG",
+												"PNG",
+												"WEBP"
+											]
+										},
+										"bytes": {
+											"type": "integer",
+											"minimum": 1,
+											"maximum": 12582912
+										},
+										"quality": {
+											"type": "string",
+											"enum": [
+												"standard",
+												"small"
+											]
+										}
+									},
+									"required": [
+										"sha256",
+										"width",
+										"height",
+										"format",
+										"bytes",
+										"quality"
+									]
+								},
+								"imageCache": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"enum": [
+												"queued",
+												"loading",
+												"retry",
+												"failed",
+												"cancelled",
+												"evicted"
+											]
+										},
+										"attempts": {
+											"type": "integer",
+											"minimum": 0,
+											"maximum": 9007199254740991
+										},
+										"nextAttemptAt": {
+											"type": "number"
+										},
+										"reason": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"status",
+										"attempts",
+										"nextAttemptAt",
+										"reason"
+									]
+								}
+							},
+							"required": [
+								"externalId",
+								"title",
+								"summary",
+								"author",
+								"publishedAt",
+								"url",
+								"thumbnailUrl",
+								"code",
+								"restricted",
+								"partial",
+								"id",
+								"subscriptionId",
+								"provider",
+								"name",
+								"firstSeenAt",
+								"read",
+								"initial"
+							]
+						},
+						"xSyncState": {
+							"type": "object",
+							"properties": {
+								"windowIds": {
+									"maxItems": 100,
+									"type": "array",
+									"items": {
+										"type": "string",
+										"pattern": "^[1-9]\\d{0,24}$"
+									}
+								},
+								"checkedAt": {
+									"type": "string",
+									"format": "date-time",
+									"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+								},
+								"gapSince": {
+									"type": "string",
+									"format": "date-time",
+									"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+								}
+							},
+							"required": [
+								"windowIds",
+								"checkedAt"
+							]
+						}
+					},
+					"required": [
+						"provider",
+						"ref",
+						"name",
+						"url",
+						"aliases",
+						"recordType",
+						"bio",
+						"evidence",
+						"id",
+						"kind",
+						"following",
+						"enabled",
+						"autoPaused",
+						"intervalMinutes",
+						"createdAt",
+						"initialized",
+						"lastCheckedAt",
+						"nextCheckAt",
+						"lastError",
+						"coverage",
+						"failureCount",
+						"unread"
+					]
+				}
+			},
+			"entries": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"externalId": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 100
+						},
+						"title": {
+							"type": "string",
+							"maxLength": 1000
+						},
+						"summary": {
+							"type": "string",
+							"maxLength": 3000
+						},
+						"author": {
+							"type": "string",
+							"maxLength": 200
+						},
+						"authorRef": {
+							"type": "string",
+							"pattern": "^[1-9]\\d{0,24}$"
+						},
+						"authorHandle": {
+							"type": "string",
+							"pattern": "^[A-Za-z0-9_]{1,15}$"
+						},
+						"postKind": {
+							"type": "string",
+							"const": "original"
+						},
+						"publishedAt": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"publishedPrecision": {
+							"default": "unknown",
+							"type": "string",
+							"enum": [
+								"exact",
+								"date",
+								"approximate",
+								"unknown"
+							]
+						},
+						"url": {
+							"type": "string",
+							"maxLength": 2000,
+							"format": "uri"
+						},
+						"thumbnailUrl": {
+							"type": "string",
+							"maxLength": 2000
+						},
+						"code": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"restricted": {
+							"type": "boolean"
+						},
+						"partial": {
+							"type": "boolean"
+						},
+						"id": {
+							"type": "string"
+						},
+						"subscriptionId": {
+							"type": "string",
+							"format": "uuid",
+							"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+						},
+						"provider": {
+							"type": "string",
+							"enum": [
+								"fanbox",
+								"javdb",
+								"javtao",
+								"x",
+								"patreon",
+								"kemono",
+								"pawchive",
+								"coomer"
+							]
+						},
+						"name": {
+							"type": "string"
+						},
+						"firstSeenAt": {
+							"type": "string"
+						},
+						"read": {
+							"type": "boolean"
+						},
+						"initial": {
+							"type": "boolean"
+						},
+						"imageAsset": {
+							"type": "object",
+							"properties": {
+								"sha256": {
+									"type": "string",
+									"pattern": "^[a-f0-9]{64}$"
+								},
+								"width": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"height": {
+									"type": "integer",
+									"exclusiveMinimum": 0,
+									"maximum": 9007199254740991
+								},
+								"format": {
+									"type": "string",
+									"enum": [
+										"JPEG",
+										"PNG",
+										"WEBP"
+									]
+								},
+								"bytes": {
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 12582912
+								},
+								"quality": {
+									"type": "string",
+									"enum": [
+										"standard",
+										"small"
+									]
+								}
+							},
+							"required": [
+								"sha256",
+								"width",
+								"height",
+								"format",
+								"bytes",
+								"quality"
+							]
+						},
+						"imageCache": {
+							"type": "object",
+							"properties": {
+								"status": {
+									"type": "string",
+									"enum": [
+										"queued",
+										"loading",
+										"retry",
+										"failed",
+										"cancelled",
+										"evicted"
+									]
+								},
+								"attempts": {
+									"type": "integer",
+									"minimum": 0,
+									"maximum": 9007199254740991
+								},
+								"nextAttemptAt": {
+									"type": "number"
+								},
+								"reason": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"status",
+								"attempts",
+								"nextAttemptAt",
+								"reason"
+							]
+						}
+					},
+					"required": [
+						"externalId",
+						"title",
+						"summary",
+						"author",
+						"publishedAt",
+						"url",
+						"thumbnailUrl",
+						"code",
+						"restricted",
+						"partial",
+						"id",
+						"subscriptionId",
+						"provider",
+						"name",
+						"firstSeenAt",
+						"read",
+						"initial"
+					]
+				}
+			},
+			"tasks": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"format": "uuid",
+							"pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+						},
+						"kind": {
+							"type": "string",
+							"enum": [
+								"lookup",
+								"check",
+								"covers"
+							]
+						},
+						"provider": {
+							"type": "string",
+							"enum": [
+								"fanbox",
+								"javdb",
+								"javtao",
+								"x",
+								"patreon",
+								"kemono",
+								"pawchive",
+								"coomer"
+							]
+						},
+						"subscriptionId": {
+							"type": "string"
+						},
+						"imageIds": {
+							"maxItems": 500,
+							"type": "array",
+							"items": {
+								"type": "string"
+							}
+						},
+						"completed": {
+							"type": "integer",
+							"minimum": -9007199254740991,
+							"maximum": 9007199254740991
+						},
+						"total": {
+							"type": "integer",
+							"minimum": -9007199254740991,
+							"maximum": 9007199254740991
+						},
+						"status": {
+							"type": "string",
+							"enum": [
+								"running",
+								"cancelling",
+								"cancelled",
+								"succeeded",
+								"partial",
+								"failed",
+								"interrupted"
+							]
+						},
+						"phase": {
+							"type": "string"
+						},
+						"startedAt": {
+							"type": "string"
+						},
+						"finishedAt": {
+							"type": "string"
+						},
+						"requests": {
+							"type": "integer",
+							"minimum": -9007199254740991,
+							"maximum": 9007199254740991
+						},
+						"candidates": {
+							"maxItems": 8,
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"provider": {
+										"type": "string",
+										"enum": [
+											"fanbox",
+											"javdb",
+											"javtao",
+											"x",
+											"patreon",
+											"kemono",
+											"pawchive",
+											"coomer"
+										]
+									},
+									"ref": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 256
+									},
+									"handle": {
+										"type": "string",
+										"pattern": "^[A-Za-z0-9_]{1,15}$"
+									},
+									"name": {
+										"type": "string",
+										"minLength": 1,
+										"maxLength": 200
+									},
+									"url": {
+										"type": "string",
+										"maxLength": 1000,
+										"format": "uri"
+									},
+									"aliases": {
+										"maxItems": 12,
+										"type": "array",
+										"items": {
+											"type": "string",
+											"maxLength": 200
+										}
+									},
+									"recordType": {
+										"type": "string",
+										"maxLength": 100
+									},
+									"bio": {
+										"type": "string",
+										"maxLength": 1000
+									},
+									"evidence": {
+										"type": "string",
+										"maxLength": 500
+									},
+									"avatarUrl": {
+										"type": "string",
+										"maxLength": 2000
+									},
+									"avatarAsset": {
+										"type": "object",
+										"properties": {
+											"sha256": {
+												"type": "string",
+												"pattern": "^[a-f0-9]{64}$"
+											},
+											"width": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991
+											},
+											"height": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991
+											},
+											"format": {
+												"type": "string",
+												"enum": [
+													"JPEG",
+													"PNG",
+													"WEBP"
+												]
+											},
+											"bytes": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 12582912
+											},
+											"quality": {
+												"type": "string",
+												"enum": [
+													"standard",
+													"small"
+												]
+											}
+										},
+										"required": [
+											"sha256",
+											"width",
+											"height",
+											"format",
+											"bytes",
+											"quality"
+										]
+									}
+								},
+								"required": [
+									"provider",
+									"ref",
+									"name",
+									"url",
+									"aliases",
+									"recordType",
+									"bio",
+									"evidence"
+								]
+							}
+						},
+						"added": {
+							"type": "integer",
+							"minimum": -9007199254740991,
+							"maximum": 9007199254740991
+						},
+						"reason": {
+							"type": "string"
+						},
+						"cancelRequestedAt": {
+							"type": "string"
+						}
+					},
+					"required": [
+						"id",
+						"kind",
+						"provider",
+						"status",
+						"phase",
+						"startedAt",
+						"finishedAt",
+						"requests",
+						"candidates",
+						"added",
+						"reason",
+						"cancelRequestedAt"
+					]
+				}
+			},
+			"sources": {
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav",
+								"fanbox",
+								"x",
+								"patreon",
+								"kemono",
+								"pawchive",
+								"coomer",
+								"f95zone",
+								"simpcity",
+								"duga"
+							]
+						},
+						"credentialPresent": {
+							"type": "boolean"
+						},
+						"checkedAt": {
+							"type": "string"
+						},
+						"state": {
+							"type": "string"
+						},
+						"message": {
+							"type": "string"
+						},
+						"cooldownUntil": {
+							"type": "number"
+						}
+					},
+					"required": [
+						"id",
+						"credentialPresent",
+						"checkedAt",
+						"state",
+						"message",
+						"cooldownUntil"
+					]
+				}
+			},
+			"encryptionAvailable": {
+				"type": "boolean"
+			},
+			"notice": {
+				"type": "string"
+			}
+		},
+		"required": [
+			"revision",
+			"preferences",
+			"subscriptions",
+			"entries",
+			"tasks",
+			"sources",
+			"encryptionAvailable",
+			"notice"
+		]
+	},
+	"preferences": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"querySources": {
+				"default": [
+					"dmm",
+					"r18dev",
+					"fc2"
+				],
+				"maxItems": 22,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"enum": [
+						"dmm",
+						"r18dev",
+						"1pondo",
+						"fc2",
+						"fc2ppvdb",
+						"javten",
+						"javarchive",
+						"avbase",
+						"javbus",
+						"javdb",
+						"javtao",
+						"sougouwiki",
+						"av_neme",
+						"av_name",
+						"makers",
+						"prestige",
+						"faleno",
+						"dahlia",
+						"mgstage",
+						"avsox",
+						"freejavbt",
+						"airav"
+					]
+				}
+			},
+			"enabledSources": {
+				"maxItems": 31,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"enum": [
+						"dmm",
+						"r18dev",
+						"1pondo",
+						"fc2",
+						"fc2ppvdb",
+						"javten",
+						"javarchive",
+						"avbase",
+						"javbus",
+						"javdb",
+						"javtao",
+						"sougouwiki",
+						"av_neme",
+						"av_name",
+						"makers",
+						"prestige",
+						"faleno",
+						"dahlia",
+						"mgstage",
+						"avsox",
+						"freejavbt",
+						"airav",
+						"fanbox",
+						"x",
+						"patreon",
+						"kemono",
+						"pawchive",
+						"coomer",
+						"f95zone",
+						"simpcity",
+						"duga"
+					]
+				}
+			},
+			"metadataPriority": {
+				"minItems": 3,
+				"maxItems": 22,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"enum": [
+						"dmm",
+						"r18dev",
+						"1pondo",
+						"fc2",
+						"fc2ppvdb",
+						"javten",
+						"javarchive",
+						"avbase",
+						"javbus",
+						"javdb",
+						"javtao",
+						"sougouwiki",
+						"av_neme",
+						"av_name",
+						"makers",
+						"prestige",
+						"faleno",
+						"dahlia",
+						"mgstage",
+						"avsox",
+						"freejavbt",
+						"airav"
+					]
+				}
+			},
+			"coverPriority": {
+				"default": [
+					"dmm"
+				],
+				"maxItems": 17,
+				"type": "array",
+				"items": {
+					"type": "string",
+					"enum": [
+						"dmm",
+						"mgstage",
+						"prestige",
+						"faleno",
+						"dahlia",
+						"1pondo",
+						"fc2",
+						"duga",
+						"javbus",
+						"avbase",
+						"javtao",
+						"fc2ppvdb",
+						"javten",
+						"javarchive",
+						"avsox",
+						"freejavbt",
+						"airav"
+					]
+				}
+			},
+			"automatic": {
+				"type": "boolean"
+			},
+			"creatorMinutes": {
+				"type": "integer",
+				"minimum": 15,
+				"maximum": 10080
+			},
+			"performerMinutes": {
+				"type": "integer",
+				"minimum": 360,
+				"maximum": 10080
+			},
+			"proxyMode": {
+				"type": "string",
+				"enum": [
+					"system",
+					"direct",
+					"custom"
+				]
+			},
+			"proxyUrl": {
+				"type": "string",
+				"maxLength": 500
+			},
+			"fanboxTransport": {
+				"type": "string",
+				"enum": [
+					"httpx",
+					"fingerprint"
+				]
+			},
+			"javdbTransport": {
+				"type": "string",
+				"enum": [
+					"httpx",
+					"fingerprint"
+				]
+			},
+			"sourceTransports": {
+				"default": {},
+				"type": "object",
+				"propertyNames": {
+					"type": "string",
+					"enum": [
+						"dmm",
+						"r18dev",
+						"1pondo",
+						"fc2",
+						"fc2ppvdb",
+						"javten",
+						"javarchive",
+						"avbase",
+						"javbus",
+						"javdb",
+						"javtao",
+						"sougouwiki",
+						"av_neme",
+						"av_name",
+						"makers",
+						"prestige",
+						"faleno",
+						"dahlia",
+						"mgstage",
+						"avsox",
+						"freejavbt",
+						"airav",
+						"fanbox",
+						"x",
+						"patreon",
+						"kemono",
+						"pawchive",
+						"coomer",
+						"f95zone",
+						"simpcity",
+						"duga"
+					]
+				},
+				"additionalProperties": {
+					"type": "string",
+					"enum": [
+						"httpx",
+						"fingerprint",
+						"browser"
+					]
+				}
+			},
+			"theme": {
+				"type": "string",
+				"enum": [
+					"cream",
+					"night"
+				]
+			},
+			"imageCacheMiB": {
+				"default": 512,
+				"type": "integer",
+				"minimum": 64,
+				"maximum": 8192
+			},
+			"magnetSearch": {
+				"default": {
+					"enabled": true,
+					"source": "sukebei",
+					"maxResults": 20,
+					"transport": "httpx"
+				},
+				"type": "object",
+				"properties": {
+					"enabled": {
+						"type": "boolean"
+					},
+					"source": {
+						"default": "sukebei",
+						"type": "string",
+						"enum": [
+							"sukebei",
+							"javtao"
+						]
+					},
+					"maxResults": {
+						"anyOf": [
+							{
+								"type": "number",
+								"const": 5
+							},
+							{
+								"type": "number",
+								"const": 10
+							},
+							{
+								"type": "number",
+								"const": 20
+							}
+						]
+					},
+					"transport": {
+						"type": "string",
+						"enum": [
+							"httpx",
+							"fingerprint"
+						]
+					}
+				},
+				"required": [
+					"enabled",
+					"maxResults",
+					"transport"
+				]
+			}
+		},
+		"required": [
+			"enabledSources",
+			"metadataPriority",
+			"automatic",
+			"creatorMinutes",
+			"performerMinutes",
+			"proxyMode",
+			"proxyUrl",
+			"fanboxTransport",
+			"javdbTransport",
+			"theme"
+		]
+	},
+	"work": {
+		"$schema": "https://json-schema.org/draft/2020-12/schema",
+		"type": "object",
+		"properties": {
+			"id": {
+				"type": "string",
+				"pattern": "^[a-f0-9]{64}$"
+			},
+			"code": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 100
+			},
+			"savedAt": {
+				"type": "string",
+				"format": "date-time",
+				"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+			},
+			"updatedAt": {
+				"type": "string",
+				"format": "date-time",
+				"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+			},
+			"records": {
+				"minItems": 1,
+				"maxItems": 30,
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string",
+							"pattern": "^[a-f0-9]{64}$"
+						},
+						"source": {
+							"type": "string",
+							"enum": [
+								"dmm",
+								"r18dev",
+								"1pondo",
+								"fc2",
+								"fc2ppvdb",
+								"javten",
+								"javarchive",
+								"avbase",
+								"javbus",
+								"javdb",
+								"javtao",
+								"sougouwiki",
+								"av_neme",
+								"av_name",
+								"makers",
+								"prestige",
+								"faleno",
+								"dahlia",
+								"mgstage",
+								"avsox",
+								"freejavbt",
+								"airav",
+								"fc2club",
+								"kmib",
+								"fc2cmadb"
+							]
+						},
+						"parser": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"parserVersion": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"code": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"contentId": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"sourceUrl": {
+							"type": "string",
+							"maxLength": 2000,
+							"format": "uri"
+						},
+						"fetchedAt": {
+							"type": "string",
+							"maxLength": 100
+						},
+						"title": {
+							"type": "string",
+							"maxLength": 1000
+						},
+						"titleLanguage": {
+							"type": "string",
+							"enum": [
+								"ja",
+								"en",
+								"ko",
+								"unknown"
+							]
+						},
+						"people": {
+							"maxItems": 42,
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"maxLength": 200
+									},
+									"role": {
+										"type": "string",
+										"enum": [
+											"performer",
+											"director",
+											"seller"
+										]
+									},
+									"sourceIdentity": {
+										"type": "string",
+										"maxLength": 1000
+									}
+								},
+								"required": [
+									"name",
+									"role",
+									"sourceIdentity"
+								]
+							}
+						},
+						"studio": {
+							"type": "string",
+							"maxLength": 500
+						},
+						"label": {
+							"type": "string",
+							"maxLength": 500
+						},
+						"seller": {
+							"type": "string",
+							"maxLength": 200
+						},
+						"sellerUrl": {
+							"type": "string",
+							"maxLength": 1000
+						},
+						"series": {
+							"type": "string",
+							"maxLength": 500
+						},
+						"releaseDate": {
+							"type": "string",
+							"maxLength": 32
+						},
+						"deliveryDate": {
+							"default": "",
+							"type": "string",
+							"maxLength": 32
+						},
+						"description": {
+							"type": "string",
+							"maxLength": 4000
+						},
+						"tags": {
+							"maxItems": 60,
+							"type": "array",
+							"items": {
+								"type": "string",
+								"maxLength": 100
+							}
+						},
+						"covers": {
+							"maxItems": 3,
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"id": {
+										"type": "string",
+										"pattern": "^[a-f0-9]{64}$"
+									},
+									"url": {
+										"type": "string",
+										"maxLength": 2000,
+										"format": "uri"
+									},
+									"source": {
+										"type": "string",
+										"enum": [
+											"dmm",
+											"r18dev",
+											"1pondo",
+											"fc2",
+											"fc2ppvdb",
+											"javten",
+											"javarchive",
+											"avbase",
+											"javbus",
+											"javdb",
+											"javtao",
+											"sougouwiki",
+											"av_neme",
+											"av_name",
+											"makers",
+											"prestige",
+											"faleno",
+											"dahlia",
+											"mgstage",
+											"avsox",
+											"freejavbt",
+											"airav",
+											"fc2club",
+											"kmib",
+											"fc2cmadb"
+										]
+									},
+									"identity": {
+										"type": "string",
+										"const": "source-matched"
+									},
+									"asset": {
+										"type": "object",
+										"properties": {
+											"sha256": {
+												"type": "string",
+												"pattern": "^[a-f0-9]{64}$"
+											},
+											"width": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991
+											},
+											"height": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991
+											},
+											"format": {
+												"type": "string",
+												"enum": [
+													"JPEG",
+													"PNG",
+													"WEBP"
+												]
+											},
+											"bytes": {
+												"type": "integer",
+												"minimum": 1,
+												"maximum": 12582912
+											},
+											"quality": {
+												"type": "string",
+												"enum": [
+													"standard",
+													"small"
+												]
+											}
+										},
+										"required": [
+											"sha256",
+											"width",
+											"height",
+											"format",
+											"bytes",
+											"quality"
+										]
+									},
+									"probe": {
+										"type": "object",
+										"properties": {
+											"width": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991
+											},
+											"height": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 9007199254740991
+											},
+											"format": {
+												"type": "string",
+												"enum": [
+													"JPEG",
+													"PNG",
+													"WEBP"
+												]
+											}
+										},
+										"required": [
+											"width",
+											"height",
+											"format"
+										]
+									},
+									"error": {
+										"type": "string",
+										"maxLength": 500
+									}
+								},
+								"required": [
+									"id",
+									"url",
+									"source",
+									"identity"
+								]
+							}
+						},
+						"warnings": {
+							"maxItems": 20,
+							"type": "array",
+							"items": {
+								"type": "string",
+								"maxLength": 500
+							}
+						}
+					},
+					"required": [
+						"id",
+						"source",
+						"parser",
+						"parserVersion",
+						"code",
+						"contentId",
+						"sourceUrl",
+						"fetchedAt",
+						"title",
+						"titleLanguage",
+						"people",
+						"studio",
+						"label",
+						"seller",
+						"sellerUrl",
+						"series",
+						"releaseDate",
+						"description",
+						"tags",
+						"covers",
+						"warnings"
+					]
+				}
+			},
+			"coverId": {
+				"anyOf": [
+					{
+						"type": "string",
+						"pattern": "^[a-f0-9]{64}$"
+					},
+					{
+						"type": "null"
+					}
+				]
+			}
+		},
+		"required": [
+			"id",
+			"code",
+			"savedAt",
+			"updatedAt",
+			"records",
+			"coverId"
+		]
+	}
+}

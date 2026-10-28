@@ -1,0 +1,837 @@
+{
+  "preferences": {
+    "querySources": [
+      "dmm",
+      "r18dev",
+      "fc2"
+    ],
+    "enabledSources": [
+      "dmm",
+      "r18dev",
+      "fc2",
+      "fanbox",
+      "javdb"
+    ],
+    "metadataPriority": [
+      "dmm",
+      "r18dev",
+      "makers",
+      "prestige",
+      "faleno",
+      "dahlia",
+      "mgstage",
+      "1pondo",
+      "fc2",
+      "fc2ppvdb",
+      "javten",
+      "avbase",
+      "javdb",
+      "javtao",
+      "javarchive",
+      "avsox",
+      "freejavbt",
+      "airav",
+      "sougouwiki",
+      "av_neme",
+      "av_name",
+      "javbus"
+    ],
+    "coverPriority": [
+      "dmm"
+    ],
+    "automatic": false,
+    "creatorMinutes": 60,
+    "performerMinutes": 360,
+    "proxyMode": "system",
+    "proxyUrl": "",
+    "fanboxTransport": "httpx",
+    "javdbTransport": "httpx",
+    "sourceTransports": {},
+    "theme": "cream",
+    "imageCacheMiB": 512,
+    "magnetSearch": {
+      "enabled": true,
+      "source": "sukebei",
+      "maxResults": 20,
+      "transport": "httpx"
+    }
+  },
+  "sources": [
+    {
+      "id": "dmm",
+      "name": "DMM / FANZA",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://api.video.dmm.co.jp/graphql",
+      "domains": [
+        "dmm.co.jp",
+        "dmm.com"
+      ],
+      "images": [
+        "dmm.co.jp",
+        "dmm.com"
+      ],
+      "credential": false,
+      "note": "配信资料与封面；编号未命中时查询 DVD 通贩普通版，标题仅查配信目录",
+      "capabilities": "配信资料与封面；编号未命中时查询 DVD 通贩普通版，标题仅查配信目录",
+      "available": true
+    },
+    {
+      "id": "r18dev",
+      "name": "r18.dev",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://r18.dev/",
+      "domains": [
+        "r18.dev"
+      ],
+      "images": [
+        "dmm.co.jp",
+        "dmm.com"
+      ],
+      "credential": false,
+      "note": "编号与资料封面；已有在线成功样本",
+      "capabilities": "编号与资料封面；已有在线成功样本",
+      "available": true
+    },
+    {
+      "id": "1pondo",
+      "name": "一本道",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "dated"
+      ],
+      "root": "https://www.1pondo.tv/",
+      "domains": [
+        "1pondo.tv"
+      ],
+      "images": [
+        "1pondo.tv"
+      ],
+      "credential": false,
+      "note": "原站作品链接；日期编号须明确选择本站，封面为官方剧照；已有本机在线成功样本",
+      "capabilities": "原站作品链接；日期编号须明确选择本站，封面为官方剧照；已有本机在线成功样本",
+      "available": true
+    },
+    {
+      "id": "fc2",
+      "name": "FC2",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "fc2"
+      ],
+      "root": "https://adult.contents.fc2.com/",
+      "domains": [
+        "fc2.com"
+      ],
+      "images": [
+        "fc2.com"
+      ],
+      "credential": false,
+      "note": "商品资料、卖家与封面；官方不提供演员栏；待在线验证",
+      "capabilities": "商品资料、卖家与封面；官方不提供演员栏；待在线验证",
+      "available": true
+    },
+    {
+      "id": "fc2ppvdb",
+      "name": "FC2PPV-DB",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "fc2"
+      ],
+      "root": "https://fc2ppv-db.com/",
+      "domains": [
+        "fc2ppv-db.com"
+      ],
+      "images": [],
+      "credential": true,
+      "note": "FC2 资料与人物，不提供封面；使用本机 Chrome / Edge 完成验证并复用独立会话",
+      "capabilities": "FC2 资料与人物，不提供封面；使用本机 Chrome / Edge 完成验证并复用独立会话",
+      "available": true
+    },
+    {
+      "id": "javten",
+      "name": "JAVten",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "fc2"
+      ],
+      "root": "https://javten.com/",
+      "domains": [
+        "javten.com"
+      ],
+      "images": [
+        "javten.com",
+        "fc2.com"
+      ],
+      "credential": true,
+      "note": "FC2 资料与封面，不提供演员栏；浏览器验证流程尚未移植",
+      "capabilities": "FC2 资料与封面，不提供演员栏；浏览器验证流程尚未移植",
+      "available": true
+    },
+    {
+      "id": "javarchive",
+      "name": "JavArchive",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "fc2"
+      ],
+      "root": "https://javarchive.com/",
+      "domains": [
+        "javarchive.com",
+        "javstore.net"
+      ],
+      "images": [
+        "javarchive.com",
+        "javstore.net"
+      ],
+      "credential": false,
+      "note": "搜索与作品资料；仅保留解析器判定的封面候选；待在线验证",
+      "capabilities": "搜索与作品资料；仅保留解析器判定的封面候选；待在线验证",
+      "available": true
+    },
+    {
+      "id": "avbase",
+      "name": "AVBase",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://www.avbase.net/",
+      "domains": [
+        "avbase.net"
+      ],
+      "images": [
+        "avbase.net",
+        "dmm.co.jp",
+        "dmm.com",
+        "mgstage.com",
+        "mgs.jp",
+        "duga.jp"
+      ],
+      "credential": false,
+      "note": "作品、人物与店铺商品；保留商品身份过滤；已有本机在线成功样本",
+      "capabilities": "作品、人物与店铺商品；保留商品身份过滤；已有本机在线成功样本",
+      "available": true
+    },
+    {
+      "id": "javbus",
+      "name": "JavBus",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://www.javbus.com/",
+      "domains": [
+        "javbus.com"
+      ],
+      "images": [
+        "javbus.com"
+      ],
+      "credential": true,
+      "note": "编号、资料与封面；可能需要年龄确认 Cookie；待在线验证",
+      "capabilities": "编号、资料与封面；可能需要年龄确认 Cookie；待在线验证",
+      "available": true
+    },
+    {
+      "id": "javdb",
+      "name": "JavDB",
+      "group": "资料与演员新作",
+      "engine": "peach",
+      "metadata": true,
+      "follow": true,
+      "families": [
+        "standard",
+        "fc2",
+        "dated"
+      ],
+      "root": "https://javdb.com/",
+      "domains": [
+        "javdb.com",
+        "jdbstatic.com",
+        "jdbimgs.com"
+      ],
+      "images": [
+        "javdb.com",
+        "jdbstatic.com",
+        "jdbimgs.com"
+      ],
+      "credential": true,
+      "note": "作品资料、演员名查询与新作订阅；演员头像本地缓存，作品图片仅作核验；部分页面受登录或出口限制",
+      "capabilities": "作品资料、演员名查询与新作订阅；演员头像本地缓存，作品图片仅作核验；部分页面受登录或出口限制",
+      "available": true
+    },
+    {
+      "id": "javtao",
+      "name": "JavTao",
+      "group": "资料与演员新作",
+      "engine": "nectisse",
+      "metadata": true,
+      "follow": true,
+      "families": [
+        "standard",
+        "fc2"
+      ],
+      "root": "https://javtao.com/",
+      "domains": [
+        "javtao.com"
+      ],
+      "images": [
+        "javtao.com"
+      ],
+      "credential": false,
+      "note": "公开作品资料、封面与演员目录；使用浏览器指纹连接；演员无头像，检查当前返回列表，不扩展历史；作品详情磁链另在磁链搜索中查询",
+      "capabilities": "公开作品资料、封面与演员目录；使用浏览器指纹连接；演员无头像，检查当前返回列表，不扩展历史；作品详情磁链另在磁链搜索中查询",
+      "available": true
+    },
+    {
+      "id": "sougouwiki",
+      "name": "素人系総合 Wiki",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://seesaawiki.jp/w/sougouwiki/",
+      "domains": [
+        "seesaawiki.jp"
+      ],
+      "images": [],
+      "credential": false,
+      "note": "按精确编号核对作品表与出演证据；有界搜索；待在线验证",
+      "capabilities": "按精确编号核对作品表与出演证据；有界搜索；待在线验证",
+      "available": true
+    },
+    {
+      "id": "av_neme",
+      "name": "このAV女優の名前教えてwiki",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://seesaawiki.jp/av_neme/",
+      "domains": [
+        "seesaawiki.jp"
+      ],
+      "images": [],
+      "credential": false,
+      "note": "按精确编号核对出演证据；有界搜索；待在线验证",
+      "capabilities": "按精确编号核对出演证据；有界搜索；待在线验证",
+      "available": true
+    },
+    {
+      "id": "av_name",
+      "name": "AV女優の名前特定wiki",
+      "group": "资料来源",
+      "engine": "peach",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://seesaawiki.jp/av_name/",
+      "domains": [
+        "seesaawiki.jp"
+      ],
+      "images": [],
+      "credential": false,
+      "note": "按精确编号核对出演证据；有界搜索；待在线验证",
+      "capabilities": "按精确编号核对出演证据；有界搜索；待在线验证",
+      "available": true
+    },
+    {
+      "id": "makers",
+      "name": "片商官网（amane）",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://s1s1s1.com/",
+      "domains": [
+        "attackers.net",
+        "befreebe.com",
+        "bi-av.com",
+        "bibian-av.com",
+        "dasdas.jp",
+        "av-e-body.com",
+        "fitch-av.com",
+        "hajimekikaku.com",
+        "honnaka.jp",
+        "hhh-av.com",
+        "ideapocket.com",
+        "kawaiikawaii.jp",
+        "kirakira-av.com",
+        "madonna-av.com",
+        "miman.jp",
+        "mko-labo.net",
+        "moodyz.com",
+        "muku.tv",
+        "mvg.jp",
+        "nanpa-japan.jp",
+        "oppai-av.com",
+        "av-opera.jp",
+        "premium-beauty.com",
+        "rookie-av.jp",
+        "s1s1s1.com",
+        "tameikegoro.jp",
+        "to-satsu.com",
+        "v-av.com",
+        "wanz-factory.com"
+      ],
+      "images": [
+        "dmm.co.jp",
+        "dmm.com"
+      ],
+      "credential": false,
+      "note": "按 amane 的 29 家片商编号前缀映射查询；S1 样例在线成功，其余片商待逐站验证",
+      "capabilities": "按 amane 的 29 家片商编号前缀映射查询；S1 样例在线成功，其余片商待逐站验证",
+      "available": true
+    },
+    {
+      "id": "prestige",
+      "name": "Prestige",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://www.prestige-av.com/",
+      "domains": [
+        "prestige-av.com"
+      ],
+      "images": [
+        "prestige-av.com",
+        "mgs.jp",
+        "mgstage.com"
+      ],
+      "credential": true,
+      "note": "官方资料与封面；配信开始日单独保存，不当发行日；待在线验证",
+      "capabilities": "官方资料与封面；配信开始日单独保存，不当发行日；待在线验证",
+      "available": true
+    },
+    {
+      "id": "faleno",
+      "name": "FALENO",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://faleno.jp/",
+      "domains": [
+        "faleno.jp"
+      ],
+      "images": [
+        "faleno.jp"
+      ],
+      "credential": true,
+      "note": "官方作品资料与封面；待在线验证",
+      "capabilities": "官方作品资料与封面；待在线验证",
+      "available": true
+    },
+    {
+      "id": "dahlia",
+      "name": "DAHLIA",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://dahlia-av.jp/",
+      "domains": [
+        "dahlia-av.jp"
+      ],
+      "images": [
+        "dahlia-av.jp"
+      ],
+      "credential": true,
+      "note": "官方作品资料与封面；待在线验证",
+      "capabilities": "官方作品资料与封面；待在线验证",
+      "available": true
+    },
+    {
+      "id": "mgstage",
+      "name": "MGStage",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://www.mgstage.com/",
+      "domains": [
+        "mgstage.com"
+      ],
+      "images": [
+        "mgstage.com",
+        "mgs.jp"
+      ],
+      "credential": true,
+      "note": "素人作品资料与官方封面；可能有地区或年龄门；待在线验证",
+      "capabilities": "素人作品资料与官方封面；可能有地区或年龄门；待在线验证",
+      "available": true
+    },
+    {
+      "id": "avsox",
+      "name": "AVSOX",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard",
+        "dated"
+      ],
+      "root": "https://avsox.click/",
+      "domains": [
+        "avsox.click"
+      ],
+      "images": [
+        "avsox.click"
+      ],
+      "credential": false,
+      "note": "无码资料后备来源；待在线验证",
+      "capabilities": "无码资料后备来源；待在线验证",
+      "available": true
+    },
+    {
+      "id": "freejavbt",
+      "name": "FreeJavBT",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://freejavbt.com/",
+      "domains": [
+        "freejavbt.com"
+      ],
+      "images": [
+        "freejavbt.com"
+      ],
+      "credential": false,
+      "note": "仅作品资料与封面解析；待在线验证",
+      "capabilities": "仅作品资料与封面解析；待在线验证",
+      "available": true
+    },
+    {
+      "id": "airav",
+      "name": "AIRAV",
+      "group": "资料来源",
+      "engine": "amane",
+      "metadata": true,
+      "follow": false,
+      "families": [
+        "standard"
+      ],
+      "root": "https://airav.io/",
+      "domains": [
+        "airav.io"
+      ],
+      "images": [
+        "airav.io",
+        "dmm.co.jp",
+        "dmm.com"
+      ],
+      "credential": false,
+      "note": "作品资料与封面；待在线验证",
+      "capabilities": "作品资料与封面；待在线验证",
+      "available": true
+    },
+    {
+      "id": "fanbox",
+      "name": "FANBOX",
+      "group": "创作者动态",
+      "engine": "peach",
+      "metadata": false,
+      "follow": true,
+      "families": [],
+      "root": "https://www.fanbox.cc/",
+      "domains": [
+        "fanbox.cc",
+        "pximg.net"
+      ],
+      "images": [
+        "fanbox.cc",
+        "pximg.net"
+      ],
+      "credential": true,
+      "note": "主页／账号查询、公开动态和受限摘要；已有在线成功样本",
+      "capabilities": "主页／账号查询、公开动态和受限摘要；已有在线成功样本",
+      "available": true
+    },
+    {
+      "id": "x",
+      "name": "X",
+      "group": "创作者动态",
+      "engine": "fxembed",
+      "metadata": false,
+      "follow": true,
+      "families": [],
+      "root": "https://x.com/",
+      "apiRoot": "https://api.fxtwitter.com",
+      "requestDomains": [
+        "api.fxtwitter.com"
+      ],
+      "domains": [
+        "x.com",
+        "twitter.com"
+      ],
+      "images": [
+        "pbs.twimg.com"
+      ],
+      "credential": false,
+      "note": "通过 FxEmbed 获取公开账号本人原创帖，无需登录；不收录回复、引用与转发，可能存在延迟或缺失",
+      "capabilities": "通过 FxEmbed 获取公开账号本人原创帖，无需登录；不收录回复、引用与转发，可能存在延迟或缺失",
+      "available": true
+    },
+    {
+      "id": "patreon",
+      "name": "Patreon",
+      "group": "创作者动态",
+      "engine": "peach",
+      "metadata": false,
+      "follow": true,
+      "families": [],
+      "root": "https://www.patreon.com/",
+      "domains": [
+        "patreon.com"
+      ],
+      "images": [
+        "patreonusercontent.com",
+        "patreon.com"
+      ],
+      "credential": true,
+      "note": "创作者主页／账号，公开帖子卡片；无历史分页，时间可能为估算；待在线验证",
+      "capabilities": "创作者主页／账号，公开帖子卡片；无历史分页，时间可能为估算；待在线验证",
+      "available": true
+    },
+    {
+      "id": "kemono",
+      "name": "Kemono",
+      "group": "归档动态",
+      "engine": "peach",
+      "metadata": false,
+      "follow": true,
+      "families": [],
+      "root": "https://kemono.cr/",
+      "domains": [
+        "kemono.cr"
+      ],
+      "images": [
+        "kemono.cr"
+      ],
+      "credential": true,
+      "note": "服务／用户身份与归档帖子；归档收录时间不等于作者发布时间；已有本机在线成功样本",
+      "capabilities": "服务／用户身份与归档帖子；归档收录时间不等于作者发布时间；已有本机在线成功样本",
+      "available": true
+    },
+    {
+      "id": "pawchive",
+      "name": "Pawchive",
+      "group": "归档动态",
+      "engine": "peach",
+      "metadata": false,
+      "follow": true,
+      "families": [],
+      "root": "https://pawchive.pw/",
+      "domains": [
+        "pawchive.pw"
+      ],
+      "images": [
+        "pawchive.pw"
+      ],
+      "credential": true,
+      "note": "服务／用户身份与归档帖子；保留纯文字公告；待在线验证",
+      "capabilities": "服务／用户身份与归档帖子；保留纯文字公告；待在线验证",
+      "available": true
+    },
+    {
+      "id": "coomer",
+      "name": "Coomer",
+      "group": "归档动态",
+      "engine": "peach",
+      "metadata": false,
+      "follow": true,
+      "families": [],
+      "root": "https://coomer.st/",
+      "domains": [
+        "coomer.st"
+      ],
+      "images": [
+        "coomer.st"
+      ],
+      "credential": true,
+      "note": "服务／用户身份与归档帖子；归档更新不承诺实时性；待在线验证",
+      "capabilities": "服务／用户身份与归档帖子；归档更新不承诺实时性；待在线验证",
+      "available": true
+    },
+    {
+      "id": "f95zone",
+      "name": "F95zone",
+      "group": "需额外适配",
+      "engine": "reference",
+      "metadata": false,
+      "follow": false,
+      "families": [],
+      "root": "https://f95zone.to/",
+      "domains": [
+        "f95zone.to"
+      ],
+      "images": [],
+      "credential": true,
+      "note": "Peach 读取论坛线程；尚需验证发帖作者与关注对象的关系，当前不派发",
+      "capabilities": "Peach 读取论坛线程；尚需验证发帖作者与关注对象的关系，当前不派发",
+      "available": false
+    },
+    {
+      "id": "simpcity",
+      "name": "SimpCity",
+      "group": "需额外适配",
+      "engine": "reference",
+      "metadata": false,
+      "follow": false,
+      "families": [],
+      "root": "https://simpcity.cr/",
+      "domains": [
+        "simpcity.cr"
+      ],
+      "images": [],
+      "credential": true,
+      "note": "需要登录；Peach 线程回复不保证来自创作者，当前不派发",
+      "capabilities": "需要登录；Peach 线程回复不保证来自创作者，当前不派发",
+      "available": false
+    },
+    {
+      "id": "duga",
+      "name": "DUGA",
+      "group": "需额外适配",
+      "engine": "reference",
+      "metadata": false,
+      "follow": false,
+      "families": [],
+      "root": "https://duga.jp/",
+      "domains": [
+        "duga.jp"
+      ],
+      "images": [
+        "duga.jp"
+      ],
+      "credential": false,
+      "note": "Peach 只复用已知精确封面地址；通用查询需要额外应用身份，当前不派发",
+      "capabilities": "Peach 只复用已知精确封面地址；通用查询需要额外应用身份，当前不派发",
+      "available": false
+    }
+  ],
+  "metadataIds": [
+    "dmm",
+    "r18dev",
+    "1pondo",
+    "fc2",
+    "fc2ppvdb",
+    "javten",
+    "javarchive",
+    "avbase",
+    "javbus",
+    "javdb",
+    "javtao",
+    "sougouwiki",
+    "av_neme",
+    "av_name",
+    "makers",
+    "prestige",
+    "faleno",
+    "dahlia",
+    "mgstage",
+    "avsox",
+    "freejavbt",
+    "airav"
+  ],
+  "followIds": [
+    "fanbox",
+    "javdb",
+    "javtao",
+    "x",
+    "patreon",
+    "kemono",
+    "pawchive",
+    "coomer"
+  ],
+  "metadataOrder": [
+    "dmm",
+    "r18dev",
+    "makers",
+    "prestige",
+    "faleno",
+    "dahlia",
+    "mgstage",
+    "1pondo",
+    "fc2",
+    "fc2ppvdb",
+    "javten",
+    "avbase",
+    "javdb",
+    "javtao",
+    "javarchive",
+    "avsox",
+    "freejavbt",
+    "airav",
+    "sougouwiki",
+    "av_neme",
+    "av_name",
+    "javbus"
+  ],
+  "legacyIds": [
+    "fc2club",
+    "kmib",
+    "fc2cmadb"
+  ]
+}

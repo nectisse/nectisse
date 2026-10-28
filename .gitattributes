@@ -1,0 +1,3 @@
+# Preserve upstream license texts byte for byte.
+resources/licenses/** -whitespace
+tests/fixtures/*.sqlite binary

@@ -1,8 +1,6 @@
 const renderer = '^src/renderer/';
 const features = ['work-query', 'library', 'subscriptions', 'updates', 'settings'];
 const entities = ['work', 'subscription', 'update'];
-const mainFeatures = ['metadata', 'library', 'magnets', 'subscriptions'];
-const platforms = ['python', 'network', 'diagnostics', 'lifecycle', 'images'];
 
 function publicModules(root, names) {
 	return names.map((name) => ({
@@ -29,13 +27,13 @@ module.exports = {
 		{
 			name: 'desktop-owns-renderer-data-libraries',
 			severity: 'error',
-			from: { path: '^src/', pathNot: '^src/renderer/shared/desktop/' },
+			from: { path: '^src/', pathNot: '^src/renderer/(shared/desktop/|main\\.tsx$)' },
 			to: { path: '^node_modules/(zustand|@tanstack/(react-query|query-core))/' },
 		},
 		{
 			name: 'desktop-public-interface',
 			severity: 'error',
-			from: { path: renderer, pathNot: '^src/renderer/shared/desktop/' },
+			from: { path: renderer, pathNot: '^src/renderer/(shared/desktop/|main\\.tsx$)' },
 			to: { path: '^src/renderer/shared/desktop/', pathNot: '^src/renderer/shared/desktop/index\\.ts$' },
 		},
 		{
@@ -47,7 +45,6 @@ module.exports = {
 		{ name: 'renderer-is-sandboxed', severity: 'error', from: { path: renderer }, to: { path: '^src/(main|preload)/|^(node:|electron$|node_modules/electron/)' } },
 		{ name: 'renderer-has-no-node-builtins', severity: 'error', from: { path: renderer }, to: { dependencyTypes: ['core'] } },
 		{ name: 'shared-has-no-node-builtins', severity: 'error', from: { path: '^src/shared/' }, to: { dependencyTypes: ['core'] } },
-		{ name: 'main-has-no-ui', severity: 'error', from: { path: '^src/(main|preload)/' }, to: { path: renderer } },
 		{
 			name: 'renderer-shared-has-no-business-dependencies',
 			severity: 'error',
@@ -78,43 +75,10 @@ module.exports = {
 			from: { path: renderer, pathNot: '^src/renderer/(demo/|app/App\\.tsx$|app/styles/)' },
 			to: { path: '^src/renderer/demo/' },
 		},
-		{
-			name: 'main-platform-has-no-business-dependencies',
-			severity: 'error',
-			from: { path: '^src/main/platform/' },
-			to: { path: '^src/main/(app/|features/|index\\.ts$)' },
-		},
-		{
-			name: 'main-features-have-no-entry-dependencies',
-			severity: 'error',
-			from: { path: '^src/main/features/' },
-			to: { path: '^src/main/(app/|index\\.ts$)' },
-		},
-		{
-			name: 'subscription-image-cache-has-no-execution-dependencies',
-			severity: 'error',
-			from: { path: '^src/main/features/subscriptions/image-cache\\.ts$' },
-			to: { path: '^src/main/features/subscriptions/(image-backfill|follow-runner|subscription-scheduler|subscriptions-service)\\.ts$' },
-		},
-		{
-			name: 'subscription-runners-have-no-coordination-dependencies',
-			severity: 'error',
-			from: { path: '^src/main/features/subscriptions/(image-backfill|follow-runner)\\.ts$' },
-			to: { path: '^src/main/features/subscriptions/(subscription-scheduler|subscriptions-service)\\.ts$' },
-		},
-		{
-			name: 'subscription-scheduler-has-no-facade-dependencies',
-			severity: 'error',
-			from: { path: '^src/main/features/subscriptions/subscription-scheduler\\.ts$' },
-			to: { path: '^src/main/features/subscriptions/subscriptions-service\\.ts$' },
-		},
 		...publicModules('src/renderer/features', features),
 		...publicModules('src/renderer/entities', entities),
 		...publicModules('src/renderer', ['demo']),
-		...publicModules('src/main/features', mainFeatures),
-		...publicModules('src/main/platform', platforms),
 		...independentFeatures('src/renderer/features', features),
-		...independentFeatures('src/main/features', mainFeatures),
 	],
 	options: {
 		doNotFollow: { path: 'node_modules' },

@@ -15,6 +15,8 @@
 
 Nectisse 是一款面向 macOS 的私人作品资料与创作者更新应用。查询作品，收藏资料与封面，用照片墙浏览喜欢的作品，在同一处追踪演员新作和创作者动态。
 
+面向 macOS 的私人作品与创作者资料库，基于 Tauri 与 Rust 后台运行，无需 Node.js 运行时。
+
 ## 下载与安装
 
 从 [GitHub Releases](https://github.com/nectisse/nectisse/releases) 获取发布包，将 `Nectisse.app` 放入“应用程序”后双击打开。

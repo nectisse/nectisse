@@ -1,0 +1,23 @@
+{
+  "password": "nectisse-public-fixture-password",
+  "keyHex": "53771d2e6aa015c07f4900444d93ce33",
+  "ivHex": "20202020202020202020202020202020",
+  "cases": [
+    {
+      "plain": "",
+      "encodedHex": ""
+    },
+    {
+      "plain": "a",
+      "encodedHex": "76313056a11db26ae04713d9410564d236f091"
+    },
+    {
+      "plain": "0123456789abcdef",
+      "encodedHex": "763130d1b157766ad08ac049fba7b5c090f5e6f323187ddcf59c3146118a943350b64e"
+    },
+    {
+      "plain": "fixture_cookie=none; label=测试",
+      "encodedHex": "7631302412a1d422b21b544507c3db54d1d58af3942a468b3bdae10904f2f30a51695074f039e65b36d2f8757b561c9b946404"
+    }
+  ]
+}
