@@ -19,13 +19,27 @@ export async function localReleaseSettings() {
 	}
 }
 
-export async function releaseCommand(tool, arguments_, env = process.env) {
-	try {
-		return await execute(tool, arguments_, { env, maxBuffer: 32 * 1024 * 1024, timeout: 45 * 60 * 1000 });
-	} catch (cause) {
-		const error = new Error(`${tool} failed during release verification. Arguments and output were withheld to protect credentials.`);
-		error.exitCode = typeof cause.code === 'number' ? cause.code : undefined;
-		throw error;
+export async function releaseCommand(tool, arguments_, env = process.env, { run = execute, wait = delay } = {}) {
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await run(tool, arguments_, { env, maxBuffer: 32 * 1024 * 1024, timeout: 45 * 60 * 1000 });
+		} catch (cause) {
+			const timestampFailure =
+				tool === '/usr/bin/codesign' &&
+				arguments_.includes('--timestamp') &&
+				/timestamp service is not available|A timestamp was expected but was not found/i.test(cause.stderr ?? '');
+			// Retry only temporary timestamp failures; never weaken the signature requirements.
+			if (timestampFailure && attempt < 4) {
+				console.log(`Apple timestamp service unavailable; retrying signature (${attempt + 1}/4).`);
+				await wait((attempt + 1) * 3000);
+				continue;
+			}
+			const error = new Error(
+				`${tool} failed during release verification${timestampFailure ? ': Apple timestamp service unavailable' : ''}. Arguments and output were withheld to protect credentials.`,
+			);
+			error.exitCode = typeof cause.code === 'number' ? cause.code : undefined;
+			throw error;
+		}
 	}
 }
 
