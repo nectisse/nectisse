@@ -10,7 +10,7 @@
     <a href="#界面预览">界面预览</a> ·
     <a href="https://github.com/nectisse/nectisse/issues">问题反馈</a>
   </p>
-  <p><sub>v0.2.1 · macOS 13.3 及以上 · Apple Silicon（arm64）</sub></p>
+  <p><sub>v0.2.2 · macOS 13.3 及以上 · Apple Silicon（arm64）</sub></p>
 </div>
 
 Nectisse 是一款面向 macOS 的私人作品资料与创作者更新应用。查询作品，收藏资料与封面，用照片墙浏览喜欢的作品，在同一处追踪演员新作和创作者动态。

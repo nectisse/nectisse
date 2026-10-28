@@ -43,6 +43,95 @@ fn backend() -> (tempfile::TempDir, Backend) {
 }
 
 #[test]
+fn x_list_thumbnail_fetches_its_image_host_and_remains_cached() {
+    let (root, backend) = backend();
+    let post;
+    {
+        let store = backend.0.store.lock().unwrap();
+        let mut preferences = store.preferences().unwrap();
+        let mut enabled = array(&preferences, "enabledSources");
+        if !enabled.iter().any(|source| source == "x") {
+            enabled.push(json!("x"));
+        }
+        preferences["enabledSources"] = json!(enabled);
+        store.save_preferences(&preferences).unwrap();
+        let sub = store
+            .follow(&candidate("x", "1722511982610538496"))
+            .unwrap();
+        let mut input = entry("1900000000000000000", "2026-10-29T02:00:00Z");
+        input["url"] = json!("https://x.com/fixtureuser/status/1900000000000000000");
+        input["authorRef"] = sub["ref"].clone();
+        input["authorHandle"] = json!("fixtureuser");
+        input["postKind"] = json!("original");
+        input["thumbnailUrl"] = json!("https://pbs.twimg.com/media/fixture.jpg");
+        store.upsert_entry(&sub, &input).unwrap();
+        post = store.entries().unwrap()[0].clone();
+    }
+    let bytes = png(65);
+    let asset = images::asset(&bytes, 16, 12, "PNG");
+    let hex = bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    fixture_worker(&backend, root.path(), &format!(
+        "emit('progress',payload=dict(event='request',source='x',host='pbs.twimg.com',sequence=1))\npermit=json.loads(sys.stdin.readline())\nassert permit['method']=='permit'\nimport pathlib\npathlib.Path(request['params']['destination']).write_bytes(bytes.fromhex({hex:?}))\nemit('result',payload=dict(status='success',reason='',message='',retryAfter=0,asset=json.loads({:?})))",
+        asset.to_string()
+    ));
+    let thumbnail = backend
+        .image("updates", text(&post, "id"), "thumbnail")
+        .unwrap();
+    assert!(
+        thumbnail.is_some(),
+        "The X post's list thumbnail must load through the image request permit"
+    );
+    let thumbnail = thumbnail.unwrap();
+    assert!(!thumbnail.bytes.is_empty());
+    let store = backend.0.store.lock().unwrap();
+    assert_eq!(
+        store.entry(text(&post, "id")).unwrap().unwrap()["imageAsset"]["sha256"],
+        thumbnail.asset["sha256"]
+    );
+    drop(store);
+    assert_eq!(
+        backend
+            .image("updates", text(&post, "id"), "original")
+            .unwrap()
+            .unwrap()
+            .bytes,
+        bytes
+    );
+    *backend.0.worker_fixture.lock().unwrap() = Some(root.path().join("worker-must-not-run.py"));
+    assert_eq!(
+        backend
+            .image("updates", text(&post, "id"), "thumbnail")
+            .unwrap()
+            .unwrap()
+            .bytes,
+        thumbnail.bytes
+    );
+}
+
+#[test]
+fn image_permits_do_not_allow_api_hosts_or_expand_post_lookup_domains() {
+    for (method, host) in [
+        ("follow.image", "api.fxtwitter.com"),
+        ("follow.image", "pbs.twimg.com.unrelated.example"),
+        ("follow.lookup", "pbs.twimg.com"),
+    ] {
+        let (root, backend) = backend();
+        fixture_worker(&backend, root.path(), &format!("emit('progress',payload=dict(event='request',source='x',host={host:?},sequence=1))\nsys.stdin.readline()"));
+        let job = Job::new("image-domain-fixture".into(), 4);
+        assert_eq!(
+            backend
+                .worker(method, json!({"provider":"x"}), &job, |_| Ok(()))
+                .unwrap_err(),
+            "来源请求超出许可范围"
+        );
+        assert_eq!(job.requests.load(Ordering::SeqCst), 0);
+    }
+}
+
+#[test]
 fn existing_electron_sqlite_and_preferences_remain_readable() {
     let (directory, store) = temporary();
     let mut preferences = store.preferences().unwrap();

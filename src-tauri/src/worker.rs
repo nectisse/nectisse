@@ -197,10 +197,21 @@ impl Backend {
                                     let allowed = if expected == "sukebei" {
                                         host == "sukebei.nyaa.si"
                                     } else {
+                                        // Media jobs use the source's image hosts, which may differ from its API.
+                                        let domain_kind = if matches!(
+                                            method,
+                                            "follow.image"
+                                                | "metadata.cover"
+                                                | "metadata.coverProbe"
+                                        ) {
+                                            "image"
+                                        } else {
+                                            "request"
+                                        };
                                         platform::allowed_url(
                                             expected,
                                             &format!("https://{host}/"),
-                                            "request",
+                                            domain_kind,
                                         )
                                     };
                                     if source != expected
