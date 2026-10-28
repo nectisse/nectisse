@@ -1,4 +1,4 @@
-/* The original visual direction, adapted to the native Electron window.
+/* The original visual direction, adapted to the native macOS window.
    All imagery is bundled locally; no web fonts or remote image URLs. */
 .app-shell {
 	position: relative;

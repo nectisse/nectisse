@@ -81,6 +81,8 @@
 		await click('设置');
 		await snapshot('settings');
 		await click('外观与应用');
+		const appVersion = (await bridge.diagnostics.getReport()).environment.appVersion;
+		assert(await until(() => document.body.textContent.includes(`Nectisse ${appVersion}`), 'settings version'), 'Settings displays the actual application version');
 		await click('打开演示');
 		await until(() => document.querySelector('[aria-label="示例数据模式"]'), 'demo mode');
 		await snapshot('demo');

@@ -17,7 +17,7 @@ const digest = async (path) =>
 		.update(await readFile(path))
 		.digest('hex');
 
-export async function verifyApplication(app) {
+export async function verifyApplication(app, { teamId } = {}) {
 	const resources = join(app, 'Contents/Resources');
 	const binary = join(app, 'Contents/MacOS/nectisse-app');
 	const info = JSON.parse((await exec('/usr/bin/plutil', ['-convert', 'json', '-o', '-', join(app, 'Contents/Info.plist')])).stdout);
@@ -47,8 +47,8 @@ export async function verifyApplication(app) {
 	for (const file of binaries) {
 		assert.ok((await exec('/usr/bin/lipo', ['-archs', file])).stdout.trim().split(/\s+/).includes('arm64'));
 		await exec('/usr/bin/codesign', ['--verify', '--strict', file]);
-		if (process.env.APPLE_TEAM_ID) {
-			assert.ok((await exec('/usr/bin/codesign', ['--display', '--verbose=4', file])).stderr.includes(`TeamIdentifier=${process.env.APPLE_TEAM_ID}`));
+		if (teamId) {
+			assert.ok((await exec('/usr/bin/codesign', ['--display', '--verbose=4', file])).stderr.includes(`TeamIdentifier=${teamId}`));
 		}
 	}
 	const probe = 'import sys; sys.path.insert(0,sys.argv[1]); import httpx,curl_cffi,PIL._imaging,lxml.etree,pydantic_core; print(sys.version.split()[0])';

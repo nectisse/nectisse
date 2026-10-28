@@ -1,3 +1,4 @@
+import { APP_VERSION } from '@shared/app-info';
 import { usePreferences, useDesktopActions } from '@/shared/desktop';
 import type { PreferencesPatch, Preferences } from '@shared/preferences';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -349,7 +350,7 @@ export function SettingsPage({
 							<SettingRow label="退出 Nectisse" description="停止本应用的任务与工作者。">
 								<kbd className="settings-shortcut">⌘ Q</kbd>
 							</SettingRow>
-							<SettingRow label="Nectisse 0.1.0">
+							<SettingRow label={`Nectisse ${APP_VERSION}`}>
 								<StatusBadge>本机开发版</StatusBadge>
 							</SettingRow>
 						</Card>

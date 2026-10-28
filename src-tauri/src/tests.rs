@@ -741,3 +741,35 @@ fn actual_electron_sqlite_fixture_keeps_people_posts_settings_and_read_state() {
         true
     );
 }
+
+#[test]
+fn cached_avatars_remain_readable_during_a_slow_remote_cover_download() {
+    let (root, backend) = backend();
+    let avatar;
+    let cover_id = hash("slow-cover");
+    {
+        let mut store = backend.0.store.lock().unwrap();
+        avatar = images::put(&store, "avatar:fast", &png(75), false, Some("avatar:fast")).unwrap()
+            ["original"]
+            .clone();
+        let mut record = query_fixture_record();
+        record["covers"] = json!([{"id":cover_id,"source":"dmm","url":"https://pics.dmm.co.jp/mono/movie/adult/sone00614/sone00614pl.jpg","identity":"source-matched","asset":images::asset(&png(15),16,12,"PNG")}]);
+        store.metadata["tasks"] = json!([{"id":uuid::Uuid::new_v4().to_string(),"status":"succeeded","phase":"fixture","plan":{"kind":"code","query":"SONE-614","code":"SONE-614","contentId":"","sources":["dmm"]},"startedAt":now(),"finishedAt":now(),"records":[record],"outcomes":[],"requests":0}]);
+        store.commit_metadata().unwrap();
+    }
+    fixture_worker(&backend,root.path(),"import time\ntime.sleep(1.5)\nemit('result',payload=dict(status='error',reason='network',message='',retryAfter=0))");
+    let download = backend.clone();
+    let thread = std::thread::spawn(move || download.image("image", &cover_id, "original"));
+    let until = std::time::Instant::now() + Duration::from_secs(3);
+    while !backend.active("image:") {
+        assert!(std::time::Instant::now() < until);
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    let started = std::time::Instant::now();
+    assert!(backend
+        .image("avatars", text(&avatar, "sha256"), "original")
+        .unwrap()
+        .is_some());
+    assert!(started.elapsed() < Duration::from_millis(700));
+    assert!(thread.join().unwrap().unwrap().is_none());
+}

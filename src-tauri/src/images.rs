@@ -582,7 +582,6 @@ impl Backend {
         if !["image", "updates", "avatars", "library"].contains(&scope) || !is_hash(id, 64) {
             return Ok(None);
         }
-        let _gate = self.0.image_io.lock().map_err(|_| "图片存储不可用")?;
         if self.0.stopped.load(Ordering::SeqCst) {
             return Ok(None);
         }
@@ -689,6 +688,14 @@ impl Backend {
             return Ok(None);
         }
         drop(store);
+        // Cached reads remain available while the remote-fetch queue waits on a source.
+        let _gate = self.0.image_io.lock().map_err(|_| "图片存储不可用")?;
+        {
+            let store = self.0.store.lock().map_err(|_| "存储不可用")?;
+            if let Some(cached) = linked(&store, owner.as_deref().unwrap_or(&key), variant)? {
+                return Ok(Some(cached));
+            }
+        }
         let job = self.job(&format!("image:{}", uuid::Uuid::new_v4()), 4)?;
         let fetched = self.fetch_image(
             &source,

@@ -1,3 +1,4 @@
+import { APP_VERSION } from '@shared/app-info';
 import type { DesktopBridge } from '@shared/protocol';
 import { followCommandSchema, subscriptionSchema, entryPageRequestSchema, type CommandReply, type FollowCandidate, type FollowCommand } from '@shared/subscriptions';
 import { mergePreferences, type Preferences } from '@shared/preferences';
@@ -319,7 +320,7 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 		diagnostics: {
 			getReport: async () => ({
 				generatedAt: new Date().toISOString(),
-				environment: { appVersion: '0.1.0', system: '示例环境', architecture: '', tauriVersion: '', pythonVersion: '', runtimePhase: 'ready' },
+				environment: { appVersion: APP_VERSION, system: '示例环境', architecture: '', tauriVersion: '', pythonVersion: '', runtimePhase: 'ready' },
 				entries: [],
 				logStatus: 'ready',
 				ignoredLines: 0,

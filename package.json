@@ -24,14 +24,17 @@
 		"package:app": "npm run icons:build && tauri build --bundles app",
 		"package:mac": "npm run package:app",
 		"package:dmg": "npm run icons:build && tauri build --bundles app,dmg",
-		"release:mac": "npm run icons:build && node scripts/release-macos.mjs",
-		"release:mac:preview": "npm run icons:build && node scripts/release-macos.mjs --unsigned",
+		"release:mac": "node scripts/release-macos.mjs",
+		"release:mac:preview": "node scripts/release-macos.mjs --unsigned",
 		"release:verify": "node scripts/verify-release.mjs",
 		"format:check": "prettier --check src/renderer/shared/desktop/tauri-bridge.ts src-tauri/tauri.conf.json scripts/*release*.mjs scripts/*sign*.mjs scripts/native* scripts/verify-package.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
 		"test:native:release": "npm run build && node scripts/native-e2e.mjs --release",
 		"licenses:generate": "node scripts/third-party-notices.mjs",
 		"licenses:check": "node scripts/third-party-notices.mjs --check",
-		"contracts:generate": "node --import tsx scripts/generate-contracts.ts"
+		"contracts:generate": "node --import tsx scripts/generate-contracts.ts",
+		"package:app:signed": "node scripts/release-macos.mjs --sign-only",
+		"release:prepare": "node scripts/github-release.mjs prepare",
+		"release:publish": "node scripts/github-release.mjs publish"
 	},
 	"dependencies": {
 		"@base-ui/react": "1.9.0",
