@@ -3,6 +3,7 @@ import { Check, ExternalLink, X } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { EntryGallery, type EntryMedia } from './entry-gallery';
 
 export function UpdateDetailDialog({
 	open,
@@ -13,8 +14,12 @@ export function UpdateDetailDialog({
 	source,
 	category,
 	code,
-	image,
-	details,
+	media,
+	mediaKey,
+	published,
+	loading,
+	warning,
+	onRetry,
 	summary,
 	notice,
 	onOpenSource,
@@ -29,8 +34,12 @@ export function UpdateDetailDialog({
 	source: string;
 	category: string;
 	code?: string;
-	image: ReactNode;
-	details: { label: string; value: ReactNode }[];
+	media: EntryMedia[];
+	mediaKey?: string;
+	published?: ReactNode;
+	loading?: boolean;
+	warning?: string;
+	onRetry?: () => void;
 	summary: string;
 	notice?: string;
 	onOpenSource: () => void;
@@ -48,9 +57,15 @@ export function UpdateDetailDialog({
 		>
 			<DialogContent className="entry-dialog" finalFocus={() => (returnFocus.current?.isConnected ? returnFocus.current : document.getElementById('page-heading'))}>
 				<div className="entry-dialog-bar">
-					<Badge variant="secondary">{category}</Badge>
-					<span>{source}</span>
-					{code && <code>{code}</code>}
+					{avatar}
+					<div className="entry-dialog-identity">
+						<span className="entry-dialog-author">{author}</span>
+						<div>
+							<span>{source}</span>
+							<Badge variant="secondary">{category}</Badge>
+							{code && <code>{code}</code>}
+						</div>
+					</div>
 					<DialogClose render={<Button variant="ghost" size="icon-sm" aria-label="关闭对话框" />}>
 						<X />
 					</DialogClose>
@@ -59,29 +74,32 @@ export function UpdateDetailDialog({
 					<DialogDescription className="sr-only">
 						{author} · {source}，来源条目与已取得的摘要。
 					</DialogDescription>
-					<div className="entry-detail-image">{image}</div>
 					<DialogTitle className={title ? 'entry-dialog-title' : 'sr-only'}>{title || `${author}的动态`}</DialogTitle>
-					<div className="entry-dialog-byline">
-						{avatar}
-						<span>{author}</span>
-					</div>
-					<dl className="entry-dialog-facts">
-						{details.map((detail) => (
-							<div key={detail.label}>
-								<dt>{detail.label}</dt>
-								<dd>{detail.value}</dd>
-							</div>
-						))}
-					</dl>
 					{(summary.trim() || notice) && (
 						<section className="entry-dialog-summary">
-							<h3>来源摘要</h3>
 							<p className={!summary ? 'is-empty' : undefined}>{summary || '来源未提供摘要'}</p>
 							{notice && <p className="entry-dialog-notice">{notice}</p>}
 						</section>
 					)}
+					<EntryGallery key={mediaKey} media={media} author={author} />
+					{loading && (
+						<p className="entry-dialog-status" role="status">
+							正在补取这条动态的完整图片…
+						</p>
+					)}
+					{warning && (
+						<div className="entry-dialog-status" role="status">
+							<span>{warning}</span>
+							{onRetry && (
+								<Button variant="text" size="text" onClick={onRetry}>
+									重新获取
+								</Button>
+							)}
+						</div>
+					)}
 				</div>
 				<div className="entry-dialog-footer">
+					<div className="entry-dialog-published">{published}</div>
 					<Button variant="outline" size="sm" onClick={onOpenSource}>
 						查看原文
 						<ExternalLink />

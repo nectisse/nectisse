@@ -1,7 +1,7 @@
 {
 	"name": "nectisse",
 	"productName": "Nectisse",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"private": true,
 	"description": "私人作品资料与创作者更新桌面应用",
 	"type": "module",

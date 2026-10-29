@@ -202,6 +202,73 @@ pub fn validate_preferences(previous: &Value, patch: &Value) -> Result<Value> {
 }
 
 impl Backend {
+    pub fn entry_details(&self, id: &str) -> Result<Value> {
+        if !is_hash(id, 64) {
+            return Err("帖子身份不正确".into());
+        }
+        let (entry, sub) = {
+            let store = self.0.store.lock().map_err(|_| "存储不可用")?;
+            let entry = store.entry(id)?.ok_or("帖子已不存在")?;
+            if text(&entry, "provider") != "x" || entry["images"].is_array() {
+                return Ok(json!({"entry":entry}));
+            }
+            let sub = store
+                .subscription(text(&entry, "subscriptionId"))?
+                .ok_or("订阅已不存在")?;
+            if !flag(&sub, "following")
+                || !flag(&sub, "enabled")
+                || flag(&sub, "autoPaused")
+                || !array(&store.preferences()?, "enabledSources")
+                    .iter()
+                    .any(|source| source == "x")
+            {
+                return Ok(json!({"entry":entry,"warning":"订阅已暂停，仅显示已保存内容"}));
+            }
+            (entry, sub)
+        };
+        let outcome = (|| {
+            let job = self.job(&format!("entry-details:{id}"), 2)?;
+            let result = (|| {
+                let params = json!({"provider":"x","ref":sub["ref"],"externalId":entry["externalId"],"proxy":self.route("x","follow")?});
+                let result = self.worker("follow.entry", params, &job, |_| Ok(()))?;
+                self.hold("x", &result)?;
+                if text(&result, "status") != "success"
+                    || !valid_entry("x", text(&sub, "ref"), &result["entry"])
+                    || result["entry"]["externalId"] != entry["externalId"]
+                {
+                    return Err("暂未取得完整图片，已保留原有内容".to_string());
+                }
+                job.running()?;
+                let store = self.0.store.lock().map_err(|_| "存储不可用")?;
+                if store.entry(id)?.is_none()
+                    || !store.subscription(text(&sub, "id"))?.is_some_and(|sub| {
+                        flag(&sub, "following")
+                            && flag(&sub, "enabled")
+                            && !flag(&sub, "autoPaused")
+                    })
+                    || !array(&store.preferences()?, "enabledSources")
+                        .iter()
+                        .any(|source| source == "x")
+                {
+                    return Err("订阅状态已改变，原有内容已保留".into());
+                }
+                store.upsert_entry(&sub, &result["entry"])?;
+                store.entry(id)?.ok_or("帖子已不存在".into())
+            })();
+            self.finish_job(&job.id);
+            result
+        })();
+        match outcome {
+            Ok(entry) => {
+                self.publish_subscriptions();
+                Ok(json!({"entry":entry}))
+            }
+            Err(_) => {
+                Ok(json!({"entry":entry,"warning":"暂未取得其余图片，可稍后重试；原有内容已保留"}))
+            }
+        }
+    }
+
     pub fn follow_command(&self, command: &Value) -> Result<Value> {
         let action = text(command, "action");
         match action {

@@ -42,6 +42,173 @@ fn backend() -> (tempfile::TempDir, Backend) {
     (root, backend)
 }
 
+fn x_post_fixture(backend: &Backend, pictures: Option<Value>) -> (Value, Value) {
+    let store = backend.0.store.lock().unwrap();
+    let mut preferences = store.preferences().unwrap();
+    let mut enabled = array(&preferences, "enabledSources");
+    if !enabled.iter().any(|source| source == "x") {
+        enabled.push(json!("x"));
+    }
+    preferences["enabledSources"] = json!(enabled);
+    store.save_preferences(&preferences).unwrap();
+    let sub = store
+        .follow(&candidate("x", "1722511982610538496"))
+        .unwrap();
+    let mut post = entry("1900000000000000000", "2026-10-29T02:00:00Z");
+    merge(
+        &mut post,
+        &json!({"url":"https://x.com/fixtureuser/status/1900000000000000000","authorRef":sub["ref"],"authorHandle":"fixtureuser","postKind":"original","thumbnailUrl":"https://pbs.twimg.com/media/first.jpg"}),
+    );
+    if let Some(pictures) = pictures {
+        post["images"] = pictures;
+    }
+    store.upsert_entry(&sub, &post).unwrap();
+    (sub, store.entries().unwrap()[0].clone())
+}
+
+#[test]
+fn gallery_images_keep_separate_cache_references_and_reject_invalid_indices() {
+    let (_root, backend) = backend();
+    let (_sub, post) = x_post_fixture(
+        &backend,
+        Some(
+            json!([{"url":"https://pbs.twimg.com/media/first.jpg"},{"url":"https://pbs.twimg.com/media/second.jpg"}]),
+        ),
+    );
+    let first = png(25);
+    let second = png(95);
+    {
+        let store = backend.0.store.lock().unwrap();
+        images::put(&store, text(&post["images"][0], "url"), &first, false, None).unwrap();
+        images::put(
+            &store,
+            text(&post["images"][1], "url"),
+            &second,
+            false,
+            None,
+        )
+        .unwrap();
+    }
+    assert_eq!(
+        backend
+            .image("updates", text(&post, "id"), "original")
+            .unwrap()
+            .unwrap()
+            .bytes,
+        first
+    );
+    assert_eq!(
+        backend
+            .image_at("updates", text(&post, "id"), "original", Some(1))
+            .unwrap()
+            .unwrap()
+            .bytes,
+        second
+    );
+    for index in [2, 20, usize::MAX] {
+        assert!(backend
+            .image_at("updates", text(&post, "id"), "original", Some(index))
+            .unwrap()
+            .is_none());
+    }
+    assert!(backend
+        .image_at("avatars", text(&post, "id"), "original", Some(0))
+        .unwrap()
+        .is_none());
+}
+
+#[test]
+fn legacy_x_post_images_are_backfilled_once_without_losing_read_or_discovery_state() {
+    let (root, backend) = backend();
+    let (_sub, post) = x_post_fixture(&backend, None);
+    backend
+        .0
+        .store
+        .lock()
+        .unwrap()
+        .mark_read(&[post["id"].clone()], true)
+        .unwrap();
+    let mut input = post.clone();
+    input["images"] = json!([{"url":"https://pbs.twimg.com/media/first.jpg"},{"url":"https://pbs.twimg.com/media/second.jpg"}]);
+    fixture_worker(&backend, root.path(), &format!("emit('progress',payload=dict(event='request',source='x',host='api.fxtwitter.com',sequence=1))\njson.loads(sys.stdin.readline())\nemit('result',payload=dict(status='success',reason='',message='',retryAfter=0,entry=json.loads({:?})))", input.to_string()));
+    let result = backend.entry_details(text(&post, "id")).unwrap();
+    assert_eq!(array(&result["entry"], "images").len(), 2);
+    assert_eq!(result["entry"]["firstSeenAt"], post["firstSeenAt"]);
+    assert_eq!(result["entry"]["read"], true);
+    *backend.0.worker_fixture.lock().unwrap() = Some(root.path().join("worker-must-not-run.py"));
+    assert_eq!(
+        array(
+            &backend.entry_details(text(&post, "id")).unwrap()["entry"],
+            "images"
+        )
+        .len(),
+        2
+    );
+}
+
+#[test]
+fn failed_or_mismatched_post_details_keep_the_legacy_picture_and_remain_retryable() {
+    for wrong_identity in [false, true] {
+        let (root, backend) = backend();
+        let (_sub, post) = x_post_fixture(&backend, None);
+        let mut input = post.clone();
+        input["authorRef"] = json!("9999");
+        let outcome = if wrong_identity {
+            json!({"status":"success","entry":input})
+        } else {
+            json!({"status":"error","reason":"server_error","message":"fixture unavailable","retryAfter":0})
+        };
+        fixture_worker(
+            &backend,
+            root.path(),
+            &format!(
+                "emit('result',payload=json.loads({:?}))",
+                outcome.to_string()
+            ),
+        );
+        let result = backend.entry_details(text(&post, "id")).unwrap();
+        assert!(result["warning"].is_string());
+        assert_eq!(result["entry"]["thumbnailUrl"], post["thumbnailUrl"]);
+        assert!(result["entry"].get("images").is_none());
+    }
+}
+
+#[test]
+fn legacy_timeline_updates_do_not_erase_known_gallery_images() {
+    let (_root, backend) = backend();
+    let (sub, post) = x_post_fixture(
+        &backend,
+        Some(
+            json!([{"url":"https://pbs.twimg.com/media/first.jpg"},{"url":"https://pbs.twimg.com/media/second.jpg"}]),
+        ),
+    );
+    let mut legacy = post.clone();
+    legacy.as_object_mut().unwrap().remove("images");
+    let store = backend.0.store.lock().unwrap();
+    store.upsert_entry(&sub, &legacy).unwrap();
+    assert_eq!(
+        array(&store.entry(text(&post, "id")).unwrap().unwrap(), "images").len(),
+        2
+    );
+}
+
+#[test]
+fn post_detail_method_reaches_the_python_connector_without_requesting_invalid_posts() {
+    let (_root, backend) = backend();
+    let job = Job::new("entry-dispatch-fixture".into(), 2);
+    let result = backend
+        .worker(
+            "follow.entry",
+            json!({"provider":"x","ref":"invalid","externalId":"invalid"}),
+            &job,
+            |_| Ok(()),
+        )
+        .unwrap();
+    assert_eq!(result["status"], "error");
+    assert_eq!(result["reason"], "unsupported");
+    assert_eq!(result["requests"], 0);
+}
+
 #[test]
 fn x_list_thumbnail_fetches_its_image_host_and_remains_cached() {
     let (root, backend) = backend();

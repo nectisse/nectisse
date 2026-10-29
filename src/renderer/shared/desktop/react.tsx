@@ -1,6 +1,7 @@
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import type { SubscriptionsState } from '@shared/subscriptions';
+import { useQuery } from '@tanstack/react-query';
+import type { EntryDetailReply, FeedEntry, SubscriptionsState } from '@shared/subscriptions';
 import type { Preferences } from '@shared/preferences';
 import type { LibraryState } from '@shared/library';
 import type { MetadataState } from '@shared/metadata';
@@ -9,6 +10,18 @@ import { useDesktop } from './context';
 
 export function useDesktopActions(): DesktopState['actions'] {
 	return useDesktop().actions;
+}
+
+export function useEntryDetail(entry?: FeedEntry) {
+	const { getEntry } = useDesktopActions();
+	return useQuery({
+		queryKey: ['entry-detail', entry?.id],
+		enabled: !!entry,
+		queryFn: async () => (await getEntry(entry!.id)) ?? { entry: entry! },
+		select: (reply: EntryDetailReply) => (entry?.images ? { ...reply, entry: { ...reply.entry, images: entry.images }, warning: undefined } : reply),
+		staleTime: 5 * 60 * 1000,
+		retry: false,
+	});
 }
 
 export function useSubscriptions<T>(selector: (state: SubscriptionsState) => T): T {

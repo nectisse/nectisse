@@ -579,7 +579,20 @@ impl Backend {
     }
 
     pub fn image(&self, scope: &str, id: &str, variant: &str) -> Result<Option<Picture>> {
+        self.image_at(scope, id, variant, None)
+    }
+
+    pub fn image_at(
+        &self,
+        scope: &str,
+        id: &str,
+        variant: &str,
+        index: Option<usize>,
+    ) -> Result<Option<Picture>> {
         if !["image", "updates", "avatars", "library"].contains(&scope) || !is_hash(id, 64) {
+            return Ok(None);
+        }
+        if index.is_some_and(|index| index >= 20) || (index.is_some() && scope != "updates") {
             return Ok(None);
         }
         if self.0.stopped.load(Ordering::SeqCst) {
@@ -630,6 +643,15 @@ impl Backend {
             _ => {
                 let found=json_rows(&store.db,"SELECT value FROM entries WHERE id=? OR json_extract(value,'$.imageAsset.sha256')=? LIMIT 1",params![id,id])?.into_iter().next();
                 if let Some(entry) = found {
+                    let index = index.unwrap_or(0);
+                    let key = entry["images"]
+                        .get(index)
+                        .map(|image| text(image, "url"))
+                        .filter(|url| !url.is_empty())
+                        .or_else(|| (index == 0).then(|| text(&entry, "thumbnailUrl")));
+                    let Some(key) = key else {
+                        return Ok(None);
+                    };
                     let Some(sub) = store.subscription(text(&entry, "subscriptionId"))? else {
                         return Ok(None);
                     };
@@ -649,11 +671,11 @@ impl Backend {
                             params![
                                 !flag(&entry, "read"),
                                 stamp(text(&entry, "firstSeenAt")),
-                                text(&entry, "thumbnailUrl")
+                                key
                             ],
                         )
                         .map_err(|_| "图片优先级未能保存")?;
-                    text(&entry, "thumbnailUrl").to_string()
+                    key.to_string()
                 } else {
                     return read_hash(&store, id);
                 }

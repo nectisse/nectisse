@@ -88,6 +88,9 @@ export function createDemoFixtures(theme: Preferences['theme']) {
 									? `https://www.patreon.com/posts/${id}`
 									: `${sub.url}posts/${id}`,
 				thumbnailUrl: offset === 1 ? '' : 'https://demo.nectisse.invalid/cover.jpg',
+				...(sub.provider === 'x' && offset !== 1
+					? { images: [0, 1, 2].map((picture) => ({ url: `https://demo.nectisse.invalid/photo-${picture}.jpg`, width: 418, height: 627 })) }
+					: {}),
 				...(offset === 1 ? {} : { imageAsset: demoAsset(((index + offset) % 6) + 1) }),
 				code: actor ? ['NECT-024', 'NECT-018', 'SEA-012'][offset]! : '',
 				restricted: false,

@@ -211,6 +211,14 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 			}),
 		},
 		subscriptions: {
+			getEntry: async (id) => {
+				const entry = state.entries.find((entry) => entry.id === id);
+				if (!entry) {
+					throw new Error('示例动态不存在');
+				}
+				return structuredClone({ entry });
+			},
+
 			getState: subsChannel.get,
 			retry: subsChannel.get,
 			command,

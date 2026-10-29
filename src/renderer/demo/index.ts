@@ -23,6 +23,7 @@ export function createDemoSession(theme: Preferences['theme']) {
 			aliases.set(entry.id, entry.imageAsset.sha256);
 		}
 	}
-	const imageUrl: ImageUrl = (_scope, hash) => portraits[Number.parseInt(aliases.get(hash) ?? hash, 16) - 1] ?? '';
+	const imageUrl: ImageUrl = (scope, hash, _variant, _version, index) =>
+		portraits[(Number.parseInt(aliases.get(hash) ?? hash, 16) - 1 + (scope === 'updates' ? (index ?? 0) : 0)) % portraits.length] ?? '';
 	return { bridge: createDemoBridge(theme), imageUrl };
 }

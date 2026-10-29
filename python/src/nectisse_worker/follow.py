@@ -250,6 +250,10 @@ def job(method, params, cancelled, permit, publish):
                 raise Cancelled()
             Path(params['destination']).write_bytes(response.body)
             result = {'asset': {'sha256': hashlib.sha256(response.body).hexdigest(), 'width': width, 'height': height, 'bytes': len(response.body), 'format': format, 'quality': 'standard' if width >= 700 else 'small'}}
+        elif method == "follow.entry":
+            if provider != 'x':
+                raise SourceFailure(FailureReason.UNSUPPORTED, '此来源暂不补取帖子图片')
+            result = {"entry": follow_x.details(params, session, CONFIGS[provider])}
         elif method == "follow.lookup":
             result = {"candidates": lookup(params, session)}
         else:

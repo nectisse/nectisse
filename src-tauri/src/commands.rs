@@ -113,6 +113,9 @@ impl Backend {
                 .lock()
                 .map_err(|_| "SUBSCRIPTIONS_STORAGE_READ")?
                 .entry_page(&input),
+            "nectisse:subscription-entry" => {
+                self.entry_details(input.as_str().ok_or("帖子身份不正确")?)
+            }
             "nectisse:subscriptions-command" => Ok(self
                 .follow_command(&input)
                 .unwrap_or_else(|error| reply(&error))),

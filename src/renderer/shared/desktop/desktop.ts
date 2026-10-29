@@ -8,12 +8,12 @@ import { SubscriptionStateReader } from './subscription-reader';
 import { createDesktopQueries } from './queries';
 
 export type ImageScope = 'image' | 'library' | 'updates' | 'avatars';
-export type ImageUrl = (scope: ImageScope, hash: string, variant?: 'thumbnail' | 'original', version?: string) => string;
+export type ImageUrl = (scope: ImageScope, hash: string, variant?: 'thumbnail' | 'original', version?: string, index?: number) => string;
 
 export function createDesktopState(
 	bridge: DesktopBridge | undefined,
-	imageUrl: ImageUrl = (scope, hash, variant = 'thumbnail', version) =>
-		`nectisse-cover://${scope}/${hash}?variant=${variant}${version ? `&v=${encodeURIComponent(version)}` : ''}`,
+	imageUrl: ImageUrl = (scope, hash, variant = 'thumbnail', version, index) =>
+		`nectisse-cover://${scope}/${hash}?variant=${variant}${version ? `&v=${encodeURIComponent(version)}` : ''}${index !== undefined ? `&index=${index}` : ''}`,
 ) {
 	const subscriptions = createSnapshot<SubscriptionsState>({
 		revision: 0,
@@ -59,6 +59,8 @@ export function createDesktopState(
 	};
 
 	const actions = {
+		getEntry: (id: string) => required().subscriptions.getEntry?.(id),
+
 		invoke,
 		uploadAvatar: async (id: string): Promise<AvatarReply> => {
 			try {

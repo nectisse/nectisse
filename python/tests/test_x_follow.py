@@ -8,7 +8,7 @@ from unittest.mock import patch
 import httpx
 from peach_core.http import HttpResponse
 from nectisse_worker.follow import CONFIGS, job
-from nectisse_worker.follow_x import check, identity, lookup
+from nectisse_worker.follow_x import check, identity, lookup, details, images
 from nectisse_worker.metadata.base import FailureReason, SourceFailure
 from nectisse_worker.metadata.network import NetworkSession
 
@@ -46,7 +46,8 @@ class Session:
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
         self.count += 1
-        payload = self.responder(url) if urlsplit(url).path.endswith('/statuses') else self.profile
+        path = urlsplit(url).path
+        payload = self.profile if path.startswith('/2/profile/') and not path.endswith('/statuses') else self.responder(url)
         return HttpResponse(200, {}, json.dumps(payload).encode(), url)
 
     def close(self):
@@ -54,6 +55,37 @@ class Session:
 
 
 class XFollowTests(unittest.TestCase):
+    def test_all_post_images_keep_order_dimensions_and_alt_without_duplicates(self):
+        first = {'type': 'photo', 'url': 'https://pbs.twimg.com/media/first.jpg', 'width': 1200, 'height': 1600, 'altText': '第一张照片'}
+        second = {'type': 'photo', 'url': 'https://pbs.twimg.com/media/second.jpg', 'width': 1600, 'height': 1200}
+        row = post(media={'all': [first, second, first, {'type': 'photo', 'url': 'https://pbs.twimg.com.evil.example/a.jpg'}]})
+        pictures = images(row)
+        self.assertEqual([image['url'] for image in pictures], [first['url'], second['url']])
+        self.assertEqual(pictures[0]['alt'], '第一张照片')
+        self.assertEqual(pictures[1]['width'], 1600)
+        entries = []
+        check(params(), Session(lambda url: page([row])), entries.append, CONFIG)
+        self.assertEqual(entries[0]['images'], pictures)
+        self.assertEqual(entries[0]['thumbnailUrl'], first['url'])
+        self.assertEqual(images(post(media={'photos': [{'url': first['url']}, {'url': second['url']}]})), [{'url': first['url']}, {'url': second['url']}])
+
+    def test_details_only_fetches_the_original_post_and_validates_both_identities(self):
+        row = post(media={'photos': [{'url': 'https://pbs.twimg.com/media/first.jpg'}, {'url': 'https://pbs.twimg.com/media/second.jpg'}]})
+        session = Session(lambda url: {'code': 200, 'status': row})
+        value = details({'ref': REF, 'externalId': POST}, session, CONFIG)
+        self.assertEqual(len(value['images']), 2)
+        self.assertEqual([urlsplit(call[1]).path for call in session.calls], ['/2/status/' + POST])
+        for patch in [{'id': '9999'}, {'author': {'id': '9999'}}, {'replying_to': '9999'}, {'quote': {}}, {'reposted_by': {}}, {'media': None}]:
+            session = Session(lambda url: {'code': 200, 'status': {**row, **patch}})
+            with self.subTest(patch=patch), self.assertRaises(SourceFailure):
+                details({'ref': REF, 'externalId': POST}, session, CONFIG)
+
+    def test_multi_image_collection_is_bounded_and_rejects_malformed_optional_data(self):
+        row = post(media={'all': [{'type': 'photo', 'url': f'https://pbs.twimg.com/media/{index}.jpg', 'width': -1, 'height': 'bad'} for index in range(100)]})
+        self.assertEqual(len(images(row)), 20)
+        self.assertEqual(set(images(row)[0]), {'url'})
+        self.assertEqual(images(post(media={'photos': 'invalid', 'videos': {}})), [])
+
     def test_inputs_resolve_exact_account_without_post_or_search_requests(self):
         for value in ['creator_1', '@Creator_1', 'https://x.com/Creator_1?ref_src=share', 'https://twitter.com/creator_1/']:
             self.assertEqual(identity(value), 'creator_1')

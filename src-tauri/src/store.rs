@@ -376,6 +376,9 @@ impl Store {
         let previous = self.entry(&id)?;
         let mut entry = input.clone();
         if let Some(old) = &previous {
+            if !entry["images"].is_array() && old["images"].is_array() {
+                entry["images"] = old["images"].clone();
+            }
             if !flag(old, "partial") && flag(input, "partial") {
                 entry["summary"] = old["summary"].clone();
                 entry["partial"] = json!(false);

@@ -25,6 +25,13 @@ export const candidateSchema = z.object({
 	avatarAsset: imageAssetSchema.optional(),
 });
 export type FollowCandidate = z.infer<typeof candidateSchema>;
+export const postImageSchema = z.object({
+	url: z.string().url().max(2000),
+	width: z.number().int().positive().max(40000).optional(),
+	height: z.number().int().positive().max(40000).optional(),
+	alt: z.string().max(1000).optional(),
+});
+export type PostImage = z.infer<typeof postImageSchema>;
 export const xSyncStateSchema = z.object({
 	windowIds: z.array(z.string().regex(/^[1-9]\d{0,24}$/)).max(100),
 	checkedAt: z.string().datetime(),
@@ -48,6 +55,7 @@ export const entryInputSchema = z.object({
 	publishedPrecision: z.enum(['exact', 'date', 'approximate', 'unknown']).default('unknown'),
 	url: z.string().url().max(2000),
 	thumbnailUrl: z.string().max(2000),
+	images: z.array(postImageSchema).max(20).optional(),
 	code: z.string().max(100),
 	restricted: z.boolean(),
 	partial: z.boolean(),
@@ -93,6 +101,8 @@ export const entrySchema = entryInputSchema.extend({
 	imageCache: imageCacheSchema.optional(),
 });
 export type FeedEntry = z.infer<typeof entrySchema>;
+export const entryDetailReplySchema = z.object({ entry: entrySchema, warning: z.string().optional() });
+export type EntryDetailReply = z.infer<typeof entryDetailReplySchema>;
 export const followTaskSchema = z.object({
 	id: z.string().uuid(),
 	kind: z.enum(['lookup', 'check', 'covers']),
@@ -172,6 +182,7 @@ export type FollowCommand = z.infer<typeof followCommandSchema>;
 export const commandReplySchema = z.object({ ok: z.boolean(), message: z.string().optional(), id: z.string().optional() });
 export type CommandReply = z.infer<typeof commandReplySchema>;
 export interface SubscriptionsBridge {
+	getEntry?: (id: string) => Promise<EntryDetailReply>;
 	uploadAvatar?: (id: string) => Promise<AvatarReply>;
 	getEntries?: (request: EntryPageRequest) => Promise<EntryPage>;
 	getState: () => Promise<SubscriptionsState>;
@@ -181,6 +192,7 @@ export interface SubscriptionsBridge {
 	onSettings: (callback: () => void) => () => void;
 }
 export const SUBS_IPC = {
+	entry: 'nectisse:subscription-entry',
 	uploadAvatar: 'nectisse:subscription-avatar-upload',
 	entries: 'nectisse:subscription-entries',
 	get: 'nectisse:subscriptions-get',

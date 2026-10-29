@@ -3,7 +3,16 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { IPC, runtimeStateSchema, type DesktopBridge, type RuntimeState } from '@shared/protocol';
 import { METADATA_IPC, metadataStateSchema, queryReplySchema, queryRequestSchema } from '@shared/metadata';
-import { SUBS_IPC, subscriptionsStateSchema, followCommandSchema, commandReplySchema, entryPageRequestSchema, entryPageSchema, avatarReplySchema } from '@shared/subscriptions';
+import {
+	SUBS_IPC,
+	subscriptionsStateSchema,
+	followCommandSchema,
+	commandReplySchema,
+	entryPageRequestSchema,
+	entryPageSchema,
+	avatarReplySchema,
+	entryDetailReplySchema,
+} from '@shared/subscriptions';
 import { SUBSCRIPTION_READ, subscriptionReadCode } from '@shared/subscription-read';
 import { DIAGNOSTICS_IPC, diagnosticCopyReplySchema, diagnosticReportSchema, diagnosticCodeSchema } from '@shared/diagnostics';
 import { subscriptionFailureContext, subscriptionFailureContextSchema } from '@shared/subscription-failure';
@@ -96,6 +105,17 @@ const bridge: DesktopBridge = {
 		},
 	},
 	subscriptions: {
+		getEntry: async (id) =>
+			entryDetailReplySchema.parse(
+				await ipcRenderer.invoke(
+					SUBS_IPC.entry,
+					z
+						.string()
+						.regex(/^[a-f0-9]{64}$/)
+						.parse(id),
+				),
+			),
+
 		uploadAvatar: async (id) => avatarReplySchema.parse(await ipcRenderer.invoke(SUBS_IPC.uploadAvatar, z.string().uuid().parse(id))),
 
 		getEntries: async (request) => entryPageSchema.parse(await ipcRenderer.invoke(SUBS_IPC.entries, entryPageRequestSchema.parse(request))),

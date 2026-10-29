@@ -1,4 +1,4 @@
-"""FxEmbed 公开账号适配；仅收录本人原创，不请求回复或逐帖详情。"""
+"""FxEmbed 公开账号适配；仅收录本人原创，旧帖图片详情按需补取。"""
 import json
 import math
 import re
@@ -93,20 +93,34 @@ def lookup(params, session, config):
     return [candidate]
 
 
-def thumbnail(row):
+def images(row):
     media = row.get('media')
     if not isinstance(media, dict):
-        return ''
+        return []
     items = media.get('all')
-    if not isinstance(items, list):
-        items = [*(media.get('photos') or []), *(media.get('videos') or [])]
+    if not isinstance(items, list) or not items:
+        photos, videos = media.get('photos'), media.get('videos')
+        items = [{**item, 'type': item.get('type', 'photo')} for item in (photos if isinstance(photos, list) else []) if isinstance(item, dict)]
+        items += videos if isinstance(videos, list) else []
+    result, seen = [], set()
     for item in items[:20]:
         if not isinstance(item, dict):
             continue
         url = item.get('url') if item.get('type') == 'photo' else item.get('thumbnail_url') if item.get('type') in {'video', 'gif'} else None
         if isinstance(url, str) and len(url) <= 2000 and allowed_url(url, image_domains('x')):
-            return url
-    return ''
+            if url in seen:
+                continue
+            seen.add(url)
+            picture = {'url': url}
+            for name in ('width', 'height'):
+                value = item.get(name)
+                if type(value) is int and 0 < value <= 40000:
+                    picture[name] = value
+            alt = text(item.get('altText'), 1000)
+            if alt:
+                picture['alt'] = alt
+            result.append(picture)
+    return result
 
 
 def original(row, ref):
@@ -138,7 +152,19 @@ def entry(row, ref):
     clipped = len(body.encode('utf-16-le', 'replace')) > 6000
     lines = body.splitlines()
     title = text(lines[0] if lines else '', 120) or '原创媒体动态'
-    return {'externalId': key, 'title': title, 'summary': summary, 'author': text(author.get('name'), 200) or handle, 'authorRef': ref, 'authorHandle': handle, 'postKind': 'original', 'publishedAt': published, 'publishedPrecision': 'exact', 'url': f'https://x.com/{handle}/status/{key}', 'thumbnailUrl': thumbnail(row), 'code': '', 'restricted': False, 'partial': clipped}
+    pictures = images(row)
+    return {'externalId': key, 'title': title, 'summary': summary, 'author': text(author.get('name'), 200) or handle, 'authorRef': ref, 'authorHandle': handle, 'postKind': 'original', 'publishedAt': published, 'publishedPrecision': 'exact', 'url': f'https://x.com/{handle}/status/{key}', 'thumbnailUrl': pictures[0]['url'] if pictures else '', 'images': pictures, 'code': '', 'restricted': False, 'partial': clipped}
+
+
+def details(params, session, config):
+    ref, key = params.get('ref'), params.get('externalId')
+    if not isinstance(ref, str) or not NATIVE_ID.fullmatch(ref) or not isinstance(key, str) or not NATIVE_ID.fullmatch(key):
+        raise SourceFailure(FailureReason.UNSUPPORTED, '帖子身份不正确')
+    payload = request_json(session, config, '/2/status/' + key, {})
+    row = payload.get('status')
+    if not isinstance(row, dict) or row.get('id') != key or not original(row, ref) or not isinstance(row.get('media'), dict):
+        raise SourceFailure(FailureReason.PARSE_ERROR, '原帖身份或原创状态不匹配，已保留原有内容')
+    return entry(row, ref)
 
 
 def check(params, session, publish, config):

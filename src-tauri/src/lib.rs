@@ -153,6 +153,15 @@ pub fn run() {
                         let url = url::Url::parse(&request.uri().to_string()).ok()?;
                         let scope = url.host_str()?;
                         let id = url.path().strip_prefix('/')?;
+                        let mut index = None;
+                        for (key, value) in url.query_pairs() {
+                            if key == "index" {
+                                if index.is_some() {
+                                    return None;
+                                }
+                                index = Some(value.parse::<usize>().ok()?);
+                            }
+                        }
                         let variant = if url
                             .query_pairs()
                             .any(|(key, value)| key == "variant" && value == "thumbnail")
@@ -161,7 +170,7 @@ pub fn run() {
                         } else {
                             "original"
                         };
-                        backend.image(scope, id, variant).ok().flatten()
+                        backend.image_at(scope, id, variant, index).ok().flatten()
                     })();
                     let response = match response {
                         Some(image) => tauri::http::Response::builder()

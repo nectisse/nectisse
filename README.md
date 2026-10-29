@@ -10,7 +10,7 @@
     <a href="#screenshots">Screenshots</a> ·
     <a href="https://github.com/nectisse/nectisse/issues">Report an issue</a>
   </p>
-  <p><sub>v0.2.2 · macOS 13.3+ · Apple Silicon (arm64)</sub></p>
+  <p><sub>v0.2.3 · macOS 13.3+ · Apple Silicon (arm64)</sub></p>
 </div>
 
 Nectisse is a private collection and creator update app for macOS. Look up works, save their metadata and covers, browse your collection as a cover wall, and follow new releases and creator posts in one place.

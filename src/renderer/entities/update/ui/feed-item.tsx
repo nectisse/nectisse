@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Check, ImageOff, Image as ImageIcon } from 'lucide-react';
+import { Check, ImageOff, Images, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { cn } from '@/shared/lib/utils';
@@ -7,10 +7,30 @@ import { cn } from '@/shared/lib/utils';
 // 超长图片最多展示两倍宽度的高度，详情仍显示完整图片。
 const MIN_CARD_IMAGE_RATIO = 1 / 2;
 
-export function FeedImage({ src, unavailable = '来源无图', alt }: { src?: string; unavailable?: string; alt: string }): React.JSX.Element {
+export function FeedImage({
+	src,
+	unavailable = '来源无图',
+	alt,
+	loading = 'lazy',
+	showLoading = false,
+}: {
+	src?: string;
+	unavailable?: string;
+	alt: string;
+	loading?: 'eager' | 'lazy';
+	showLoading?: boolean;
+}): React.JSX.Element {
 	const [failedSrc, setFailedSrc] = useState('');
+	const [loadedSrc, setLoadedSrc] = useState('');
 	return src && failedSrc !== src ? (
-		<img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailedSrc(src)} />
+		<>
+			<img src={src} alt={alt} loading={loading} decoding="async" onLoad={() => setLoadedSrc(src)} onError={() => setFailedSrc(src)} />
+			{showLoading && loadedSrc !== src && (
+				<span className="feed-image-loading" role="status">
+					正在加载图片…
+				</span>
+			)}
+		</>
 	) : (
 		<span className="feed-image-placeholder" role="img" aria-label={src ? '封面不可用' : unavailable}>
 			{src ? <ImageOff strokeWidth={1.4} /> : <ImageIcon strokeWidth={1.4} />}
@@ -32,6 +52,7 @@ export function FeedItem({
 	image,
 	imageKey,
 	imageAspectRatio,
+	mediaCount = 0,
 	published,
 	discovered,
 	onOpen,
@@ -54,6 +75,7 @@ export function FeedItem({
 	image?: ReactNode;
 	imageKey?: string;
 	imageAspectRatio?: number;
+	mediaCount?: number;
 	published: ReactNode;
 	discovered?: ReactNode;
 	onOpen: () => void;
@@ -88,6 +110,12 @@ export function FeedItem({
 			aria-label={`查看封面与内容：${accessibleTitle}`}
 		>
 			{image}
+			{mediaCount > 1 && (
+				<span className="feed-item-image-count" aria-label={`${mediaCount} 张图片`}>
+					<Images />
+					{mediaCount}
+				</span>
+			)}
 			{natural && ratio < MIN_CARD_IMAGE_RATIO && (
 				<Badge variant="secondary" className="feed-item-long-image">
 					长图

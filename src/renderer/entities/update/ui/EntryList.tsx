@@ -1,5 +1,5 @@
 import { isPerformerProvider } from '@shared/sources';
-import { useSubscriptions, useDesktopActions } from '@/shared/desktop';
+import { useSubscriptions, useDesktopActions, useEntryDetail } from '@/shared/desktop';
 import { feedDate, formatTimestamp as date } from '@/shared/lib/format-date';
 import { useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
@@ -35,7 +35,7 @@ function entryCategory(entry: FeedEntry): string {
 				: '创作者动态';
 }
 
-function EntryImage({ entry, variant = 'thumbnail' }: { entry: FeedEntry; variant?: 'thumbnail' | 'original' }): React.JSX.Element {
+function EntryImage({ entry, variant = 'thumbnail', index }: { entry: FeedEntry; variant?: 'thumbnail' | 'original'; index?: number }): React.JSX.Element {
 	const { imageUrl } = useDesktopActions();
 	const state = useSubscriptions((state) => ({ preferences: state.preferences, sources: state.sources, subscriptions: state.subscriptions }));
 	const sub = state.subscriptions.find((sub) => sub.id === entry.subscriptionId);
@@ -60,9 +60,11 @@ function EntryImage({ entry, variant = 'thumbnail' }: { entry: FeedEntry; varian
 	return (
 		<FeedImage
 			key={`${entry.imageAsset?.sha256 ?? ''}:${status ?? ''}`}
-			src={entry.thumbnailUrl ? imageUrl('updates', entry.id, variant, entry.imageAsset?.sha256) : undefined}
+			src={entry.thumbnailUrl || (index !== undefined && entry.images?.[index]) ? imageUrl('updates', entry.id, variant, entry.imageAsset?.sha256, index) : undefined}
+			loading={variant === 'original' ? 'eager' : 'lazy'}
+			showLoading={variant === 'original'}
 			unavailable={unavailable}
-			alt={`${entry.title || '来源内容'} · 来源封面`}
+			alt={index === undefined ? `${entry.title || '来源内容'} · 来源封面` : entry.images?.[index]?.alt || `${entry.name}的第 ${index + 1} 张图片`}
 		/>
 	);
 }
@@ -83,6 +85,16 @@ export function EntryList({
 	const [selection, setSelected] = useState<FeedEntry>();
 	const selected = entries.find((entry) => entry.id === selection?.id) ?? selection;
 	const returnFocus = useRef<HTMLElement | null>(null);
+	const detail = useEntryDetail(selected);
+	const current = detail.data && detail.data.entry.id === selected?.id ? detail.data.entry : selected;
+	const media = current
+		? (current.images?.length ? current.images : current.thumbnailUrl ? [{ url: current.thumbnailUrl }] : []).map((image, index) => ({
+				key: image.url,
+				label: current.name + '的第 ' + (index + 1) + ' 张图片',
+				image: <EntryImage key={image.url} entry={current} variant="original" index={index} />,
+				thumbnail: <EntryImage key={image.url} entry={current} index={index} />,
+			}))
+		: [];
 	const Layout = presentation === 'cards' ? Masonry : 'div';
 
 	const open = (entry: FeedEntry): void => {
@@ -113,6 +125,7 @@ export function EntryList({
 							image={presentation === 'cards' && !entry.thumbnailUrl && !entry.imageAsset ? undefined : <EntryImage entry={entry} />}
 							imageKey={entry.imageAsset?.sha256 ?? entry.thumbnailUrl}
 							imageAspectRatio={entry.imageAsset ? entry.imageAsset.width / entry.imageAsset.height : undefined}
+							mediaCount={entry.images?.length}
 							published={
 								<span
 									title={
@@ -154,34 +167,23 @@ export function EntryList({
 				source={selected ? providerName(selected.provider) : ''}
 				category={selected ? entryCategory(selected) : ''}
 				code={selected?.code}
-				image={selected && <EntryImage key={selected.id} entry={selected} variant="original" />}
-				details={
-					selected
-						? [
-								{
-									label: isPerformerProvider(selected.provider) ? '发行日期' : '发布时间',
-									value: (
-										<time dateTime={selected.publishedAt || undefined}>
-											{feedDate(selected.publishedAt, isPerformerProvider(selected.provider) || selected.publishedPrecision === 'date')}
-											{selected.publishedPrecision === 'approximate' ? '（估算）' : ''}
-										</time>
-									),
-								},
-								{ label: '来源页面', value: <span title={selected.url}>{new URL(selected.url).hostname}</span> },
-								{ label: '发现时间', value: <time dateTime={selected.firstSeenAt}>{date(selected.firstSeenAt)}</time> },
-							]
-						: []
+				media={media}
+				mediaKey={current?.id}
+				published={
+					current?.publishedAt && (
+						<time dateTime={current.publishedAt} title={date(current.publishedAt)}>
+							{feedDate(current.publishedAt, isPerformerProvider(current.provider) || current.publishedPrecision === 'date')}
+						</time>
+					)
 				}
-				summary={isPerformerProvider(selected?.provider) ? '' : selected?.summary || ''}
-				notice={
-					isPerformerProvider(selected?.provider)
-						? undefined
-						: selected?.restricted
-							? '仅显示来源公开提供的内容。'
-							: selected?.partial
-								? '完整正文尚未取得，可查看原文。'
-								: undefined
-				}
+				loading={detail.isFetching && current?.provider === 'x' && !current.images}
+				warning={detail.isError ? '完整图片暂未取得，已保留原有内容' : detail.data?.warning}
+				onRetry={() => {
+					void detail.refetch();
+				}}
+				summary={isPerformerProvider(current?.provider) ? '' : current?.summary || ''}
+				notice={current?.restricted ? '仅显示来源公开提供的内容。' : current?.partial ? '完整正文尚未取得，可查看原文。' : undefined}
+
 				onOpenSource={() => {
 					if (selected) {
 						void invoke({ action: 'open', kind: 'entry', id: selected.id });

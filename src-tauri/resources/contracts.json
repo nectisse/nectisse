@@ -1520,6 +1520,37 @@
 				"type": "string",
 				"maxLength": 2000
 			},
+			"images": {
+				"maxItems": 20,
+				"type": "array",
+				"items": {
+					"type": "object",
+					"properties": {
+						"url": {
+							"type": "string",
+							"maxLength": 2000,
+							"format": "uri"
+						},
+						"width": {
+							"type": "integer",
+							"exclusiveMinimum": 0,
+							"maximum": 40000
+						},
+						"height": {
+							"type": "integer",
+							"exclusiveMinimum": 0,
+							"maximum": 40000
+						},
+						"alt": {
+							"type": "string",
+							"maxLength": 1000
+						}
+					},
+					"required": [
+						"url"
+					]
+				}
+			},
 			"code": {
 				"type": "string",
 				"maxLength": 100
@@ -2131,6 +2162,37 @@
 									"type": "string",
 									"maxLength": 2000
 								},
+								"images": {
+									"maxItems": 20,
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"url": {
+												"type": "string",
+												"maxLength": 2000,
+												"format": "uri"
+											},
+											"width": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 40000
+											},
+											"height": {
+												"type": "integer",
+												"exclusiveMinimum": 0,
+												"maximum": 40000
+											},
+											"alt": {
+												"type": "string",
+												"maxLength": 1000
+											}
+										},
+										"required": [
+											"url"
+										]
+									}
+								},
 								"code": {
 									"type": "string",
 									"maxLength": 100
@@ -2385,6 +2447,37 @@
 						"thumbnailUrl": {
 							"type": "string",
 							"maxLength": 2000
+						},
+						"images": {
+							"maxItems": 20,
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"url": {
+										"type": "string",
+										"maxLength": 2000,
+										"format": "uri"
+									},
+									"width": {
+										"type": "integer",
+										"exclusiveMinimum": 0,
+										"maximum": 40000
+									},
+									"height": {
+										"type": "integer",
+										"exclusiveMinimum": 0,
+										"maximum": 40000
+									},
+									"alt": {
+										"type": "string",
+										"maxLength": 1000
+									}
+								},
+								"required": [
+									"url"
+								]
+							}
 						},
 						"code": {
 							"type": "string",
