@@ -259,15 +259,15 @@ fn x_list_thumbnail_fetches_its_image_host_and_remains_cached() {
         thumbnail.asset["sha256"]
     );
     drop(store);
-    assert_eq!(
-        backend
-            .image("updates", text(&post, "id"), "original")
-            .unwrap()
-            .unwrap()
-            .bytes,
-        bytes
-    );
     *backend.0.worker_fixture.lock().unwrap() = Some(root.path().join("worker-must-not-run.py"));
+    let original = backend
+        .image("updates", text(&post, "id"), "original")
+        .unwrap();
+    assert!(
+        original.is_some(),
+        "Opening X post details must reuse the original downloaded with the list thumbnail, even offline"
+    );
+    assert_eq!(original.unwrap().bytes, bytes);
     assert_eq!(
         backend
             .image("updates", text(&post, "id"), "thumbnail")
@@ -276,6 +276,21 @@ fn x_list_thumbnail_fetches_its_image_host_and_remains_cached() {
             .bytes,
         thumbnail.bytes
     );
+    drop(backend);
+    let restored = Backend::open(root.path().into(), PathBuf::new(), false).unwrap();
+    *restored.0.worker_fixture.lock().unwrap() = Some(root.path().join("worker-must-not-run.py"));
+    for _ in 0..2 {
+        assert_eq!(
+            restored
+                .image_at("updates", text(&post, "id"), "original", Some(0))
+                .unwrap()
+                .expect(
+                    "Details and full-size views must reuse the persisted X image after restart"
+                )
+                .bytes,
+            bytes
+        );
+    }
 }
 
 #[test]

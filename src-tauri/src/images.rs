@@ -496,7 +496,8 @@ impl Backend {
             {
                 return Err("来源已关闭".into());
             }
-            put(&store, url, &bytes, thumbnail_only, owner)
+            // X 封面与详情使用同一图片地址，保留已下载原图供详情复用。
+            put(&store, url, &bytes, thumbnail_only && source != "x", owner)
         })();
         let _ = fs::remove_file(&path);
         result
