@@ -118,6 +118,73 @@ fn gallery_images_keep_separate_cache_references_and_reject_invalid_indices() {
 }
 
 #[test]
+fn saved_post_picture_uses_the_selected_cached_original_and_preserves_user_directory_permissions() {
+    let (root, backend) = backend();
+    let (_, post) = x_post_fixture(
+        &backend,
+        Some(json!([
+            {"url":"https://pbs.twimg.com/media/first.jpg"},
+            {"url":"https://pbs.twimg.com/media/second.jpg"}
+        ])),
+    );
+    let first = png(25);
+    let second = png(95);
+    {
+        let store = backend.0.store.lock().unwrap();
+        images::put(&store, text(&post["images"][0], "url"), &first, false, None).unwrap();
+        images::put(
+            &store,
+            text(&post["images"][1], "url"),
+            &second,
+            false,
+            None,
+        )
+        .unwrap();
+    }
+    *backend.0.worker_fixture.lock().unwrap() = Some(root.path().join("worker-must-not-run.py"));
+    let (picture, name) = backend.entry_image_export(text(&post, "id"), 1).unwrap();
+    assert_eq!(picture.bytes, second);
+    assert_eq!(name, "Nectisse-1900000000000000000-02.png");
+    let destination = root.path().join("user-pictures");
+    std::fs::create_dir(&destination).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&destination, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let path = destination.join(name);
+    images::save_picture(&path, &picture).unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), second);
+    assert_eq!(std::fs::read_dir(&destination).unwrap().count(), 1);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(&destination)
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o755
+        );
+    }
+    for index in [2, 20, usize::MAX] {
+        assert!(backend
+            .entry_image_export(text(&post, "id"), index)
+            .is_err());
+    }
+    assert!(backend
+        .entry_image_export(&hash("missing-post"), 0)
+        .is_err());
+    assert!(backend.entry_image_export("../image", 0).is_err());
+    assert!(crate::contracts::validate(
+        "imageSave",
+        &json!({"id":post["id"],"index":1,"path":path})
+    )
+    .is_err());
+}
+
+#[test]
 fn legacy_x_post_images_are_backfilled_once_without_losing_read_or_discovery_state() {
     let (root, backend) = backend();
     let (_sub, post) = x_post_fixture(&backend, None);

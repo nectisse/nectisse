@@ -6,9 +6,11 @@ import { Sparkles } from 'lucide-react';
 
 import { EmptyState } from '@/shared/components/empty-state';
 import { Masonry } from '@/shared/ui/masonry';
+import { Dialog } from '@/shared/ui/dialog';
 
 import { FeedImage, FeedItem } from './feed-item';
 import { UpdateDetailDialog } from './update-detail-dialog';
+import { EntryImageViewer } from './entry-gallery';
 
 import type { FeedEntry } from '@shared/subscriptions';
 import { IdentityAvatar } from '@/entities/subscription';
@@ -81,8 +83,10 @@ export function EntryList({
 	onPerson?: (id: string) => void;
 }): React.JSX.Element {
 	const state = useSubscriptions((state) => ({ subscriptions: state.subscriptions }));
-	const { invoke } = useDesktopActions();
+	const { invoke, saveEntryImage } = useDesktopActions();
 	const [selection, setSelected] = useState<FeedEntry>();
+	const [view, setView] = useState<'detail' | 'images'>('detail');
+	const [imageIndex, setImageIndex] = useState(0);
 	const selected = entries.find((entry) => entry.id === selection?.id) ?? selection;
 	const returnFocus = useRef<HTMLElement | null>(null);
 	const detail = useEntryDetail(selected);
@@ -97,8 +101,14 @@ export function EntryList({
 		: [];
 	const Layout = presentation === 'cards' ? Masonry : 'div';
 
-	const open = (entry: FeedEntry): void => {
-		returnFocus.current = document.activeElement as HTMLElement;
+	const avatar = selected && <IdentityAvatar identity={state.subscriptions.find((sub) => sub.id === selected.subscriptionId) ?? { name: selected.name }} small />;
+	const loading = detail.isFetching && current?.provider === 'x' && !current.images;
+	const warning = detail.isError ? '完整图片暂未取得，已保留原有内容' : detail.data?.warning;
+
+	const open = (entry: FeedEntry, view: 'detail' | 'images' = 'detail', trigger?: HTMLElement): void => {
+		returnFocus.current = trigger ?? (document.activeElement as HTMLElement);
+		setView(view);
+		setImageIndex(0);
 		setSelected(entry);
 		void invoke({ action: 'read', ids: [entry.id], read: true });
 	};
@@ -147,6 +157,7 @@ export function EntryList({
 								</span>
 							}
 							onOpen={() => open(entry)}
+							onImage={entry.thumbnailUrl ? (event) => open(entry, 'images', event.currentTarget) : undefined}
 							onRead={() => {
 								void invoke({ action: 'read', ids: [entry.id], read: !entry.read });
 							}}
@@ -158,47 +169,78 @@ export function EntryList({
 			) : (
 				<EmptyState icon={Sparkles} title="还没有可显示的内容" description="关注并完成检查后，来源实际提供的动态或目录会出现在这里。" />
 			)}
-			<UpdateDetailDialog
+			<Dialog
 				open={!!selected}
-				onClose={() => setSelected(undefined)}
-				title={selected?.provider === 'x' ? undefined : selected?.title || '来源内容'}
-				author={selected?.name || ''}
-				avatar={selected && <IdentityAvatar identity={state.subscriptions.find((sub) => sub.id === selected.subscriptionId) ?? { name: selected.name }} small />}
-				source={selected ? providerName(selected.provider) : ''}
-				category={selected ? entryCategory(selected) : ''}
-				code={selected?.code}
-				media={media}
-				mediaKey={current?.id}
-				published={
-					current?.publishedAt && (
-						<time dateTime={current.publishedAt} title={date(current.publishedAt)}>
-							{feedDate(current.publishedAt, isPerformerProvider(current.provider) || current.publishedPrecision === 'date')}
-						</time>
-					)
-				}
-				loading={detail.isFetching && current?.provider === 'x' && !current.images}
-				warning={detail.isError ? '完整图片暂未取得，已保留原有内容' : detail.data?.warning}
-				onRetry={() => {
-					void detail.refetch();
-				}}
-				summary={isPerformerProvider(current?.provider) ? '' : current?.summary || ''}
-				notice={current?.restricted ? '仅显示来源公开提供的内容。' : current?.partial ? '完整正文尚未取得，可查看原文。' : undefined}
-
-				onOpenSource={() => {
-					if (selected) {
-						void invoke({ action: 'open', kind: 'entry', id: selected.id });
+				onOpenChange={(open) => {
+					if (!open) {
+						setSelected(undefined);
 					}
 				}}
-				onWork={
-					selected?.code
-						? () => {
-								onWork(selected.code);
-								setSelected(undefined);
+			>
+				{view === 'images' ? (
+					<EntryImageViewer
+						media={media}
+						index={imageIndex}
+						onIndexChange={setImageIndex}
+						author={current?.name ?? ''}
+						avatar={avatar}
+						source={current ? providerName(current.provider) : ''}
+						category={current ? entryCategory(current) : ''}
+						loading={loading}
+						warning={warning}
+						onRetry={() => {
+							void detail.refetch();
+						}}
+						onSave={(index) => (current ? saveEntryImage({ id: current.id, index }) : Promise.resolve({ ok: false, message: '帖子已不存在' }))}
+						onClose={() => setSelected(undefined)}
+						returnFocus={returnFocus}
+					/>
+				) : (
+					<UpdateDetailDialog
+						onClose={() => setSelected(undefined)}
+						title={selected?.provider === 'x' ? undefined : selected?.title || '来源内容'}
+						author={selected?.name || ''}
+						avatar={avatar}
+						source={selected ? providerName(selected.provider) : ''}
+						category={selected ? entryCategory(selected) : ''}
+						code={selected?.code}
+						media={media}
+						onPreview={(index) => {
+							setImageIndex(index);
+							setView('images');
+						}}
+						published={
+							current?.publishedAt && (
+								<time dateTime={current.publishedAt} title={date(current.publishedAt)}>
+									{feedDate(current.publishedAt, isPerformerProvider(current.provider) || current.publishedPrecision === 'date')}
+								</time>
+							)
+						}
+						loading={loading}
+						warning={warning}
+						onRetry={() => {
+							void detail.refetch();
+						}}
+						summary={isPerformerProvider(current?.provider) ? '' : current?.summary || ''}
+						notice={current?.restricted ? '仅显示来源公开提供的内容。' : current?.partial ? '完整正文尚未取得，可查看原文。' : undefined}
+
+						onOpenSource={() => {
+							if (selected) {
+								void invoke({ action: 'open', kind: 'entry', id: selected.id });
 							}
-						: undefined
-				}
-				returnFocus={returnFocus}
-			/>
+						}}
+						onWork={
+							selected?.code
+								? () => {
+										onWork(selected.code);
+										setSelected(undefined);
+									}
+								: undefined
+						}
+						returnFocus={returnFocus}
+					/>
+				)}
+			</Dialog>
 		</>
 	);
 }

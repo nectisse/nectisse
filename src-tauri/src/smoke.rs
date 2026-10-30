@@ -57,26 +57,75 @@ pub fn smoke_seed(backend: State<'_, Backend>) -> Result<Value> {
         false,
         Some("avatar:gallery-second"),
     )?;
-    store.upsert_entry(&x_creator,&json!({"externalId":"1900000000000000000","title":"图库样本标题","summary":"沿着海岸，收集两个安静的瞬间。\n照片记录日常，也记录光停留的样子。","author":"海岸日记","authorRef":x_creator["ref"],"authorHandle":"gallery_fixture","postKind":"original","publishedAt":"2026-10-29T02:00:00Z","publishedPrecision":"exact","url":"https://x.com/gallery_fixture/status/1900000000000000000","thumbnailUrl":first_url,"images":[{"url":first_url},{"url":second_url}],"code":"","restricted":false,"partial":false}))?;
+    let third_url = "https://pbs.twimg.com/media/gallery-third.jpg";
+    images::put(
+        &store,
+        third_url,
+        include_bytes!("../../src/renderer/demo/assets/portrait-5.jpg"),
+        false,
+        Some("avatar:gallery-third"),
+    )?;
+    store.upsert_entry(&x_creator,&json!({"externalId":"1900000000000000000","title":"图库样本标题","summary":"沿着海岸，收集三个安静的瞬间。\n照片记录日常，也记录光停留的样子。","author":"海岸日记","authorRef":x_creator["ref"],"authorHandle":"gallery_fixture","postKind":"original","publishedAt":"2026-10-29T02:00:00Z","publishedPrecision":"exact","url":"https://x.com/gallery_fixture/status/1900000000000000000","thumbnailUrl":first_url,"images":[{"url":first_url},{"url":second_url},{"url":third_url}],"code":"","restricted":false,"partial":false}))?;
     let gallery_id = hash(format!("{}:1900000000000000000", text(&x_creator, "id")));
     if let Some(mut post) = store.entry(&gallery_id)? {
         post["imageAsset"] = first_photo["thumbnail"].clone();
         store.save_entry(&post)?;
     }
-    let record = json!({"id":hash("fixture-record"),"source":"dmm","parser":"fixture","parserVersion":"1","code":"SONE-614","contentId":"sone00614","sourceUrl":"https://video.dmm.co.jp/av/content/?id=sone00614","fetchedAt":now(),"title":"本地收藏样本","titleLanguage":"ja","people":[],"studio":"样本","label":"","series":"","seller":"","sellerUrl":"","releaseDate":"2026-10-29","description":"本地隔离测试","tags":[],"covers":[{"id":hash("fixture-cover"),"source":"dmm","url":"https://pics.dmm.co.jp/mono/movie/adult/sone00614/sone00614pl.jpg","identity":"source-matched","asset":picture["original"]}],"warnings":[]});
+    let record = json!({"id":hash("fixture-record"),"source":"dmm","parser":"fixture","parserVersion":"1","code":"SONE-614","contentId":"sone00614","sourceUrl":"https://video.dmm.co.jp/av/content/?id=sone00614","fetchedAt":now(),"title":"本地收藏样本","titleLanguage":"ja","people":[],"studio":"样本","label":"","series":"","seller":"","sellerUrl":"","releaseDate":"2026-10-29","description":"本地隔离测试","tags":["双张照片墙样本"],"covers":[{"id":hash("fixture-cover"),"source":"dmm","url":"https://pics.dmm.co.jp/mono/movie/adult/sone00614/sone00614pl.jpg","identity":"source-matched","asset":picture["original"]}],"warnings":[]});
+    let wall_photos: [&[u8]; 6] = [
+        include_bytes!("../../src/renderer/demo/assets/portrait-1.jpg"),
+        include_bytes!("../../src/renderer/demo/assets/portrait-2.jpg"),
+        include_bytes!("../../src/renderer/demo/assets/portrait-3.jpg"),
+        include_bytes!("../../src/renderer/demo/assets/portrait-4.jpg"),
+        include_bytes!("../../src/renderer/demo/assets/portrait-5.jpg"),
+        include_bytes!("../../src/renderer/demo/assets/portrait-6.jpg"),
+    ];
+    let mut wall_covers = Vec::new();
+    for (index, bytes) in wall_photos.into_iter().enumerate() {
+        let url = format!("https://pics.dmm.co.jp/mono/movie/adult/wallfixture{index}/cover.jpg");
+        let saved = images::put(
+            &store,
+            &url,
+            bytes,
+            false,
+            Some(&format!("avatar:wall-fixture-{index}")),
+        )?;
+        wall_covers.push(
+            json!({"source":"dmm","url":url,"identity":"source-matched","asset":saved["original"]}),
+        );
+    }
+    let mut records = vec![record];
+    for index in 1..14 {
+        let mut record = records[0].clone();
+        let content = format!("sone{:05}", 614 + index);
+        record["id"] = json!(hash(format!("fixture-wall-record-{index}")));
+        record["code"] = json!(format!("SONE-{}", 614 + index));
+        record["contentId"] = json!(content);
+        record["sourceUrl"] = json!(format!("https://video.dmm.co.jp/av/content/?id={content}"));
+        record["title"] = json!(format!("本地收藏样本 {}", index + 1));
+        record["tags"] = json!([if index == 1 {
+            "双张照片墙样本"
+        } else {
+            "照片墙样本"
+        }]);
+        let mut cover = wall_covers[(index - 1) % wall_covers.len()].clone();
+        cover["id"] = json!(hash(format!("fixture-wall-cover-{index}")));
+        record["covers"] = json!([cover]);
+        records.push(record);
+    }
     images::pin(
         &store,
         "query:fixture",
         "https://pics.dmm.co.jp/mono/movie/adult/sone00614/sone00614pl.jpg",
     )?;
     let query = uuid::Uuid::new_v4().to_string();
-    store.metadata["tasks"] = json!([{"id":query,"status":"succeeded","phase":"本地样本","plan":{"kind":"code","query":"SONE-614","code":"SONE-614","contentId":"","sources":["dmm"]},"coverPriority":["dmm"],"startedAt":now(),"finishedAt":now(),"records":[record],"outcomes":[],"requests":0}]);
+    store.metadata["tasks"] = json!([{"id":query,"status":"succeeded","phase":"本地样本","plan":{"kind":"code","query":"SONE-614","code":"SONE-614","contentId":"","sources":["dmm"]},"coverPriority":["dmm"],"startedAt":now(),"finishedAt":now(),"records":records,"outcomes":[],"requests":0}]);
     store.commit_metadata()?;
     drop(store);
     backend.publish_metadata();
     backend.publish_subscriptions();
     Ok(
-        json!({"creator":creator["id"],"actor":actor["id"],"xCreator":x_creator["id"],"query":query,"avatar":picture["original"]["sha256"]}),
+        json!({"creator":creator["id"],"actor":actor["id"],"xCreator":x_creator["id"],"gallery":gallery_id,"query":query,"avatar":picture["original"]["sha256"]}),
     )
 }
 
@@ -86,6 +135,18 @@ pub fn start(app: &AppHandle) {
             let _ = window.eval(include_str!("../../scripts/native-smoke.js"));
         }
     }
+}
+
+pub fn image_save_path(name: &str) -> Option<PathBuf> {
+    std::env::var_os("NECTISSE_SMOKE_OUTPUT")?;
+    Some(PathBuf::from(std::env::var_os("NECTISSE_DATA_DIR")?).join(name))
+}
+
+#[tauri::command]
+pub fn smoke_image_saved(backend: State<'_, Backend>, id: String, index: usize) -> Result<bool> {
+    let (picture, name) = backend.entry_image_export(&id, index)?;
+    let path = image_save_path(&name).ok_or("Harness is not enabled")?;
+    Ok(std::fs::read(path).is_ok_and(|bytes| bytes == picture.bytes))
 }
 
 #[tauri::command]
@@ -112,6 +173,10 @@ pub async fn smoke_snapshot(window: tauri::WebviewWindow, name: String) -> Resul
         "post",
         "post-cream",
         "image-viewer",
+        "image-viewer-cream",
+        "wall",
+        "wall-one",
+        "wall-two",
     ]
     .contains(&name.as_str())
     {

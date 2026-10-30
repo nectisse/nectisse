@@ -211,6 +211,8 @@ export function createDemoBridge(theme: Preferences['theme'] = 'cream'): Desktop
 			}),
 		},
 		subscriptions: {
+			saveImage: async () => ({ ok: false, message: blocked }),
+
 			getEntry: async (id) => {
 				const entry = state.entries.find((entry) => entry.id === id);
 				if (!entry) {

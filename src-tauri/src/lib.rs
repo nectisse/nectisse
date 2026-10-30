@@ -218,6 +218,7 @@ pub fn run() {
         commands::desktop,
         smoke::smoke_seed,
         smoke::smoke_report,
+        smoke::smoke_image_saved,
         smoke::smoke_snapshot
     ]);
     #[cfg(not(feature = "native-smoke"))]

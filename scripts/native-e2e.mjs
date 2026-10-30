@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 
-const output = resolve('work/native');
+const output = resolve(process.env.NECTISSE_SMOKE_OUTPUT ?? 'work/native');
 await mkdir(output, { recursive: true });
 await rm(join(output, 'report.json'), { force: true });
 const data = await mkdtemp(join(tmpdir(), 'nectisse-tauri-native-'));

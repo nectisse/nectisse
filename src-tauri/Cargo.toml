@@ -1,6 +1,6 @@
 [package]
 name = "nectisse-app"
-version = "0.2.4"
+version = "0.2.5"
 description = "A private collection and creator updates workspace"
 edition = "2021"
 rust-version = "1.93"

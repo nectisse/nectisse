@@ -9,13 +9,39 @@ use rusqlite::{params, OptionalExtension};
 use serde_json::{json, Value};
 use std::{
     fs,
-    io::Cursor,
+    io::{Cursor, Write},
+    path::Path,
     sync::{atomic::Ordering, Arc},
 };
 
 pub struct Picture {
     pub bytes: Vec<u8>,
     pub asset: Value,
+}
+
+pub fn save_picture(path: &Path, picture: &Picture) -> Result<()> {
+    let parent = path.parent().ok_or("保存位置不正确")?;
+    let temporary = parent.join(format!(".nectisse-{}.tmp", uuid::Uuid::new_v4()));
+    // 用户选择的目录沿用原有权限，不使用内部缓存目录的初始化逻辑。
+    let result = (|| {
+        let mut options = fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options
+            .open(&temporary)
+            .map_err(|_| "图片未能保存，请检查保存位置")?;
+        file.write_all(&picture.bytes)
+            .and_then(|_| file.sync_all())
+            .map_err(|_| "图片未能写入，请检查磁盘空间")?;
+        fs::rename(&temporary, path).map_err(|_| "图片未能保存到所选位置")?;
+        Ok(())
+    })();
+    let _ = fs::remove_file(temporary);
+    result
 }
 
 pub fn read_hash(store: &Store, sha: &str) -> Result<Option<Picture>> {
@@ -443,6 +469,41 @@ pub fn prepare(store: &Store) -> Result<()> {
 }
 
 impl Backend {
+    pub fn entry_image_export(&self, id: &str, index: usize) -> Result<(Picture, String)> {
+        if !is_hash(id, 64) || index >= 20 {
+            return Err("图片身份不正确".into());
+        }
+        let entry = self
+            .0
+            .store
+            .lock()
+            .map_err(|_| "存储不可用")?
+            .entry(id)?
+            .ok_or("帖子已不存在")?;
+        let picture = self
+            .image_at("updates", id, "original", Some(index))?
+            .ok_or("原图尚未取得，请稍后重试")?;
+        let extension = match text(&picture.asset, "format") {
+            "JPEG" => "jpg",
+            "PNG" => "png",
+            "WEBP" => "webp",
+            _ => return Err("图片格式暂不支持保存".into()),
+        };
+        let stem = text(&entry, "externalId")
+            .chars()
+            .take(100)
+            .map(|ch| {
+                if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+                    ch
+                } else {
+                    '-'
+                }
+            })
+            .collect::<String>();
+        let name = format!("Nectisse-{stem}-{:02}.{extension}", index + 1);
+        Ok((picture, name))
+    }
+
     pub fn fetch_image(
         &self,
         source: &str,

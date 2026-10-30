@@ -10,7 +10,7 @@
     <a href="#screenshots">Screenshots</a> ·
     <a href="https://github.com/nectisse/nectisse/issues">Report an issue</a>
   </p>
-  <p><sub>v0.2.4 · macOS 13.3+ · Apple Silicon (arm64)</sub></p>
+  <p><sub>v0.2.5 · macOS 13.3+ · Apple Silicon (arm64)</sub></p>
 </div>
 
 Nectisse is a private collection and creator update app for macOS. Look up works, save their metadata and covers, browse your collection as a cover wall, and follow new releases and creator posts in one place.
@@ -31,6 +31,7 @@ The app includes its Python runtime, dependencies, and collection scripts. No se
 - **Fullscreen cover wall**: Browse your collection as a collage of varied cover sizes with narrow gaps. Drag, zoom, and search; click to preview a full cover or open a work's details. Your browsing position is preserved when you return.
 - **Follow performers and creators**: Look up identities, review candidates, and confirm follows in a dialog. Keep track of performer releases, creator announcements, and posts. Upload custom profile pictures or restore the source-provided image.
 - **Updates**: Browse performer releases with pagination and creator posts in a masonry layout that adapts to image proportions, ordered by publication time. Filter unread items, mark them as read, check manually or on a schedule, and cancel active tasks.
+- **Post images**: Click a post image to open a translucent fullscreen preview. Browse multiple images with the side arrows or arrow keys, save the current original, and return to your place in the feed.
 - **Magnet search for a work**: Search Sukebei or JavTao from a work's detail view using its ID, with up to 20 results. Copy magnet links or open the original listing. An external shortcut opens Heima Cili for manual searches. The app does not provide playback or download tasks.
 - **Personal settings**: Choose between Cream Archive and Blackberry Night themes. Manage sources, subscriptions, proxies, image storage, and diagnostic logs in Settings.
 

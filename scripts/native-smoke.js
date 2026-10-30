@@ -81,38 +81,144 @@
 		await click('创作者');
 		await click('查看海岸日记的主页');
 		const galleryCard = await until(() => document.querySelector('.real-feed-entry .feed-item-thumbnail'), 'multi-image post');
+		const pageScroll = document.querySelector('.page-scroll');
+		pageScroll.scrollTop = Math.min(120, pageScroll.scrollHeight - pageScroll.clientHeight);
+		const scrollBeforePreview = pageScroll.scrollTop;
 		galleryCard.click();
-		await until(() => document.querySelectorAll('.entry-gallery-thumbnail').length === 2, 'all post images');
+		let viewer = await until(() => document.querySelector('.entry-image-viewer'), 'direct image preview');
+		assert(!document.querySelector('.entry-dialog'), 'Clicking a post cover opens its image preview directly');
+		assert(document.querySelector('.entry-image-viewer-position').textContent.trim() === '1 / 3', 'Image preview starts at the first of all three pictures');
+		assert(
+			getComputedStyle(viewer).backgroundColor === 'rgba(0, 0, 0, 0)' && !!document.querySelector('.entry-image-overlay'),
+			'Image viewer uses a translucent full-window overlay',
+		);
+		assert(button('上一张图片').disabled, 'The first picture has no previous picture');
+		await click('下一张图片');
+		await until(() => {
+			const image = document.querySelector('.entry-image-viewer-picture img');
+			return image?.naturalWidth > 0 && image.src.includes('index=1');
+		}, 'second original through native cache');
+		assert(document.querySelector('.entry-image-viewer-position').textContent.trim() === '2 / 3', 'Side arrows switch to the second original image');
+		await snapshot('image-viewer');
+		await click('保存当前图片');
+		assert(await until(() => invoke('smoke_image_saved', { id: ids.gallery, index: 1 }), 'save the selected original'), 'Saving writes the currently selected original bytes');
+		assert(
+			await until(() => document.querySelector('[data-sonner-toast]')?.textContent.includes('图片已保存'), 'saved picture feedback'),
+			'Successful saves show confirmation',
+		);
+		await click('关闭提示');
+		viewer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+		await until(() => document.querySelector('.entry-image-viewer-position')?.textContent.trim() === '3 / 3', 'keyboard last image');
+		assert(button('下一张图片').disabled, 'The last picture has no next picture');
+		viewer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+		await until(() => !document.querySelector('.entry-image-viewer'), 'escape image preview');
+		assert(!document.querySelector('.entry-dialog'), 'Esc returns directly to the post list');
+		assert(Math.abs(pageScroll.scrollTop - scrollBeforePreview) < 1, 'Closing the image preview retains the list scroll position');
+		assert(document.activeElement === galleryCard, 'Closing the image preview restores focus to its cover');
+
+		const summary = document.querySelector('.real-feed-entry .feed-item-summary');
+		summary.click();
+		await until(() => document.querySelectorAll('.entry-detail-media button').length === 3, 'post text and compact photo grid');
 		assert(!!document.querySelector('.entry-dialog-footer time') && !document.querySelector('.entry-dialog-facts'), 'Post time stays in the footer without redundant metadata');
 		assert(!document.querySelector('.entry-dialog-title:not(.sr-only)'), 'X posts do not repeat a synthetic title');
-		await click('查看第 2 张图片');
-		await until(() => {
-			const image = document.querySelector('.entry-gallery-picture img');
-			return image?.naturalWidth > 0 && image.src.includes('index=1');
-		}, 'second image through native protocol');
-		assert(document.querySelector('.entry-gallery-count').textContent.trim() === '2 / 2', 'Gallery selects the second cached image');
+		assert(!document.querySelector('.entry-gallery-expand'), 'The separate view-large-image entry has been removed');
 		await snapshot('post');
-		await click('查看第 2 张大图');
-		const viewer = await until(() => document.querySelector('.entry-image-viewer'), 'full image viewer');
-		await until(() => document.querySelector('.entry-image-viewer img')?.naturalWidth > 0, 'full resolution image');
-		viewer.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+		await click('预览第 3 张图片');
+		viewer = await until(() => document.querySelector('.entry-image-viewer'), 'preview from text details');
+		assert(document.querySelector('.entry-image-viewer-position').textContent.trim() === '3 / 3', 'Clicking a detail thumbnail opens that exact picture');
 		assert(
-			await until(() => document.querySelector('.entry-image-viewer-position')?.textContent.trim() === '1 / 2', 'keyboard gallery navigation'),
-			'Keyboard arrows change the full-size image',
+			document.querySelectorAll('[data-slot="dialog-overlay"]').length === 1 && !document.querySelector('.entry-dialog'),
+			'Text details and photo previews share one dialog',
 		);
-		await click('原始大小');
-		assert(!!document.querySelector('.entry-image-viewer-stage.is-zoomed'), 'Full image viewer supports original size');
-		await click('适合窗口');
-		await snapshot('image-viewer');
-		viewer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
-		await until(() => !document.querySelector('.entry-image-viewer'), 'escape full image');
-		assert(!!document.querySelector('.entry-dialog'), 'Esc returns from the image viewer to post details');
 		await bridge.subscriptions.command({ action: 'preferences-patch', patch: { theme: 'cream' } });
-		await until(() => document.documentElement.dataset.theme === 'cream', 'light post theme');
+		await until(() => document.documentElement.dataset.theme === 'cream', 'light image preview theme');
+		await snapshot('image-viewer-cream');
+		await click('关闭图片预览');
+		await until(() => !document.querySelector('.entry-image-viewer'), 'close image preview');
+		summary.click();
+		await until(() => document.querySelector('.entry-dialog'), 'light post text');
 		await snapshot('post-cream');
 		await click('完成阅读');
 		await until(() => !document.querySelector('.entry-dialog'), 'close post');
 		await bridge.subscriptions.command({ action: 'preferences-patch', patch: { theme: 'night' } });
+
+		for (let index = 1; index < 14; index++) {
+			const saved = await bridge.library.save({ taskId: ids.query, code: `SONE-${614 + index}`, replace: false });
+			assert(saved.ok, `Save photo wall fixture ${index + 1}`);
+		}
+		await click('作品收藏');
+		await click('照片墙');
+		const wall = await until(() => document.querySelector('.collection-wall-viewport'), 'collection wall');
+		const world = wall.querySelector('.collection-wall-world');
+		const centered = async (count) =>
+			until(() => {
+				const tiles = [...wall.querySelectorAll('.collection-wall-tile')];
+				if (tiles.length !== count) {
+					return false;
+				}
+				const rects = tiles.map((tile) => tile.getBoundingClientRect());
+				const viewport = wall.getBoundingClientRect();
+				const left = Math.min(...rects.map((rect) => rect.left));
+				const right = Math.max(...rects.map((rect) => rect.right));
+				const top = Math.min(...rects.map((rect) => rect.top));
+				const bottom = Math.max(...rects.map((rect) => rect.bottom));
+				return (
+					Math.abs((left + right) / 2 - (viewport.left + viewport.width / 2)) < 1 &&
+					Math.abs((top + bottom) / 2 - (viewport.top + (viewport.height - 8) / 2)) < 1 &&
+					left >= viewport.left + 23 &&
+					right <= viewport.right - 23 &&
+					top >= viewport.top + 71 &&
+					bottom <= viewport.bottom - 79
+				);
+			}, `centered photo wall with ${count} works`);
+
+		assert(await centered(14), 'All 14 wall covers fit in a centered initial view with toolbar clearance');
+		const wallTiles = [...wall.querySelectorAll('.collection-wall-tile')];
+		const extent = {
+			width: Math.max(...wallTiles.map((tile) => parseFloat(tile.style.left) + parseFloat(tile.style.width))),
+			height: Math.max(...wallTiles.map((tile) => parseFloat(tile.style.top) + parseFloat(tile.style.height))),
+		};
+		const intervals = wallTiles.map((tile) => [parseFloat(tile.style.left), parseFloat(tile.style.left) + parseFloat(tile.style.width)]).sort((a, b) => a[0] - b[0]);
+		let occupied = 0;
+		let largestGap = 0;
+		for (const [left, right] of intervals) {
+			largestGap = Math.max(largestGap, left - occupied);
+			occupied = Math.max(occupied, right);
+		}
+		assert(largestGap <= 6, 'Partial collage blocks remain adjacent without a central empty band');
+		await until(() => [...wall.querySelectorAll('img')].every((image) => image.complete && image.naturalWidth > 0), 'wall cover pixels');
+		await snapshot('wall');
+		const initialScale = new DOMMatrix(getComputedStyle(world).transform).a;
+		await click('放大照片墙');
+		await click('放大照片墙');
+		wall.dispatchEvent(new WheelEvent('wheel', { deltaX: 1e6, deltaY: 1e6, bubbles: true, cancelable: true }));
+		assert(
+			await until(() => {
+				const matrix = new DOMMatrix(getComputedStyle(world).transform);
+				return matrix.a > initialScale * 1.3 && Math.abs(matrix.m41 + extent.width * matrix.a - wall.clientWidth + 24) < 1;
+			}, 'right wall boundary'),
+			'Panning a zoomed wall stops at its padded right boundary',
+		);
+		await click('重置照片墙位置');
+		assert(await centered(14), 'Reset restores a centered wall and fits the collection again');
+		await click('搜索照片墙');
+		const searchWall = async (value) => {
+			const input = document.querySelector('input[aria-label="搜索照片墙"]');
+			Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		};
+
+		await searchWall('SONE-614');
+		assert(await centered(1), 'A single filtered work recenters without keeping the previous pan');
+		await snapshot('wall-one');
+		await searchWall('双张照片墙样本');
+		assert(await centered(2), 'Two filtered works stay together in the center');
+		await snapshot('wall-two');
+		await searchWall('missing-wall-fixture');
+		assert(await until(() => document.body.textContent.includes('没有匹配的收藏'), 'empty photo wall'), 'Empty wall filter remains recoverable');
+		await click('清除照片墙筛选');
+		assert(await centered(14), 'Clearing the filter restores all covers and their centered view');
+		await click('返回收藏');
 
 		await click('设置');
 		await snapshot('settings');

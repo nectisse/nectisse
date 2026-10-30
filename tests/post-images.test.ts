@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { entrySchema } from '../src/shared/subscriptions';
+import { entrySchema, entryImageSaveSchema } from '../src/shared/subscriptions';
 import { createDesktopState } from '../src/renderer/shared/desktop/desktop';
 import { createDemoFixtures } from '../src/renderer/demo/fixtures';
 
@@ -27,4 +27,19 @@ test('多图仍使用本地图片协议，索引不会把远程地址交给网�
 	assert.equal(url.searchParams.get('index'), '1');
 	assert.equal(url.searchParams.get('variant'), 'original');
 	assert.equal(new URL(desktop.actions.imageUrl('updates', id)).searchParams.has('index'), false);
+});
+
+test('保存图片只接受帖子身份与有界索引，不允许网页指定 URL 或文件路径', () => {
+	const request = { id: 'a'.repeat(64), index: 1 };
+	assert.deepEqual(entryImageSaveSchema.parse(request), request);
+	for (const value of [
+		{ ...request, index: -1 },
+		{ ...request, index: 20 },
+		{ ...request, index: 1.5 },
+		{ ...request, id: '../image' },
+		{ ...request, url: 'https://example.com/image.jpg' },
+		{ ...request, path: '/tmp/image.jpg' },
+	]) {
+		assert.equal(entryImageSaveSchema.safeParse(value).success, false);
+	}
 });

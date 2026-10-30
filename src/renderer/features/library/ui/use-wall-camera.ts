@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
-import { clampCamera, type WallCamera, type WallSize } from '../model/wall-layout';
+import { clampCamera, homeCamera, WALL_MIN_SCALE, WALL_MAX_SCALE, type WallCamera, type WallSize } from '../model/wall-layout';
 
 export function useWallCamera(extent: WallSize, scope: string, initial: WallCamera | undefined, remember: (camera: WallCamera) => void) {
 	const viewport = useRef<HTMLDivElement>(null);
@@ -9,7 +9,8 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 		setElement(node);
 	}, []);
 	const world = useRef<HTMLDivElement>(null);
-	const current = useRef<WallCamera>(initial ?? { x: 0, y: 0, scale: innerWidth < 1100 ? 0.7 : 0.9 });
+	const current = useRef<WallCamera>(initial ?? homeCamera({ width: innerWidth, height: innerHeight }, extent));
+	const atHome = useRef(!initial);
 	const [view, setView] = useState({ camera: current.current, size: { width: innerWidth, height: innerHeight } });
 	const bounds = useRef({ extent, size: view.size });
 	bounds.current.extent = extent;
@@ -41,8 +42,9 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 	};
 
 	const zoom = (factor: number, x = bounds.current.size.width / 2, y = bounds.current.size.height / 2): void => {
+		atHome.current = false;
 		const old = current.current;
-		const scale = Math.max(0.4, Math.min(1.6, old.scale * factor));
+		const scale = Math.max(WALL_MIN_SCALE, Math.min(WALL_MAX_SCALE, old.scale * factor));
 		paint({ scale, x: x - ((x - old.x) * scale) / old.scale, y: y - ((y - old.y) * scale) / old.scale });
 	};
 
@@ -53,7 +55,7 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 		}
 		const observer = new ResizeObserver(() => {
 			bounds.current.size = { width: node.clientWidth, height: node.clientHeight };
-			paint(current.current);
+			paint(atHome.current ? homeCamera(bounds.current.size, bounds.current.extent) : current.current);
 			setView({ camera: { ...current.current }, size: bounds.current.size });
 		});
 		observer.observe(node);
@@ -67,10 +69,9 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 	useEffect(() => {
 		if (scopeRef.current !== scope) {
 			scopeRef.current = scope;
-			paint({ x: 0, y: 0, scale: current.current.scale });
-		} else {
-			paint(current.current);
+			atHome.current = true;
 		}
+		paint(atHome.current ? homeCamera(bounds.current.size, bounds.current.extent) : current.current);
 	}, [extent.width, extent.height, scope]);
 
 	useEffect(() => {
@@ -83,6 +84,7 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 			if (event.ctrlKey || event.metaKey) {
 				zoom(Math.exp(-event.deltaY * 0.01), event.clientX, event.clientY);
 			} else {
+				atHome.current = false;
 				const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? node.clientHeight : 1;
 				paint({
 					...current.current,
@@ -101,8 +103,16 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 		world,
 		view,
 		zoom,
-		reset: () => paint({ x: 0, y: 0, scale: innerWidth < 1100 ? 0.7 : 0.9 }),
-		pan: (x: number, y: number) => paint({ ...current.current, x: current.current.x + x, y: current.current.y + y }),
+		reset: () => {
+			atHome.current = true;
+			paint(homeCamera(bounds.current.size, bounds.current.extent));
+		},
+
+		pan: (x: number, y: number) => {
+			atHome.current = false;
+			paint({ ...current.current, x: current.current.x + x, y: current.current.y + y });
+		},
+
 		handlers: {
 			onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
 				if (event.button === 0 && event.isPrimary) {
@@ -125,6 +135,7 @@ export function useWallCamera(extent: WallSize, scope: string, initial: WallCame
 					event.currentTarget.setPointerCapture(event.pointerId);
 				}
 				dragged.current = true;
+				atHome.current = false;
 				paint({ ...start.origin, x: start.origin.x + x, y: start.origin.y + y });
 			},
 			onPointerUp: () => {

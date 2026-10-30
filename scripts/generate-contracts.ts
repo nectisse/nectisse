@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { z } from 'zod';
 import { runtimeStateSchema } from '../src/shared/protocol';
 import { metadataRecordSchema, metadataStateSchema } from '../src/shared/metadata';
-import { candidateSchema, entryInputSchema, subscriptionsStateSchema, xSyncStateSchema } from '../src/shared/subscriptions';
+import { candidateSchema, entryInputSchema, entryImageSaveSchema, subscriptionsStateSchema, xSyncStateSchema } from '../src/shared/subscriptions';
 import { preferencesSchema } from '../src/shared/preferences';
 import { savedWorkSchema } from '../src/shared/library';
 import { magnetResultSchema } from '../src/shared/magnets';
@@ -19,6 +19,7 @@ const schemas = {
 	metadata: metadataStateSchema,
 	candidate: candidateSchema,
 	entry: entryInputSchema,
+	imageSave: entryImageSaveSchema,
 	subscriptions: subscriptionsStateSchema,
 	preferences: preferencesSchema,
 	work: savedWorkSchema,

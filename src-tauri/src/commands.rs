@@ -116,6 +116,9 @@ impl Backend {
             "nectisse:subscription-entry" => {
                 self.entry_details(input.as_str().ok_or("帖子身份不正确")?)
             }
+            "nectisse:subscription-image-save" => Ok(self
+                .save_entry_image(&input)
+                .unwrap_or_else(|error| reply(&error))),
             "nectisse:subscriptions-command" => Ok(self
                 .follow_command(&input)
                 .unwrap_or_else(|error| reply(&error))),
@@ -290,6 +293,39 @@ impl Backend {
             }
             _ => Err("应用通信方法尚未支持".into()),
         }
+    }
+
+    pub fn save_entry_image(&self, input: &Value) -> Result<Value> {
+        use tauri_plugin_dialog::DialogExt;
+        crate::contracts::validate("imageSave", input)?;
+        let (picture, name) =
+            self.entry_image_export(text(input, "id"), number(input, "index") as usize)?;
+        #[cfg(feature = "native-smoke")]
+        if let Some(path) = crate::smoke::image_save_path(&name) {
+            images::save_picture(&path, &picture)?;
+            return Ok(json!({"ok":true}));
+        }
+        let app = self
+            .0
+            .app
+            .lock()
+            .map_err(|_| "应用不可用")?
+            .clone()
+            .ok_or("应用不可用")?;
+        let extension = name.rsplit('.').next().ok_or("图片格式不正确")?;
+        let Some(file) = app
+            .dialog()
+            .file()
+            .set_title("保存图片")
+            .set_file_name(&name)
+            .add_filter("图片", &[extension])
+            .blocking_save_file()
+        else {
+            return Ok(json!({"ok":false,"cancelled":true}));
+        };
+        let path = file.into_path().map_err(|_| "请选择本机保存位置")?;
+        images::save_picture(&path, &picture)?;
+        Ok(json!({"ok":true}))
     }
 
     pub fn pick_avatar(&self, id: &str) -> Result<Value> {

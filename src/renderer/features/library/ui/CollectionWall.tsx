@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { EmptyState } from '@/shared/components/empty-state';
-import { visibleTiles, wallLayout, type WallCamera } from '../model/wall-layout';
+import { visibleTiles, wallLayout, WALL_MIN_SCALE, WALL_MAX_SCALE, type WallCamera } from '../model/wall-layout';
 import { useWallCamera } from './use-wall-camera';
 
 export function CollectionWall({
@@ -126,11 +126,11 @@ export function CollectionWall({
 						<Search />
 					</Button>
 					<span className="collection-wall-tools-divider" />
-					<Button variant="ghost" size="icon-sm" aria-label="缩小照片墙" disabled={camera.view.camera.scale <= 0.4} onClick={() => camera.zoom(1 / 1.2)}>
+					<Button variant="ghost" size="icon-sm" aria-label="缩小照片墙" disabled={camera.view.camera.scale <= WALL_MIN_SCALE} onClick={() => camera.zoom(1 / 1.2)}>
 						<Minus />
 					</Button>
 					<output aria-label="照片墙缩放">{Math.round(camera.view.camera.scale * 100)}%</output>
-					<Button variant="ghost" size="icon-sm" aria-label="放大照片墙" disabled={camera.view.camera.scale >= 1.6} onClick={() => camera.zoom(1.2)}>
+					<Button variant="ghost" size="icon-sm" aria-label="放大照片墙" disabled={camera.view.camera.scale >= WALL_MAX_SCALE} onClick={() => camera.zoom(1.2)}>
 						<Plus />
 					</Button>
 					<Button variant="ghost" size="icon-sm" aria-label="重置照片墙位置" onClick={camera.reset}>

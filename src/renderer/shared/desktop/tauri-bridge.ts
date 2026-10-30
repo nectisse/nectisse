@@ -12,6 +12,8 @@ import {
 	entryPageSchema,
 	avatarReplySchema,
 	entryDetailReplySchema,
+	entryImageSaveSchema,
+	imageSaveReplySchema,
 } from '@shared/subscriptions';
 import { SUBSCRIPTION_READ, subscriptionReadCode } from '@shared/subscription-read';
 import { DIAGNOSTICS_IPC, diagnosticCopyReplySchema, diagnosticReportSchema, diagnosticCodeSchema } from '@shared/diagnostics';
@@ -105,6 +107,8 @@ const bridge: DesktopBridge = {
 		},
 	},
 	subscriptions: {
+		saveImage: async (request) => imageSaveReplySchema.parse(await ipcRenderer.invoke(SUBS_IPC.saveImage, entryImageSaveSchema.parse(request))),
+
 		getEntry: async (id) =>
 			entryDetailReplySchema.parse(
 				await ipcRenderer.invoke(

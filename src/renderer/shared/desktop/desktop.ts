@@ -1,7 +1,7 @@
 import type { DesktopBridge, RuntimeState } from '@shared/protocol';
 import type { MetadataState } from '@shared/metadata';
 import type { LibraryState } from '@shared/library';
-import type { FollowCommand, CommandReply, SubscriptionsState, AvatarReply } from '@shared/subscriptions';
+import type { FollowCommand, CommandReply, SubscriptionsState, AvatarReply, EntryImageSave, ImageSaveReply } from '@shared/subscriptions';
 import { DEFAULT_PREFERENCES, type PreferencesPatch } from '@shared/preferences';
 import { createSnapshot, connectSnapshot } from './snapshot';
 import { SubscriptionStateReader } from './subscription-reader';
@@ -60,6 +60,15 @@ export function createDesktopState(
 
 	const actions = {
 		getEntry: (id: string) => required().subscriptions.getEntry?.(id),
+
+		saveEntryImage: async (request: EntryImageSave): Promise<ImageSaveReply> => {
+			try {
+				const save = required().subscriptions.saveImage;
+				return save ? await save(request) : { ok: false, message: '当前模式暂不支持保存图片' };
+			} catch {
+				return { ok: false, message: '图片未能保存，请重试' };
+			}
+		},
 
 		invoke,
 		uploadAvatar: async (id: string): Promise<AvatarReply> => {

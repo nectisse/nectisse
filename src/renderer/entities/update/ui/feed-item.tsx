@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type MouseEvent } from 'react';
 import { Check, ImageOff, Images, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
@@ -56,6 +56,7 @@ export function FeedItem({
 	published,
 	discovered,
 	onOpen,
+	onImage,
 	onRead,
 	onAuthor,
 	onCode,
@@ -79,6 +80,7 @@ export function FeedItem({
 	published: ReactNode;
 	discovered?: ReactNode;
 	onOpen: () => void;
+	onImage?: (event: MouseEvent<HTMLButtonElement>) => void;
 	onRead: () => void;
 	onAuthor?: () => void;
 	onCode?: () => void;
@@ -106,8 +108,8 @@ export function FeedItem({
 						}
 					: undefined
 			}
-			onClick={onOpen}
-			aria-label={`查看封面与内容：${accessibleTitle}`}
+			onClick={onImage ?? onOpen}
+			aria-label={`${onImage ? '预览图片' : '查看封面与内容'}：${accessibleTitle}`}
 		>
 			{image}
 			{mediaCount > 1 && (

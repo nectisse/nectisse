@@ -181,8 +181,14 @@ export const followCommandSchema = z.discriminatedUnion('action', [
 export type FollowCommand = z.infer<typeof followCommandSchema>;
 export const commandReplySchema = z.object({ ok: z.boolean(), message: z.string().optional(), id: z.string().optional() });
 export type CommandReply = z.infer<typeof commandReplySchema>;
+export const entryImageSaveSchema = z.object({ id: z.string().regex(/^[a-f0-9]{64}$/), index: z.number().int().min(0).max(19) }).strict();
+export type EntryImageSave = z.infer<typeof entryImageSaveSchema>;
+export const imageSaveReplySchema = commandReplySchema.extend({ cancelled: z.boolean().optional() });
+export type ImageSaveReply = z.infer<typeof imageSaveReplySchema>;
+
 export interface SubscriptionsBridge {
 	getEntry?: (id: string) => Promise<EntryDetailReply>;
+	saveImage?: (request: EntryImageSave) => Promise<ImageSaveReply>;
 	uploadAvatar?: (id: string) => Promise<AvatarReply>;
 	getEntries?: (request: EntryPageRequest) => Promise<EntryPage>;
 	getState: () => Promise<SubscriptionsState>;
@@ -193,6 +199,7 @@ export interface SubscriptionsBridge {
 }
 export const SUBS_IPC = {
 	entry: 'nectisse:subscription-entry',
+	saveImage: 'nectisse:subscription-image-save',
 	uploadAvatar: 'nectisse:subscription-avatar-upload',
 	entries: 'nectisse:subscription-entries',
 	get: 'nectisse:subscriptions-get',
